@@ -19,3 +19,13 @@ describe('editable song charts', () => {
     expect(() => parseSongChart('{}')).toThrow()
   })
 })
+it('round-trips labels and section while accepting legacy charts', () => {
+  const chart = newSongChart()
+  const labeled = { ...chart, barLabels: ['Intro'], section: { start: 0, end: 0 } }
+  const imported = parseSongChart(JSON.stringify({ app: 'DrumMaster AI Chart', schema: 1, chart: labeled }))
+  expect(imported.barLabels).toEqual(['Intro'])
+  expect(imported.section).toEqual({ start: 0, end: 0 })
+  expect(isSongChart(chart)).toBe(true)
+  expect(isSongChart({ ...labeled, section: { start: 0, end: 1 } })).toBe(false)
+  expect(isSongChart({ ...labeled, barLabels: ['Intro', 'Extra'] })).toBe(false)
+})

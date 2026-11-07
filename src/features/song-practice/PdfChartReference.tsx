@@ -13,6 +13,7 @@ export async function validatePdfReference(file: File) {
 
 export function PdfChartReference() {
   const [reference, setReference] = useState<{ url: string; name: string } | null>(null)
+  const [error, setError] = useState(false)
   const [message, setMessage] = useState('Choose a local PDF to read beside the editable drum chart.')
   const generation = useRef(0)
   const urlRef = useRef<string | null>(null)
@@ -26,6 +27,7 @@ export function PdfChartReference() {
     if (urlRef.current) URL.revokeObjectURL(urlRef.current)
     urlRef.current = null
     setReference(null)
+    setError(false)
     setMessage('PDF removed. Your editable chart is unchanged.')
   }
 
@@ -38,9 +40,10 @@ export function PdfChartReference() {
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
       urlRef.current = url
       setReference({ url, name: file.name })
+      setError(false)
       setMessage('Reference loaded. Enter notes manually in the chart editor. PDF viewing does not create practice events.')
     } catch (error) {
-      if (request === generation.current) setMessage(error instanceof Error ? error.message : 'Unable to open this PDF.')
+      if (request === generation.current) { setError(true); setMessage(error instanceof Error ? error.message : 'Unable to open this PDF.') }
     }
   }
 
@@ -48,8 +51,9 @@ export function PdfChartReference() {
     <h3 className="text-lg font-semibold">PDF Chart Reference</h3>
     <p className="text-sm text-zinc-300">Local reference only: no upload, OCR, or automatic notation transcription. PDFs are not saved in chart JSON or practice backups. Choose the file again after leaving Song Practice or refreshing.</p>
     <label className="block rounded-lg border border-cyan-200/50 bg-cyan-950/40 p-3 text-sm text-cyan-100">Choose local PDF (max 20 MB)
-      <input aria-label="Choose local PDF" type="file" accept=".pdf,application/pdf" className="mt-2 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-slate-950" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void choose(file) }} />
+      <input aria-label="Choose local PDF" type="file" className="mt-2 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-slate-950" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void choose(file) }} />
     </label>
+    <p role={error ? 'alert' : 'status'} className={error ? 'rounded-lg border-2 border-amber-300 bg-amber-950/60 p-3 text-sm font-semibold text-amber-100' : 'text-sm text-cyan-200'}>{error ? 'PDF not loaded: ' : ''}{message}</p>
     {reference && <>
       <p className="break-words text-sm font-semibold">{reference.name}</p>
       <div className="flex flex-wrap gap-2">
@@ -59,6 +63,5 @@ export function PdfChartReference() {
       <iframe title="Local PDF chart preview" src={reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
     </>}
-    <p role="status" className="text-sm text-cyan-200">{message}</p>
   </GlassCard>
 }
