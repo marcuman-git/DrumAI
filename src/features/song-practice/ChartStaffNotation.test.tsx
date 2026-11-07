@@ -23,3 +23,8 @@ describe('chart staff notation', () => {
     expect(screen.getByTestId('staff-Snare-0')).toHaveAttribute('data-active', 'false')
   })
 })
+it('fits the complete staff without a forced minimum width', () => {
+  render(<ChartStaffNotation bar={blankBar()} barNumber={1} activeStep={-1} />)
+  expect(screen.getByRole('img', { name: 'Bar 1 drum notation' })).toHaveClass('w-full', 'max-w-full')
+  expect(screen.getByRole('img', { name: 'Bar 1 drum notation' })).not.toHaveClass('min-w-[1000px]')
+})

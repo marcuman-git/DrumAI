@@ -8,8 +8,8 @@ export function ChartStaffNotation({ bar, barNumber, activeStep }: { bar: ChartB
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
     <h4 className="font-semibold">Musical Staff - Bar {barNumber}</h4>
     <p className="text-xs text-zinc-400">4/4 percussion notation, one staff per instrument. Each symbol lasts a sixteenth note. Parentheses indicate ghost notes; accents appear above the note. The grid below remains editable.</p>
-    <div className="overflow-x-auto rounded-lg border border-white/20 bg-zinc-100 p-2">
-      <svg role="img" aria-label={`Bar ${barNumber} drum notation`} viewBox={`0 0 ${width} 390`} className="block min-w-[1000px] w-full" style={{ color: '#18181b' }}>
+    <div className="overflow-hidden rounded-lg border border-white/20 bg-zinc-100 p-2">
+      <svg role="img" aria-label={`Bar ${barNumber} drum notation`} viewBox={`0 0 ${width} 390`} className="block h-auto w-full max-w-full" style={{ color: '#18181b' }}>
         <title>Three aligned percussion staves with sixteenth notes and rests</title>
         {CHART_INSTRUMENTS.map((instrument, row) => {
           const top = 55 + row * 120
