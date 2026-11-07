@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PdfRegionSelector } from './PdfRegionSelector'
 import { PdfInspectionPanel } from './PdfInspectionPanel'
 import { GlassCard } from '../../shared/components/GlassCard'
 
@@ -61,6 +62,7 @@ export function PdfChartReference() {
         <a href={reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
         <button onClick={clear} className="rounded border border-white/25 px-3 py-2 text-sm">Remove PDF</button>
       </div>
+      <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} />
       <PdfInspectionPanel key={reference.url} file={reference.file} />
       <iframe title="Local PDF chart preview" src={reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>

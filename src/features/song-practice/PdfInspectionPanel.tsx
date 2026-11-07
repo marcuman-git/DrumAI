@@ -17,7 +17,7 @@ export function PdfInspectionPanel({ file }: { file: File }) {
       if (request.signal.aborted) return
       setResult(value); setMessage('Inspection complete. No notes were generated and no practice data was changed.')
     } catch {
-      if (controller.current === request) setMessage(request.signal.aborted ? 'Inspection cancelled or timed out. Your PDF and chart are unchanged.' : 'Inspection failed. The file may be damaged, encrypted/password-protected, or unsupported. Use your local PDF viewer and manual chart review.')
+      if (controller.current === request) setMessage(request.signal.aborted ? 'Inspection cancelled or timed out. Your PDF and chart are unchanged.' : 'Inspection failed. The file may be damaged, encrypted/password-protected, or unsupported. Use your local PDF viewer and the editable drum chart.')
     } finally {
       window.clearTimeout(timeout)
       if (controller.current === request) setBusy(false)
