@@ -45,3 +45,7 @@ it('finds cross candidates above conventional hi-hat position', () => {
   const image = analyzeStaffs(source.data, source.width, source.height)
   expect(findNoteCandidates(image, image.staffs[0]).some((note) => Math.abs(note.x - 280) < 4 && note.sourceLabel?.includes('Cymbal'))).toBe(true)
 })
+it('rejects noninteger crop sizes and invalid manual staff spacing', () => {
+  expect(() => analyzeStaffs(new Uint8ClampedArray(40000), 100.5, 100)).toThrow()
+  expect(() => findNoteCandidates({ width: 100, height: 100, ink: new Uint8Array(10000), angle: 0, staffs: [] }, { top: 30, gap: Infinity })).toThrow()
+})
