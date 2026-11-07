@@ -195,3 +195,16 @@ it('keeps the editor free of removed review and shortcut panels', () => {
   expect(screen.queryByRole('button', { name: 'Copy bar' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
 })
+it('appends a confirmed recognition draft without replacing existing bars and supports undo', () => {
+  const bar = { 'Hi-hat': Array(16).fill(0), Snare: Array(16).fill(2), Kick: Array(16).fill(0) }
+  const consumed = vi.fn()
+  render(<SongChartEditor recognitionDraft={{ bar, source: 'fixture.pdf', page: 1 }} onDraftConsumed={consumed} />)
+  expect(screen.getByRole('button', { name: 'Kick step 1: note' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Add detected bar' }))
+  expect(consumed).toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Bar 2: PDF draft' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Snare step 16: note' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+  expect(screen.queryByRole('button', { name: 'Bar 2: PDF draft' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Kick step 1: note' })).toBeInTheDocument()
+})

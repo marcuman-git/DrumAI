@@ -1,0 +1,21 @@
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { NotationRecognitionPanel } from './NotationRecognitionPanel'
+vi.mock('./notationRecognition', async (original) => {
+  const actual = await original<typeof import('./notationRecognition')>()
+  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: new Uint8Array(20000), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
+})
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
+it('requires accepted candidates and acknowledgement before sending an editable draft', () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
+  const onDraft = vi.fn()
+  render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} onDraft={onDraft} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
+  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText(/Snare, x=20/))
+  fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+  fireEvent.click(screen.getByRole('button', { name: 'Build draft preview' }))
+  expect(onDraft).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Send draft to chart editor' }))
+  expect(onDraft.mock.calls[0][0].bar.Snare[0]).toBe(2)
+})

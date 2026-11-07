@@ -1,3 +1,4 @@
+import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useRef, useState } from 'react'
 import { PdfRegionSelector } from './PdfRegionSelector'
 import { PdfInspectionPanel } from './PdfInspectionPanel'
@@ -13,7 +14,7 @@ export async function validatePdfReference(file: File) {
   if (header !== '%PDF-') throw new Error('This file does not have a valid PDF header.')
 }
 
-export function PdfChartReference() {
+export function PdfChartReference({ onDraft }: { onDraft?: (draft: RecognitionDraft) => void } = {}) {
   const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
   const [error, setError] = useState(false)
   const [message, setMessage] = useState('Choose a local PDF to read beside the editable drum chart.')
@@ -51,7 +52,7 @@ export function PdfChartReference() {
 
   return <GlassCard layout={false} className="min-w-0 space-y-3">
     <h3 className="text-lg font-semibold">PDF Chart Reference</h3>
-    <p className="text-sm text-zinc-300">Local reference only: no upload, OCR, or automatic notation transcription. PDFs are not saved in chart JSON or practice backups. Choose the file again after leaving Song Practice or refreshing.</p>
+    <p className="text-sm text-zinc-300">Local PDF reference with optional experimental recognition. No upload or production-quality transcription. PDFs are not saved in chart JSON or practice backups. Choose the file again after leaving Song Practice or refreshing.</p>
     <label className="block rounded-lg border border-cyan-200/50 bg-cyan-950/40 p-3 text-sm text-cyan-100">Choose local PDF (max 20 MB)
       <input aria-label="Choose local PDF" type="file" className="mt-2 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-slate-950" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void choose(file) }} />
     </label>
@@ -62,7 +63,7 @@ export function PdfChartReference() {
         <a href={reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
         <button onClick={clear} className="rounded border border-white/25 px-3 py-2 text-sm">Remove PDF</button>
       </div>
-      <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} />
+      <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} onDraft={onDraft} />
       <PdfInspectionPanel key={reference.url} file={reference.file} />
       <iframe title="Local PDF chart preview" src={reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
