@@ -36,3 +36,12 @@ it('detects multiple independent staffs in a stacked synthetic crop', () => {
   data.set(source.data, 0); data.set(source.data, source.data.length)
   expect(analyzeStaffs(data, source.width, height).staffs).toHaveLength(2)
 })
+it('finds cross candidates above conventional hi-hat position', () => {
+  const source = fixture()
+  for (let dx = -6; dx <= 6; dx++) for (const sign of [-1, 1]) {
+    const index = (Math.round(22 + sign * dx * 0.6) * source.width + 280 + dx) * 4
+    source.data[index] = source.data[index + 1] = source.data[index + 2] = 0
+  }
+  const image = analyzeStaffs(source.data, source.width, source.height)
+  expect(findNoteCandidates(image, image.staffs[0]).some((note) => Math.abs(note.x - 280) < 4 && note.sourceLabel?.includes('Cymbal'))).toBe(true)
+})

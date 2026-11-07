@@ -1,6 +1,6 @@
 import type { ChartBar, ChartInstrument } from './songChartLogic'
 export interface StaffCandidate { top: number; gap: number }
-export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean }
+export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
 export interface RecognitionDraft { bar: ChartBar; source: string; page: number }
 function rowBands(rows: number[], width: number) {
@@ -44,7 +44,8 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   const { width, height, ink } = image; const notes: NoteCandidate[] = []
   const at = (x: number, y: number) => x >= 0 && x < width && y >= 0 && y < height ? ink[Math.round(y) * width + Math.round(x)] ?? 0 : 0
   const halfX = Math.max(2, Math.round(staff.gap * 0.48)); const halfY = Math.max(2, Math.round(staff.gap * 0.3))
-  const levels: [ChartInstrument, number][] = [['Hi-hat', -0.5], ['Snare', 1.5], ['Kick', 3.5]]
+  // Cymbal positions vary by publisher; retain their position for manual identification.
+  const levels: [ChartInstrument, number][] = [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ['Snare', 1.5], ['Kick', 3.5]]
   for (const [instrument, offset] of levels) {
     const y = Math.round(staff.top + offset * staff.gap)
     const peaks: { x: number; score: number }[] = []
@@ -59,10 +60,10 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
       if (score >= (instrument === 'Hi-hat' ? 0.78 : 0.58)) peaks.push({ x, score })
     }
     for (const peak of peaks.sort((a, b) => b.score - a.score)) {
-      if (notes.some((note) => note.instrument === instrument && Math.abs(note.x - peak.x) < staff.gap * 1.1)) continue
+      if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * 1.1)) continue
       let stem = 0; for (let dy = 4; dy < staff.gap * 3; dy++) stem += at(peak.x + halfX, y - dy)
       let flags = 0; for (let dx = 3; dx < staff.gap; dx++) flags += at(peak.x + halfX + dx, y - staff.gap * 2)
-      notes.push({ id: notes.length, x: peak.x, y, instrument, shape: instrument === 'Hi-hat' ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
+      notes.push({ id: notes.length, x: peak.x, y, instrument, sourceLabel: instrument === 'Hi-hat' ? `Cymbal/Hi-hat candidate (staff offset ${offset})` : instrument, shape: instrument === 'Hi-hat' ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
     }
   }
   return notes.sort((a, b) => a.x - b.x)
