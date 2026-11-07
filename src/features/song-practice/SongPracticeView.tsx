@@ -10,6 +10,7 @@ import {
 import { GlassCard } from '../../shared/components/GlassCard'
 import { SectionHeader } from '../../shared/components/SectionHeader'
 import { SongChartEditor } from './SongChartEditor'
+import { PdfChartReference } from './PdfChartReference'
 
 export function SongPracticeView() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -110,7 +111,8 @@ export function SongPracticeView() {
       <SectionHeader title="Song Practice" subtitle="Create editable drum charts, or practice separately with uploaded audio tracks." />
       <div className="flex gap-2">{(['chart', 'audio'] as const).map((value) => <button key={value} aria-pressed={mode === value} onClick={() => { pausePlayback(); setMode(value) }} className={`rounded-lg border px-4 py-2 ${mode === value ? 'border-cyan-200 bg-cyan-300/20' : 'border-white/20'}`}>{value === 'chart' ? 'Drum Chart' : 'Audio Tracks'}</button>)}</div>
 
-      {mode === 'chart' ? <SongChartEditor /> : <><p role="status" className="text-sm text-zinc-300">{audioMessage}</p><div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
+      <div hidden={mode !== 'chart'}><div className="grid min-w-0 items-start gap-4 2xl:grid-cols-2"><PdfChartReference />{mode === 'chart' && <SongChartEditor />}</div></div>
+      {mode === 'audio' && <><p role="status" className="text-sm text-zinc-300">{audioMessage}</p><div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
         <GlassCard className="space-y-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-xs text-zinc-100">
             <Upload size={12} /> Upload Audio
