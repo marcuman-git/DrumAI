@@ -32,7 +32,7 @@ describe('local PDF reference', () => {
     fireEvent.change(screen.getByLabelText('Choose local PDF'), { target: { files: [file()] } })
     await screen.findByTitle('Local PDF chart preview')
     fireEvent.change(screen.getByLabelText('Choose local PDF'), { target: { files: [file('bad.pdf', 'hello')] } })
-    await screen.findByRole('alert')
+    expect(await screen.findByRole('alert')).toHaveTextContent('File not loaded: This file does not have a valid PDF header.')
     expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src', 'blob:valid')
   })
 })

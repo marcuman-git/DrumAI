@@ -53,7 +53,7 @@ export function PdfChartReference() {
     <label className="block rounded-lg border border-cyan-200/50 bg-cyan-950/40 p-3 text-sm text-cyan-100">Choose local PDF (max 20 MB)
       <input aria-label="Choose local PDF" type="file" className="mt-2 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-slate-950" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void choose(file) }} />
     </label>
-    <p role={error ? 'alert' : 'status'} className={error ? 'rounded-lg border-2 border-amber-300 bg-amber-950/60 p-3 text-sm font-semibold text-amber-100' : 'text-sm text-cyan-200'}>{error ? 'PDF not loaded: ' : ''}{message}</p>
+    <p role={error ? 'alert' : 'status'} className={error ? 'rounded-lg border-2 border-amber-300 bg-amber-950/60 p-3 text-sm font-semibold text-amber-100' : 'text-sm text-cyan-200'}>{error ? 'File not loaded: ' : ''}{message}</p>
     {reference && <>
       <p className="break-words text-sm font-semibold">{reference.name}</p>
       <div className="flex flex-wrap gap-2">

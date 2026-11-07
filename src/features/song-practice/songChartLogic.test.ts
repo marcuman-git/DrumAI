@@ -29,3 +29,9 @@ it('round-trips labels and section while accepting legacy charts', () => {
   expect(isSongChart({ ...labeled, section: { start: 0, end: 1 } })).toBe(false)
   expect(isSongChart({ ...labeled, barLabels: ['Intro', 'Extra'] })).toBe(false)
 })
+it('validates and preserves optional count-in settings', () => {
+  const chart = { ...newSongChart(), countIn: 8 }
+  expect(parseSongChart(JSON.stringify({ app: 'DrumMaster AI Chart', schema: 1, chart })).countIn).toBe(8)
+  expect(isSongChart({ ...chart, countIn: 7 })).toBe(false)
+  expect(isSongChart({ ...chart, countIn: '4' })).toBe(false)
+})
