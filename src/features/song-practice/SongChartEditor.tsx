@@ -6,6 +6,7 @@ import { blankBar, chartSection, CHART_INSTRUMENTS, cycleChartNote, loadSongChar
 import { patternRow, replaceChartBar, replaceChartRow, ROW_PATTERNS } from './chartShortcuts'
 import type { RowPattern } from './chartShortcuts'
 import type { ChartBar, ChartInstrument, SongChart } from './songChartLogic'
+import { ChartStaffNotation } from './ChartStaffNotation'
 import { ChartPracticeControls } from './ChartPracticeControls'
 import { defaultMix, defaultTraining, ladderBpm, mixLevel } from './chartPracticeSettings'
 import { useChartHistory } from './useChartHistory'
@@ -70,7 +71,7 @@ export function SongChartEditor() {
         if (token !== generation.current) return
         if (end !== null && config.current.loop && (!training.enabled || scheduledCycles < training.repetitions)) { end = null; index = first }
         while (end === null && next < audio.currentTime + 0.04) {
-          const current = config.current
+          let current = config.current
           if (remainingCount > 0) {
             const time = Math.max(next, audio.currentTime)
             const osc = audio.createOscillator(); const gain = audio.createGain()
@@ -87,6 +88,7 @@ export function SongChartEditor() {
             if (!current.loop || (training.enabled && scheduledCycles >= training.repetitions)) { end = next; break }
             const bpm = ladderBpm(config.current.chart.bpm, training, scheduledCycles)
             if (bpm !== config.current.chart.bpm) { config.current.chart = { ...config.current.chart, bpm }; setChart((value) => ({ ...value, bpm })) }
+            current = config.current
             index = first
           }
           const time = Math.max(next, audio.currentTime)
@@ -162,6 +164,7 @@ export function SongChartEditor() {
       <label className="block text-sm">Chart title<input aria-label="Chart title" disabled={playing} maxLength={80} value={chart.title} onChange={(event) => setChart((current) => ({ ...current, title: event.target.value }))} className="mt-1 w-full rounded-lg border border-cyan-300/40 bg-zinc-800 p-2" /></label>
       <div className="flex flex-wrap gap-2">{chart.bars.map((_, index) => <button key={index} disabled={playing} aria-pressed={shownBar === index} onClick={() => { setSelectedBar(index); setPendingEdit(null); setConfirmClear(false) }} className={`rounded border px-3 py-2 ${shownBar === index ? 'border-amber-200 bg-amber-300/15' : 'border-white/20'}`}>Bar {index + 1}{chart.barLabels?.[index] ? `: ${chart.barLabels[index]}` : ''}</button>)}</div>
       <label className="block text-sm">Bar label<input aria-label="Bar label" disabled={playing} maxLength={40} value={chart.barLabels?.[selectedBar] ?? ''} onChange={(event) => setChart((current) => ({ ...current, barLabels: current.bars.map((_, index) => index === selectedBar ? event.target.value : current.barLabels?.[index] ?? '') }))} placeholder="Intro, Verse, Chorus..." className="mt-1 w-full rounded-lg border border-cyan-300/40 bg-zinc-800 p-2" /></label>
+      <ChartStaffNotation bar={chart.bars[shownBar]} barNumber={shownBar + 1} activeStep={playing && countBeat === null ? active : -1} />
       <div className="overflow-x-auto rounded-lg border border-white/15 bg-black/25 p-2"><div className="min-w-[580px] space-y-3 p-1">
         <div className="grid grid-cols-[80px_repeat(16,minmax(0,1fr))] gap-1 text-center text-xs text-zinc-300"><span>Count</span>{Array.from({ length: 16 }, (_, index) => <span key={index}>{index % 4 === 0 ? index / 4 + 1 : ['e', '&', 'a'][index % 4 - 1]}</span>)}</div>
         {CHART_INSTRUMENTS.map((instrument) => <div key={instrument} className="grid grid-cols-[80px_repeat(16,minmax(0,1fr))] gap-1"><span className="self-center text-sm text-cyan-100">{instrument}</span>{chart.bars[shownBar][instrument].map((note, index) => <button key={index} aria-label={`${instrument} step ${index + 1}: ${['rest', 'ghost', 'note', 'accent'][note]}`} onClick={() => setChart((current) => cycleChartNote(current, shownBar, instrument, index))} className={`flex h-12 items-center justify-center rounded border text-sm ${playing && active === index ? 'ring-2 ring-amber-300' : ''} ${note === 3 ? 'border-amber-300 bg-amber-300/20 text-amber-100' : note ? 'border-cyan-300/40 bg-cyan-500/20 text-cyan-100' : 'border-white/15 bg-zinc-900 text-zinc-500'}`}>{note === 3 ? '>x' : note === 2 ? 'x' : note === 1 ? '(x)' : '-'}</button>)}</div>)}
