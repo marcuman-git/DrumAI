@@ -28,3 +28,12 @@ it('fits the complete staff without a forced minimum width', () => {
   expect(screen.getByRole('img', { name: 'Bar 1 drum notation' })).toHaveClass('w-full', 'max-w-full')
   expect(screen.getByRole('img', { name: 'Bar 1 drum notation' })).not.toHaveClass('min-w-[1000px]')
 })
+it('places simultaneous instruments on one five-line staff', () => {
+  const bar = blankBar(); bar['Hi-hat'][0] = 2; bar.Snare[0] = 2; bar.Kick[0] = 2
+  render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={0} />)
+  const svg = screen.getByRole('img', { name: 'Bar 1 drum notation' })
+  expect(svg.querySelectorAll('line')).toHaveLength(7)
+  expect(screen.getByTestId('staff-Hi-hat-0')).toHaveAttribute('data-active', 'true')
+  expect(screen.getByTestId('staff-Snare-0')).toHaveAttribute('data-active', 'true')
+  expect(screen.getByTestId('staff-Kick-0')).toHaveAttribute('data-active', 'true')
+})

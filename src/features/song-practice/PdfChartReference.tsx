@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PdfInspectionPanel } from './PdfInspectionPanel'
 import { GlassCard } from '../../shared/components/GlassCard'
 
 export const MAX_REFERENCE_BYTES = 20 * 1024 * 1024
@@ -12,7 +13,7 @@ export async function validatePdfReference(file: File) {
 }
 
 export function PdfChartReference() {
-  const [reference, setReference] = useState<{ url: string; name: string } | null>(null)
+  const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
   const [error, setError] = useState(false)
   const [message, setMessage] = useState('Choose a local PDF to read beside the editable drum chart.')
   const generation = useRef(0)
@@ -39,7 +40,7 @@ export function PdfChartReference() {
       const url = URL.createObjectURL(file)
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
       urlRef.current = url
-      setReference({ url, name: file.name })
+      setReference({ url, name: file.name, file })
       setError(false)
       setMessage('Reference loaded. Enter notes manually in the chart editor. PDF viewing does not create practice events.')
     } catch (error) {
@@ -60,6 +61,7 @@ export function PdfChartReference() {
         <a href={reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
         <button onClick={clear} className="rounded border border-white/25 px-3 py-2 text-sm">Remove PDF</button>
       </div>
+      <PdfInspectionPanel key={reference.url} file={reference.file} />
       <iframe title="Local PDF chart preview" src={reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
     </>}

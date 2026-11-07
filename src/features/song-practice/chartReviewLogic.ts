@@ -8,7 +8,7 @@ export const SUPPORTED_REVIEW_RULES = [
   'Supported cells: rest, normal stroke, ghost stroke and accent.',
   'Longer note values must be entered manually as strike positions; the staff view uses sixteenth slots.',
   'Tuplets, flams, drags, ties, repeats and other meters require manual interpretation and are not recognized.',
-  'No automatic recognition, OCR, PDF parsing or confidence score is available in this release.',
+  'PDF structure inspection is available separately; automatic note recognition, OCR and recognition confidence scores are not available.',
 ]
 export function barSignature(bar: ChartBar): string { return JSON.stringify([bar['Hi-hat'], bar.Snare, bar.Kick]) }
 export function newChartReview(chart: SongChart): ChartReview { return { source: '', bars: chart.bars.map(() => ({ status: 'Pending', page: 1, notes: '', signature: '' })) } }
