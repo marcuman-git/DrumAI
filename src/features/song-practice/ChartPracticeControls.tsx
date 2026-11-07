@@ -1,0 +1,20 @@
+import type { SetStateAction } from 'react'
+import { CHART_INSTRUMENTS } from './songChartLogic'
+import type { SongChart } from './songChartLogic'
+import { defaultMix, defaultTraining } from './chartPracticeSettings'
+export function ChartPracticeControls({ chart, setChart, playing, cycles }: { chart: SongChart; setChart: (update: SetStateAction<SongChart>) => void; playing: boolean; cycles: number }) {
+  const mix = chart.mix ?? defaultMix()
+  const training = chart.training ?? defaultTraining()
+  return <div className="space-y-3 rounded-lg border border-white/20 p-3">
+    <h4 className="font-semibold">Instrument Mix</h4>
+    {CHART_INSTRUMENTS.map((instrument) => <div key={instrument} className="space-y-2 rounded border border-white/15 p-2"><div className="flex flex-wrap items-center gap-2"><span className="text-sm">{instrument}</span>{(['muted', 'solo'] as const).map((key) => <button key={key} aria-label={`${instrument} ${key === 'muted' ? 'mute' : 'solo'}`} aria-pressed={mix[instrument][key]} onClick={() => setChart((current) => { const value = current.mix ?? defaultMix(); return { ...current, mix: { ...value, [instrument]: { ...value[instrument], [key]: !value[instrument][key] } } } })} className={`rounded border px-2 py-1 text-xs ${mix[instrument][key] ? 'border-amber-200 bg-amber-300/20' : 'border-white/25'}`}>{key === 'muted' ? 'Mute' : 'Solo'}</button>)}</div><label className="block text-xs">{instrument} balance {Math.round(mix[instrument].volume * 100)}%<input aria-label={`${instrument} balance`} type="range" min={0} max={1} step={0.01} value={mix[instrument].volume} onChange={(event) => { const volume = Number(event.target.value); setChart((current) => { const value = current.mix ?? defaultMix(); return { ...current, mix: { ...value, [instrument]: { ...value[instrument], volume } } } }) }} className="block w-full accent-cyan-400" /></label></div>)}
+    <button onClick={() => setChart((current) => ({ ...current, mix: defaultMix() }))} className="rounded border border-white/25 px-3 py-2 text-sm">Reset instrument mix</button>
+    <p className="text-xs text-zinc-400">Mute overrides Solo. Multiple solo instruments can play together. Mix updates upcoming notes without restarting; chart notes stay unchanged.</p>
+    <h4 className="font-semibold">Repetition Training</h4>
+    <label className="block text-sm"><input type="checkbox" aria-label="Repetition training" disabled={playing} checked={training.enabled} onChange={(event) => setChart((current) => ({ ...current, training: { ...(current.training ?? defaultTraining()), enabled: event.target.checked } }))} /> Enable repetition target</label>
+    {(['repetitions', 'increment', 'every'] as const).map((key) => <label key={key} className="block text-sm">{key === 'repetitions' ? 'Target cycles' : key === 'increment' ? 'BPM increase' : 'Increase every (cycles)'}<select aria-label={key} disabled={playing} value={training[key]} onChange={(event) => { const value = Number(event.target.value); setChart((current) => ({ ...current, training: { ...(current.training ?? defaultTraining()), [key]: value } })) }} className="mt-1 w-full rounded border border-white/25 bg-zinc-900 p-2">{Array.from({ length: key === 'repetitions' ? 100 : key === 'increment' ? 10 : 16 }, (_, index) => <option key={index} value={index + 1}>{index + 1}</option>)}</select></label>)}
+    <label className="block text-sm"><input type="checkbox" aria-label="Tempo ladder" disabled={playing} checked={training.ladder} onChange={(event) => setChart((current) => ({ ...current, training: { ...(current.training ?? defaultTraining()), ladder: event.target.checked } }))} /> Enable tempo ladder</label>
+    <p role="status" className="text-sm text-cyan-100">Completed cycles: {cycles}{training.enabled ? ` / ${training.repetitions}` : ''}</p>
+    <p className="text-xs text-zinc-400">One cycle is the selected bar range. Training starts with Loop On and stops at its target. Turning Loop Off finishes the current cycle early. Tempo rises between cycles, capped at 240 BPM. These are playback cycles, not measured performance.</p>
+  </div>
+}
