@@ -1,21 +1,26 @@
 import type { GrooveInstrument } from './grooveLibraryLogic'
+import type { ChartInstrument } from '../song-practice/chartKit'
+const TOM_PITCH: Partial<Record<ChartInstrument, number>> = { 'Floor tom 2': 85, 'Floor tom 1': 105, 'Tom 3': 135, 'Tom 2': 170, 'Tom 1': 215 }
 export function createGroovePlayer(context: AudioContext) {
   const noise = context.createBuffer(1, Math.ceil(context.sampleRate * 0.6), context.sampleRate)
   const samples = noise.getChannelData(0)
   for (let index = 0; index < samples.length; index++) samples[index] = Math.random() * 2 - 1
-  return (instrument: GrooveInstrument | 'Crash', time: number, soft: boolean, volume: number) => {
+  return (instrument: GrooveInstrument | ChartInstrument, time: number, soft: boolean, volume: number) => {
     if (volume <= 0) return
     const gain = context.createGain()
-    const duration = instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : instrument === 'Kick' ? 0.16 : instrument === 'Snare' ? 0.12 : 0.055
+    const tom = TOM_PITCH[instrument as ChartInstrument]
+    const bass = instrument === 'Kick' || instrument === 'Kick 2'
+    const duration = tom ? 0.24 : instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : bass ? 0.16 : instrument === 'Pedal hi-hat' ? 0.035 : instrument === 'Snare' ? 0.12 : 0.055
     const strength = volume * (soft ? 0.22 : 0.8)
-    gain.gain.setValueAtTime(Math.max(0.0001, strength * (instrument === 'Kick' ? 1 : 0.5)), time)
+    gain.gain.setValueAtTime(Math.max(0.0001, strength * (bass ? 1 : 0.5)), time)
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration)
     gain.connect(context.destination)
-    if (instrument === 'Kick' || instrument === 'Shell') {
+    if (bass || tom || instrument === 'Shell') {
       const oscillator = context.createOscillator()
-      oscillator.type = instrument === 'Shell' ? 'triangle' : 'sine'
-      oscillator.frequency.setValueAtTime(instrument === 'Kick' ? 130 : 1250, time)
-      if (instrument === 'Kick') oscillator.frequency.exponentialRampToValueAtTime(45, time + duration)
+      oscillator.type = instrument === 'Shell' || tom ? 'triangle' : 'sine'
+      const pitch = tom ?? (bass ? instrument === 'Kick 2' ? 95 : 130 : 1250)
+      oscillator.frequency.setValueAtTime(pitch, time)
+      if (bass || tom) oscillator.frequency.exponentialRampToValueAtTime(tom ? pitch * 0.65 : 45, time + duration)
       oscillator.connect(gain); oscillator.start(time); oscillator.stop(time + duration)
     } else {
       const source = context.createBufferSource(); source.buffer = noise

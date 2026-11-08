@@ -8,3 +8,11 @@ it('gives Crash a noise wash and Ride a short attack with distinct metallic part
   play('Crash',10,false,0.3); expect(stops).toEqual([10.55]); expect(frequencies).toHaveLength(0)
   play('Ride',20,false,0.3); expect(stops).toEqual([10.55,20.09]); expect(frequencies.map((item)=>item.value)).toEqual([2800,4100])
 })
+it('uses descending tom pitches and separate bass attack pitches', () => {
+  const pitches:number[]=[]
+  const gain=()=>({gain:{setValueAtTime:vi.fn(),exponentialRampToValueAtTime:vi.fn()},connect:vi.fn()})
+  const context={sampleRate:1000,destination:{},createBuffer:()=>({getChannelData:()=>new Float32Array(600)}),createGain:gain,createOscillator:()=>({type:'',frequency:{setValueAtTime:(value:number)=>pitches.push(value),exponentialRampToValueAtTime:vi.fn()},connect:vi.fn(),start:vi.fn(),stop:vi.fn()})} as unknown as AudioContext
+  const play=createGroovePlayer(context)
+  for(const name of ['Floor tom 2','Floor tom 1','Tom 3','Tom 2','Tom 1','Kick','Kick 2'] as const)play(name,0,false,0.3)
+  expect(pitches).toEqual([85,105,135,170,215,130,95])
+})
