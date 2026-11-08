@@ -8,7 +8,8 @@ export function MusicXmlImportPanel({ disabled, onImport }: { disabled: boolean;
   return <section className="space-y-2 rounded border border-cyan-300/40 p-3" aria-label="MusicXML import">
     <h4 className="font-semibold">Import MusicXML</h4>
     <p className="text-sm text-amber-100" role="status">{message}</p>
-    <input aria-label="Choose MusicXML" type="file" disabled={disabled} onChange={async (event) => {
+    <label className="block rounded-lg border border-cyan-200/50 bg-cyan-950/40 p-3 text-sm text-cyan-100">Choose local MusicXML (max 500 KB)
+    <input aria-label="Choose MusicXML" type="file" disabled={disabled} className="mt-2 block w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-slate-950 disabled:opacity-50" onChange={async (event) => {
       const file = event.target.files?.[0]; event.target.value = ''; const token = ++generation.current; setDraft(null)
       if (!file) return
       try {
@@ -17,7 +18,7 @@ export function MusicXmlImportPanel({ disabled, onImport }: { disabled: boolean;
         if (token !== generation.current) return
         setDraft(result); setMessage(`Preview: ${result.title}, ${result.bars.length} bars, ${result.bpm} BPM. Confirm to replace the current unsaved chart. Saved charts remain unchanged. Notes stay editable.`)
       } catch (error) { if (token === generation.current) setMessage(`File not loaded: ${error instanceof Error ? error.message : 'Invalid document.'}`) }
-    }} />
+    }} /></label>
     {draft && <div className="flex gap-2"><button disabled={disabled} onClick={() => { onImport(draft); setDraft(null); setMessage('Imported into editable chart. Verify against the source, then Save as new.') }} className="rounded bg-cyan-800 px-3 py-2">Confirm MusicXML import</button><button onClick={() => { generation.current++; setDraft(null); setMessage('Import canceled; chart unchanged.') }} className="rounded border border-white/30 px-3 py-2">Cancel MusicXML import</button></div>}
   </section>
 }

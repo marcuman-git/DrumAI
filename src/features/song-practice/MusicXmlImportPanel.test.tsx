@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 import { MusicXmlImportPanel } from './MusicXmlImportPanel'
+afterEach(cleanup)
 it('does not change a chart until preview confirmation and supports cancellation', async () => {
   const onImport = vi.fn()
   render(<MusicXmlImportPanel disabled={false} onImport={onImport} />)
@@ -15,4 +16,9 @@ it('does not change a chart until preview confirmation and supports cancellation
   await waitFor(() => expect(screen.getByText('Confirm MusicXML import')).toBeVisible())
   fireEvent.click(screen.getByText('Confirm MusicXML import'))
   expect(onImport).toHaveBeenCalledOnce()
+})
+it('uses the PDF-style cyan file picker and disables it during playback', () => {
+  render(<MusicXmlImportPanel disabled={true} onImport={vi.fn()} />)
+  expect(screen.getByLabelText('Choose MusicXML')).toHaveClass('file:bg-cyan-300', 'file:rounded')
+  expect(screen.getByLabelText('Choose MusicXML')).toBeDisabled()
 })
