@@ -3,7 +3,7 @@ import type { ChartBar } from './songChartLogic'
 const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
-export function ChartStaffNotation({ bar, barNumber, activeStep }: { bar: ChartBar; barNumber: number; activeStep: number }) {
+export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
   const width = 1080; const start = 140; const spacing = 56
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
     <h4 className="font-semibold">Musical Staff - Bar {barNumber}</h4>
@@ -17,7 +17,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep }: { bar: ChartB
         <text x={126} y={71} fontSize={15} fill="currentColor">4</text><text x={126} y={88} fontSize={15} fill="currentColor">4</text>
         {Array.from({ length: 16 }, (_, step) => {
           const x = start + step * spacing + 20; const color = activeStep === step ? '#b45309' : '#18181b'
-          const hits = CHART_INSTRUMENTS.filter((instrument) => notesFor(bar, instrument)[step] !== 0)
+          const hits = instruments.filter((instrument) => notesFor(bar, instrument)[step] !== 0)
           const headOffsets = new Map<string, number>()
           const ordered = [...hits].sort((a, b) => HEAD_Y[a] - HEAD_Y[b])
           ordered.forEach((instrument, index) => {
@@ -30,7 +30,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep }: { bar: ChartB
             {!hits.length && <g stroke={color} fill={color} strokeWidth={1.5}>
               <path d={`M ${x + 7} 62 l -9 30 M ${x + 6} 64 q -6 9 -12 1 M ${x + 3} 74 q -6 9 -12 1`} fill="none" /><circle cx={x - 7} cy={63} r={2.3} /><circle cx={x - 10} cy={73} r={2.3} />
             </g>}
-            {CHART_INSTRUMENTS.map((instrument) => {
+            {instruments.map((instrument) => {
               const note = notesFor(bar, instrument)[step]; const y = HEAD_Y[instrument]
               return <g key={instrument} data-testid={`staff-${instrument}-${step}`} data-active={activeStep === step} aria-label={`${instrument} slot ${step + 1}: ${['sixteenth rest', 'ghost sixteenth note', 'sixteenth note', 'accented sixteenth note'][note]}`} stroke={color} fill={color}>
                 <title>{instrument} slot {step + 1}: {['rest', 'ghost', 'note', 'accent'][note]}</title>
