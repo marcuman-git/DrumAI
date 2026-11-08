@@ -7,7 +7,7 @@ it('imports encoded quarter timing and rests without pixel guesses', () => {
   expect(chart.bpm).toBe(60); expect(chart.bars[0].Snare[0]).toBe(2); expect(chart.bars[0].Snare.filter(Boolean)).toHaveLength(1)
 })
 it('rejects unsupported cymbals, malformed XML, entities and partial bars', () => {
-  expect(() => importMusicXml(score(hit.repeat(4), 50))).toThrow('Unsupported')
+  expect(() => importMusicXml(score(hit.repeat(4), 49))).toThrow('Unsupported')
   expect(() => importMusicXml('<broken>')).toThrow()
   expect(() => importMusicXml('<!DOCTYPE x>' + score(hit.repeat(4)))).toThrow()
   expect(() => importMusicXml(score(hit))).toThrow('incomplete')
@@ -20,4 +20,8 @@ it('tempo parsing has no state leakage between imports', () => {
   const a = score(hit.repeat(4)).replace('<attributes>', '<direction><sound tempo="90"/></direction><attributes>')
   expect(importMusicXml(a).bpm).toBe(90)
   expect(importMusicXml(a.replace('90','80')).bpm).toBe(80)
+})
+it('imports distinct GM Crash and Ride instruments into their own rows', () => {
+  expect(importMusicXml(score(hit.repeat(4), 50)).bars[0].Crash?.filter(Boolean)).toHaveLength(4)
+  expect(importMusicXml(score(hit.repeat(4), 52)).bars[0].Ride?.filter(Boolean)).toHaveLength(4)
 })

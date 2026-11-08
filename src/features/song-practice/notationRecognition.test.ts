@@ -49,3 +49,17 @@ it('rejects noninteger crop sizes and invalid manual staff spacing', () => {
   expect(() => analyzeStaffs(new Uint8ClampedArray(40000), 100.5, 100)).toThrow()
   expect(() => findNoteCandidates({ width: 100, height: 100, ink: new Uint8Array(10000), angle: 0, staffs: [] }, { top: 30, gap: Infinity })).toThrow()
 })
+it('searches additional staff spaces and below the bottom staff line', () => {
+  const width = 240; const height = 150; const ink = new Uint8Array(width * height)
+  for (const [cx, cy] of [[70, 70], [170, 94]]) for (let dx = -6; dx <= 6; dx++) for (let dy = -4; dy <= 4; dy++) if ((dx/6)**2 + (dy/4)**2 <= 1) ink[(cy+dy)*width+cx+dx] = 1
+  const notes = findNoteCandidates({ width, height, ink, angle: 0, staffs: [] }, { top: 40, gap: 12 })
+  expect(notes.some((note) => Math.abs(note.x-70) <= 3 && note.y === 70)).toBe(true)
+  expect(notes.some((note) => note.instrument === 'Kick' && Math.abs(note.x-170) <= 3 && note.y === 94)).toBe(true)
+})
+it('reuses candidates without sharing mutable acceptance or instrument mappings', () => {
+  const source = fixture(); const image = analyzeStaffs(source.data, source.width, source.height)
+  const first = findNoteCandidates(image, image.staffs[0]); const original = first[0].instrument
+  first[0].instrument = 'Ride'
+  expect(findNoteCandidates(image, image.staffs[0])[0].instrument).toBe(original)
+  expect(findNoteCandidates(image, { ...image.staffs[0], gap: 10 })).not.toEqual(first)
+})

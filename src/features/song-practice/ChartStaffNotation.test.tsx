@@ -37,3 +37,10 @@ it('places simultaneous instruments on one five-line staff', () => {
   expect(screen.getByTestId('staff-Snare-0')).toHaveAttribute('data-active', 'true')
   expect(screen.getByTestId('staff-Kick-0')).toHaveAttribute('data-active', 'true')
 })
+it('renders distinct cymbal heads on the same staff', () => {
+  const bar = blankBar(); bar.Crash[0] = 2; bar.Ride[4] = 3
+  render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={4} />)
+  expect(screen.getByTestId('staff-Crash-0')).toHaveAttribute('aria-label', 'Crash slot 1: sixteenth note')
+  expect(screen.getByTestId('staff-Crash-0').querySelector('circle')).not.toBeNull()
+  expect(screen.getByTestId('staff-Ride-4')).toHaveAttribute('data-active', 'true')
+})

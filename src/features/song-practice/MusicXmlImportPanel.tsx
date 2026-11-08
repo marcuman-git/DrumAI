@@ -3,7 +3,7 @@ import { importMusicXml } from './musicXmlImport'
 import type { SongChart } from './songChartLogic'
 export function MusicXmlImportPanel({ disabled, onImport }: { disabled: boolean; onImport: (chart: SongChart) => void }) {
   const [draft, setDraft] = useState<SongChart | null>(null)
-  const [message, setMessage] = useState('Local import: one percussion part, complete 4/4 bars, sixteenth-grid timing, GM Hi-hat/Snare/Kick. Compressed .mxl, cymbals, ties and tuplets are not supported.')
+  const [message, setMessage] = useState('Local import: one percussion part, complete 4/4 bars, sixteenth-grid timing, GM Hi-hat/Snare/Kick/Crash/Ride. Compressed .mxl, unsupported instruments, ties and tuplets are not supported.')
   const generation = useRef(0)
   return <section className="space-y-2 rounded border border-cyan-300/40 p-3" aria-label="MusicXML import">
     <h4 className="font-semibold">Import MusicXML</h4>
