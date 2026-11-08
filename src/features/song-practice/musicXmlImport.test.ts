@@ -7,7 +7,7 @@ it('imports encoded quarter timing and rests without pixel guesses', () => {
   expect(chart.bpm).toBe(60); expect(chart.bars[0].Snare[0]).toBe(2); expect(chart.bars[0].Snare.filter(Boolean)).toHaveLength(1)
 })
 it('rejects unsupported cymbals, malformed XML, entities and partial bars', () => {
-  expect(() => importMusicXml(score(hit.repeat(4), 49))).toThrow('Unsupported')
+  expect(() => importMusicXml(score(hit.repeat(4), 57))).toThrow('Unsupported')
   expect(() => importMusicXml('<broken>')).toThrow()
   expect(() => importMusicXml('<!DOCTYPE x>' + score(hit.repeat(4)))).toThrow()
   expect(() => importMusicXml(score(hit))).toThrow('incomplete')
@@ -24,4 +24,9 @@ it('tempo parsing has no state leakage between imports', () => {
 it('imports distinct GM Crash and Ride instruments into their own rows', () => {
   expect(importMusicXml(score(hit.repeat(4), 50)).bars[0].Crash?.filter(Boolean)).toHaveLength(4)
   expect(importMusicXml(score(hit.repeat(4), 52)).bars[0].Ride?.filter(Boolean)).toHaveLength(4)
+})
+it('maps encoded bass/tom/pedal voices using one-based GM MusicXML numbers', () => {
+  for(const [midi,row] of [[36,'Kick 2'],[42,'Floor tom 2'],[44,'Floor tom 1'],[46,'Tom 3'],[48,'Tom 2'],[51,'Tom 1'],[45,'Pedal hi-hat']] as const) {
+    expect(importMusicXml(score(hit.repeat(4),midi)).bars[0][row]?.filter(Boolean)).toHaveLength(4)
+  }
 })

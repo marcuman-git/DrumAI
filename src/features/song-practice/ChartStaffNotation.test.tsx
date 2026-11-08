@@ -44,3 +44,10 @@ it('renders distinct cymbal heads on the same staff', () => {
   expect(screen.getByTestId('staff-Crash-0').querySelector('circle')).not.toBeNull()
   expect(screen.getByTestId('staff-Ride-4')).toHaveAttribute('data-active', 'true')
 })
+it('renders floor/rack toms, second bass and pedal hi-hat without separate staves', () => {
+  const bar=blankBar(); bar['Tom 1'][0]=2; bar['Floor tom 2'][0]=2; bar['Kick 2'][0]=2; bar['Pedal hi-hat'][0]=2
+  render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={0} />)
+  expect(screen.getByTestId('staff-Tom 1-0').querySelector('ellipse')).not.toBeNull()
+  expect(screen.getByTestId('staff-Kick 2-0')).toHaveAttribute('data-active','true')
+  expect(screen.getByTestId('staff-Pedal hi-hat-0').querySelector('ellipse')).toBeNull()
+})

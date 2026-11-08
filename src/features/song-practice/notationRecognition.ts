@@ -1,4 +1,6 @@
 import type { ChartBar, ChartInstrument } from './songChartLogic'
+import { completeBar } from './chartKit'
+export type RecognitionProfile = 'generic' | 'master-key'
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
@@ -47,9 +49,9 @@ export function analyzeStaffs(data: Uint8ClampedArray, width: number, height: nu
   for (let i = 0; i < xs.length; i++) { const x = xs[i]; const y = Math.round(ys[i] - slope * (x - width / 2)); if (y >= 0 && y < height) { ink[y * width + x] = 1; rows[y]++ } }
   return { width, height, ink, angle, staffs: detectedStaffs(rows, width) }
 }
-export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidate): NoteCandidate[] {
+export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidate, profile: RecognitionProfile = 'generic'): NoteCandidate[] {
   if (!Number.isFinite(staff.top) || !Number.isFinite(staff.gap) || staff.gap < 4 || staff.gap > 80) throw new Error('Invalid staff geometry.')
-  const key = `${staff.top}:${staff.gap}`; const cache = candidateCache.get(image)
+  const key = `${staff.top}:${staff.gap}:${profile}`; const cache = candidateCache.get(image)
   const existing = cache?.get(key)
   if (existing) return existing.map((note) => ({ ...note }))
   const { width, height, ink } = image; const notes: NoteCandidate[] = []
@@ -67,23 +69,26 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
     return sums
   }
   // Cymbal positions vary by publisher; retain their position for manual identification.
-  const levels: [ChartInstrument, number][] = [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ...Array.from({ length: 11 }, (_, index): [ChartInstrument, number] => { const offset = (index + 1) / 2; return [offset === 3.5 || offset >= 4.5 ? 'Kick' : 'Snare', offset] })]
+  const levels: [ChartInstrument, number][] = profile === 'master-key'
+    ? [['Crash', -2], ['Crash', -1.5], ['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Pedal hi-hat', 4.5], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Tom 3', 2], ['Floor tom 1', 2.5], ['Floor tom 2', 3], ['Kick', 3.5], ['Kick 2', 4]]
+    : [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ...Array.from({ length: 11 }, (_, index): [ChartInstrument, number] => { const offset = (index + 1) / 2; return [offset === 3.5 || offset >= 4.5 ? 'Kick' : 'Snare', offset] })]
   for (const [instrument, offset] of levels) {
+    const crossHead = ['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat'].includes(instrument)
     const y = Math.round(staff.top + offset * staff.gap)
     const peaks: { x: number; score: number }[] = []
     for (let x = halfX; x < width - halfX; x++) {
       // Cross heads do not need the unrelated oval-density calculation.
       let dark = 0
-      if (instrument === 'Hi-hat') { for (const [dx, dy] of cross) dark += Math.max(at(x + dx, y + dy - 1), at(x + dx, y + dy), at(x + dx, y + dy + 1)) }
+      if (crossHead) { for (const [dx, dy] of cross) dark += Math.max(at(x + dx, y + dy - 1), at(x + dx, y + dy), at(x + dx, y + dy + 1)) }
       else { for (const [dy, radius] of oval) { const sums = rowPrefix(y + dy); if (sums) dark += sums[x + radius + 1] - sums[x - radius] } }
-      const score = dark / (instrument === 'Hi-hat' ? cross.length : ovalArea)
-      if (score >= (instrument === 'Hi-hat' ? 0.78 : 0.58)) peaks.push({ x, score })
+      const score = dark / (crossHead ? cross.length : ovalArea)
+      if (score >= (crossHead ? 0.78 : 0.58)) peaks.push({ x, score })
     }
     for (const peak of peaks.sort((a, b) => b.score - a.score)) {
       if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * 1.1)) continue
       let stem = 0; for (let dy = 4; dy < staff.gap * 3; dy++) stem += at(peak.x + halfX, y - dy)
       let flags = 0; for (let dx = 3; dx < staff.gap; dx++) flags += at(peak.x + halfX + dx, y - staff.gap * 2)
-      notes.push({ id: notes.length, x: peak.x, y, instrument, sourceLabel: instrument === 'Hi-hat' ? `Cymbal/Hi-hat candidate (staff offset ${offset})` : `${instrument} suggestion (staff offset ${offset}; verify instrument)`, shape: instrument === 'Hi-hat' ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
+      notes.push({ id: notes.length, x: peak.x, y, instrument, sourceLabel: profile === 'master-key' ? `${instrument} key-profile suggestion (staff offset ${offset}; verify)` : instrument === 'Hi-hat' ? `Cymbal/Hi-hat candidate (staff offset ${offset})` : `${instrument} suggestion (staff offset ${offset}; verify instrument)`, shape: crossHead ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
     }
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
@@ -104,7 +109,7 @@ export function findBarlineHints(image: RecognitionImage, staff: StaffCandidate)
 }
 export function candidatesToBar(notes: NoteCandidate[], first: number, last: number): ChartBar {
   if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) throw new Error('Invalid slot centers.')
-  const bar = { 'Hi-hat': Array(16).fill(0), Snare: Array(16).fill(0), Kick: Array(16).fill(0), Crash: Array(16).fill(0), Ride: Array(16).fill(0) }
+  const bar = completeBar()
   for (const note of notes) { const raw = (note.x - first) / (last - first) * 15; const step = Math.round(raw); if (step >= 0 && step < 16 && Math.abs(raw - step) <= 0.4) bar[note.instrument][step] = 2 }
   return bar
 }

@@ -31,3 +31,12 @@ it('preserves old review signatures until a cymbal is actually added', () => {
   expect(before).toBe(JSON.stringify([bar['Hi-hat'], bar.Snare, bar.Kick]))
   bar.Crash[0] = 2; expect(barSignature(bar)).not.toBe(before)
 })
+it('retains optional tom, second-bass and pedal rows through chart JSON', () => {
+  const bar = completeBar()
+  for (const name of ['Kick 2', 'Floor tom 2', 'Floor tom 1', 'Tom 3', 'Tom 2', 'Tom 1', 'Pedal hi-hat'] as const) bar[name][0] = 2
+  const chart = { ...newSongChart(), bars: [bar] }
+  const imported = parseSongChart(JSON.stringify({ app: 'DrumMaster AI Chart', schema: 1, chart }))
+  expect(imported.bars).toEqual(chart.bars)
+  expect(isSongChart({ ...chart, bars: [{ ...bar, 'Tom 1': [0] }] })).toBe(false)
+  expect(isSongChart({ ...chart, bars: [{ ...bar, 'Pedal hi-hat': null }] })).toBe(false)
+})

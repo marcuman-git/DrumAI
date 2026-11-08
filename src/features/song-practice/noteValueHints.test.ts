@@ -27,3 +27,10 @@ it('does not mislabel three beam bands as a supported sixteenth note', () => {
   const {image,note}=sample(3)
   expect(inspectNoteValue(image,{top:60,gap:12},note).value).toBe('unknown')
 })
+it('does not count the five staff lines as beams and clips context at image edges', () => {
+  const {image,note}=sample()
+  for(let line=0;line<5;line++)for(let x=0;x<image.width;x++)image.ink[(60+line*12)*image.width+x]=1
+  expect(inspectNoteValue(image,{top:60,gap:12},note).value).toBe('quarter')
+  const edge=inspectNoteValue(image,{top:60,gap:12},{...note,x:4,y:4})
+  expect(edge.left).toBe(0); expect(edge.top).toBeGreaterThanOrEqual(0)
+})

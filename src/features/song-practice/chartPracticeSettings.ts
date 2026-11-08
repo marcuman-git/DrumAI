@@ -1,10 +1,10 @@
-import { CHART_INSTRUMENTS } from './chartKit'
+import { CHART_INSTRUMENTS, isCoreInstrument } from './chartKit'
 import type { ChartInstrument } from './chartKit'
 export interface InstrumentMix { volume: number; muted: boolean; solo: boolean }
-export type ChartMix = Record<'Hi-hat' | 'Snare' | 'Kick', InstrumentMix> & Partial<Record<'Crash' | 'Ride', InstrumentMix>>
+export type ChartMix = Record<'Hi-hat' | 'Snare' | 'Kick', InstrumentMix> & Partial<Record<Exclude<ChartInstrument, 'Hi-hat' | 'Snare' | 'Kick'>, InstrumentMix>>
 export interface ChartTraining { enabled: boolean; repetitions: number; ladder: boolean; increment: number; every: number }
 export function defaultMix(): Record<ChartInstrument, InstrumentMix> { return Object.fromEntries(CHART_INSTRUMENTS.map((name) => [name, { volume: 1, muted: false, solo: false }])) as Record<ChartInstrument, InstrumentMix> }
-export function completeMix(mix?: ChartMix) { return { ...defaultMix(), ...mix } }
+export function completeMix(mix?: ChartMix): Record<ChartInstrument, InstrumentMix> { return Object.fromEntries(CHART_INSTRUMENTS.map((name) => [name, mix?.[name] ?? { volume: 1, muted: false, solo: false }])) as Record<ChartInstrument, InstrumentMix> }
 export function defaultTraining(): ChartTraining { return { enabled: false, repetitions: 4, ladder: false, increment: 2, every: 1 } }
 export function mixLevel(mix: ChartMix, instrument: ChartInstrument): number {
   const row = mix[instrument] ?? { volume: 1, muted: false, solo: false }
@@ -15,7 +15,7 @@ export function validMix(value: unknown): value is ChartMix {
   const mix = value as ChartMix
   return CHART_INSTRUMENTS.every((name) => {
     const row = mix[name]
-    if ((name === 'Crash' || name === 'Ride') && row === undefined) return true
+    if (!isCoreInstrument(name) && row === undefined) return true
     return !!row && typeof row.volume === 'number' && Number.isFinite(row.volume) && row.volume >= 0 && row.volume <= 1 && typeof row.muted === 'boolean' && typeof row.solo === 'boolean'
   })
 }

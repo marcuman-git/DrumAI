@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { analyzeStaffs, candidatesToBar, findBarlineHints, findNoteCandidates } from './notationRecognition'
-import type { NoteCandidate, RecognitionDraft, RecognitionImage, StaffCandidate } from './notationRecognition'
+import type { NoteCandidate, RecognitionDraft, RecognitionImage, RecognitionProfile, StaffCandidate } from './notationRecognition'
 import { CHART_INSTRUMENTS, notesFor } from './songChartLogic'
 import type { ChartBar } from './songChartLogic'
 import { inspectNoteValue } from './noteValueHints'
@@ -18,6 +18,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   const [valueHints, setValueHints] = useState<Record<number, NoteValueHint>>({})
   const [manualStaff, setManualStaff] = useState(false)
   const [scanCount, setScanCount] = useState(0)
+  const [profile, setProfile] = useState<RecognitionProfile>('generic')
   const [accepted, setAccepted] = useState<number[]>([])
   const [threshold, setThreshold] = useState(160)
   const [angle, setAngle] = useState('')
@@ -48,7 +49,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
     }
   }
   function chooseStaff(result: RecognitionImage, selected: StaffCandidate) {
-    const candidates = findNoteCandidates(result, selected)
+    const candidates = findNoteCandidates(result, selected, profile)
     const hints = Object.fromEntries(candidates.map((note) => [note.id, inspectNoteValue(result, selected, note)]))
     setValueHints(hints); setStaff(selected); setNotes(candidates); setAccepted([]); setDraft(null); setConfirmed(false); draw(result, selected, candidates, hints)
   }
@@ -77,7 +78,9 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   }
   return <section className="space-y-3 rounded-lg border border-amber-200/40 bg-amber-950/15 p-3" aria-label="Experimental notation recognition">
     <h4 className="font-semibold">Experimental Region-to-Chart Prototype</h4>
-    <p className="text-sm text-amber-100">Cross-shaped candidates are searched from two spaces above the staff through the top line. Check your chart legend: cymbal candidates start with a Hi-hat suggestion; map them to Hi-hat, Crash or Ride as appropriate. Clefs are structural symbols, not strokes; exclude them from accepted candidates. Include space above the staff in your crop.</p>
+    <label className="block text-sm">Instrument-position profile<select aria-label="Recognition instrument profile" value={profile} onChange={(event) => { setProfile(event.target.value as RecognitionProfile); setNotes([]); setValueHints({}); setAccepted([]); setDraft(null); setConfirmed(false); setMessage('Profile changed. Detect again; existing chart notes are unchanged.') }} className="mt-1 block w-full rounded border border-white/25 bg-zinc-900 p-2"><option value="generic">Generic positions (verify mapping)</option><option value="master-key">Supplied Master Drum Key</option></select></label>
+    <p className="text-xs text-amber-100">Use Master Drum Key only when the source follows that legend. It suggests tom, bass and pedal-hi-hat rows, not guaranteed identities. Splash/China/second crash and articulations still require interpretation.</p>
+    <p className="text-sm text-amber-100">Include space above and below the staff in your crop. Generic-profile crosses start with a Hi-hat suggestion; the Master Drum Key profile suggests cymbal and pedal voices by position. Verify every instrument against your chart legend. Clefs are structural symbols, not strokes; exclude them from accepted candidates.</p>
     <p className="text-sm text-amber-100">Not production transcription. Candidates can be wrong. Only one evenly spaced 4/4 bar with heads inside and below the staff is supported. Empty slots become guessed rests. Tuplets, variable spacing, flams, drags, ties, repeats, ghost notes and accents are not automatically interpreted.</p>
     <div className="grid gap-2 sm:grid-cols-2"><label className="text-sm">Ink threshold {threshold}<input aria-label="Recognition threshold" type="range" min={40} max={230} value={threshold} onChange={(event) => { setThreshold(Number(event.target.value)); setImage(null); setNotes([]); setAccepted([]); setConfirmed(false); setDraft(null) }} className="block w-full" /></label><label className="text-sm">Skew angle (blank = auto)<input aria-label="Recognition skew" type="number" min={-5} max={5} step={0.5} value={angle} onChange={(event) => { if (event.target.value === '' || (Number(event.target.value) >= -5 && Number(event.target.value) <= 5)) { setAngle(event.target.value); setImage(null); setNotes([]); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label></div>
     <div className="flex flex-wrap gap-2"><button onClick={() => scan()} className="rounded border border-cyan-200/40 px-3 py-2">Detect staffs and note candidates</button><button onClick={() => scan(true)} className="rounded border border-white/25 px-3 py-2">Run fresh detection</button></div>

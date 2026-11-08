@@ -45,3 +45,12 @@ it('retains manual geometry on repeated primary detection and offers an uncached
   expect(screen.getByLabelText('Manual staff spacing')).toHaveValue(12)
   expect(screen.getByText(/Candidates refreshed with fresh pixel analysis using your manual staff/)).toBeVisible()
 })
+it('changes the instrument profile without inserting or retaining an accepted draft', () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+  const onDraft=vi.fn()
+  render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} onDraft={onDraft}/>)
+  fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}))
+  fireEvent.change(screen.getByLabelText('Recognition instrument profile'),{target:{value:'master-key'}})
+  expect(screen.getByRole('button',{name:'Build draft preview'})).toBeDisabled()
+  expect(onDraft).not.toHaveBeenCalled()
+})

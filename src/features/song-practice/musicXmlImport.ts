@@ -11,7 +11,9 @@ export function importMusicXml(xml: string): SongChart {
   const mapping = new Map<string, ChartInstrument>()
   for (const item of document.querySelectorAll('score-part > midi-instrument')) {
     const midi = Number(text(item, 'midi-unpitched'))
-    const instrument: ChartInstrument | undefined = [43,45,47].includes(midi) ? 'Hi-hat' : [39,41].includes(midi) ? 'Snare' : [36,37].includes(midi) ? 'Kick' : [50,58].includes(midi) ? 'Crash' : [52,54,60].includes(midi) ? 'Ride' : undefined
+    // MusicXML midi-unpitched is one-based (GM drum-note number plus one).
+    const gm: Record<number, ChartInstrument> = { 36: 'Kick 2', 37: 'Kick', 39: 'Snare', 41: 'Snare', 42: 'Floor tom 2', 44: 'Floor tom 1', 46: 'Tom 3', 48: 'Tom 2', 49: 'Tom 2', 51: 'Tom 1', 43: 'Hi-hat', 45: 'Pedal hi-hat', 47: 'Hi-hat', 50: 'Crash', 58: 'Crash', 52: 'Ride', 54: 'Ride', 60: 'Ride' }
+    const instrument = gm[midi]
     if (instrument) mapping.set(item.getAttribute('id') ?? '', instrument)
   }
   const measures = parts[0].querySelectorAll(':scope > measure')
@@ -38,7 +40,7 @@ export function importMusicXml(xml: string): SongChart {
       if (start + duration > 16 || start < 0) throw new Error('Incomplete or overflowing bar timing.')
       if (entry.localName === 'note' && !entry.querySelector('rest')) {
         const instrument = mapping.get(entry.querySelector('instrument')?.getAttribute('id') ?? '')
-        if (!instrument || !entry.querySelector('unpitched')) throw new Error('Unsupported or unspecified instrument. This editor supports GM Hi-hat, Snare, Kick, Crash and Ride only.')
+        if (!instrument || !entry.querySelector('unpitched')) throw new Error('Unsupported or unspecified instrument. Use supported GM drum/tom/cymbal voices; extras such as cowbell remain unsupported.')
         bar[instrument][start] = entry.querySelector('accent, strong-accent') ? 3 : entry.querySelector('notehead[parentheses="yes"]') ? 1 : 2
       }
       if (!chord) { previous = cursor; cursor += duration; hasPrevious = entry.localName === 'note' }

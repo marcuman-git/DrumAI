@@ -63,3 +63,13 @@ it('reuses candidates without sharing mutable acceptance or instrument mappings'
   expect(findNoteCandidates(image, image.staffs[0])[0].instrument).toBe(original)
   expect(findNoteCandidates(image, { ...image.staffs[0], gap: 10 })).not.toEqual(first)
 })
+it('maps supplied-key tom positions separately without changing the generic profile', () => {
+  const width=260; const height=150; const ink=new Uint8Array(width*height)
+  for(const [x,y] of [[60,46],[170,76]]) for(let dx=-6;dx<=6;dx++)for(let dy=-4;dy<=4;dy++)if((dx/6)**2+(dy/4)**2<=1) ink[(y+dy)*width+x+dx]=1
+  const image={width,height,ink,angle:0,staffs:[]}; const staff={top:40,gap:12}
+  const generic=findNoteCandidates(image,staff)
+  const key=findNoteCandidates(image,staff,'master-key')
+  expect(key.some((note)=>note.instrument==='Tom 1' && Math.abs(note.x-60)<4)).toBe(true)
+  expect(key.some((note)=>note.instrument==='Floor tom 2' && Math.abs(note.x-170)<4)).toBe(true)
+  expect(generic.some((note)=>note.instrument==='Tom 1')).toBe(false)
+})

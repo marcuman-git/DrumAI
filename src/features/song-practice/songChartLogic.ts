@@ -2,7 +2,7 @@ import { validChartReview } from './chartReviewLogic'
 import type { ChartReview } from './chartReviewLogic'
 import { validMix, validTraining } from './chartPracticeSettings'
 import type { ChartMix, ChartTraining } from './chartPracticeSettings'
-import { CHART_INSTRUMENTS, completeBar, notesFor } from './chartKit'
+import { CHART_INSTRUMENTS, completeBar, notesFor, isCoreInstrument } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 export { CHART_INSTRUMENTS, notesFor } from './chartKit'
 export type { ChartBar, ChartInstrument } from './chartKit'
@@ -22,7 +22,7 @@ export function isSongChart(value: unknown): value is SongChart {
   const chart = value as SongChart
   return typeof chart.id === 'string' && chart.id.length > 0 && chart.id.length <= 120 && typeof chart.title === 'string' && chart.title.trim().length > 0 && chart.title.length <= 80
     && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 16
-    && chart.bars.every((bar) => bar && CHART_INSTRUMENTS.every((instrument) => ((instrument === 'Crash' || instrument === 'Ride') && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note) => Number.isInteger(note) && note >= 0 && note <= 3))))
+    && chart.bars.every((bar) => bar && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note) => Number.isInteger(note) && note >= 0 && note <= 3))))
     && (chart.review === undefined || validChartReview(chart.review, chart.bars.length))
     && (chart.mix === undefined || validMix(chart.mix))
     && (chart.training === undefined || validTraining(chart.training))
