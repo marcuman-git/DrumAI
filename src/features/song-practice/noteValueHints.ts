@@ -36,6 +36,20 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
       inside = supported
     }
   }
+  // Short isolated flags may not span the longer beam window. Require a
+  // contiguous curved cluster near the stem tip, away from staff lines.
+  if (bands === 0 && best.length >= gap * 2) {
+    let rows = 0; let longest = 0
+    for (let index = 1; index <= gap * 1.4; index++) {
+      const y = Math.round(best.end - best.direction * index)
+      if (staffLines.some((line) => Math.abs(line - y) <= 1)) { rows = 0; continue }
+      let dark = 0
+      for (let dx = 3; dx <= Math.max(6, gap * 0.8); dx++) dark += at(best.x + dx, y)
+      rows = dark >= 3 ? rows + 1 : 0
+      longest = Math.max(longest, rows)
+    }
+    if (longest >= 3) bands = 1
+  }
   const left = Math.max(0, Math.floor(note.x - gap * 2)); const right = Math.min(width, Math.ceil(note.x + gap * 2))
   const top = Math.max(0, Math.floor(Math.min(note.y - gap * 0.6, best.end) - 3))
   const bottom = Math.min(height, Math.ceil(Math.max(note.y + gap * 0.6, best.end) + 3))

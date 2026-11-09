@@ -15,13 +15,13 @@ export function barSignature(bar: ChartBar): string {
   const core = [bar['Hi-hat'], bar.Snare, bar.Kick]
   const old = bar.Crash?.some(Boolean) || bar.Ride?.some(Boolean) ? [...core, bar.Crash ?? Array(16).fill(0), bar.Ride ?? Array(16).fill(0)] : core
   const extras = CHART_INSTRUMENTS.slice(5).filter((name) => notesFor(bar, name).some(Boolean)).map((name) => ({ name, notes: notesFor(bar, name) }))
-  return JSON.stringify(extras.length ? [...old, ...extras] : old)
+  return JSON.stringify(bar.rhythmEvents ? [...old, ...extras, { rhythmEvents: bar.rhythmEvents }] : extras.length ? [...old, ...extras] : old)
 }
 export function newChartReview(chart: SongChart): ChartReview { return { source: '', bars: chart.bars.map(() => ({ status: 'Pending', page: 1, notes: '', signature: '' })) } }
 export function validChartReview(value: unknown, length: number): value is ChartReview {
   if (!value || typeof value !== 'object') return false
   const review = value as ChartReview
-  return typeof review.source === 'string' && review.source.length <= 120 && Array.isArray(review.bars) && review.bars.length === length && review.bars.every((bar) => bar && ['Pending', 'Uncertain', 'Reviewed'].includes(bar.status) && Number.isInteger(bar.page) && bar.page >= 1 && bar.page <= 999 && typeof bar.notes === 'string' && bar.notes.length <= 500 && typeof bar.signature === 'string' && bar.signature.length <= 1200)
+  return typeof review.source === 'string' && review.source.length <= 120 && Array.isArray(review.bars) && review.bars.length === length && review.bars.every((bar) => bar && ['Pending', 'Uncertain', 'Reviewed'].includes(bar.status) && Number.isInteger(bar.page) && bar.page >= 1 && bar.page <= 999 && typeof bar.notes === 'string' && bar.notes.length <= 500 && typeof bar.signature === 'string' && bar.signature.length <= 24000)
 }
 export function reviewStatus(chart: SongChart, index: number): ReviewStatus {
   const review = chart.review?.bars[index]

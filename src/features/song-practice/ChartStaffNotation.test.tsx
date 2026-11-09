@@ -51,3 +51,12 @@ it('renders floor/rack toms, second bass and pedal hi-hat without separate stave
   expect(screen.getByTestId('staff-Kick 2-0')).toHaveAttribute('data-active','true')
   expect(screen.getByTestId('staff-Pedal hi-hat-0').querySelector('ellipse')).toBeNull()
 })
+it('renders reviewed durations without extra flags or continuation rests', async () => {
+  const { reviewedBar, fillReviewedRests } = await import('./reviewedRhythm')
+  const bar = reviewedBar(fillReviewedRests([{ instrument: 'Snare', step: 0, duration: 4, kind: 'note', dynamic: 2 }], 'Snare'))
+  render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={0} />)
+  expect(screen.getByLabelText('Snare slot 1: quarter note')).toBeInTheDocument()
+  expect(screen.getByTestId('review-stem-Snare-0').getAttribute('d')).not.toContain('q')
+  expect(screen.queryByTestId('review-rest-Snare-1')).not.toBeInTheDocument()
+  expect(screen.getByTestId('review-rest-Snare-4')).toBeInTheDocument()
+})

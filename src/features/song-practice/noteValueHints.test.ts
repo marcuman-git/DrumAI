@@ -34,3 +34,8 @@ it('does not count the five staff lines as beams and clips context at image edge
   const edge=inspectNoteValue(image,{top:60,gap:12},{...note,x:4,y:4})
   expect(edge.left).toBe(0); expect(edge.top).toBeGreaterThanOrEqual(0)
 })
+it('finds a short isolated flag that does not span the long beam window', () => {
+  const { image, note } = sample()
+  for (let y = 44; y <= 47; y++) for (let x = 79; x <= 84; x++) image.ink[y * image.width + x] = 1
+  expect(inspectNoteValue(image, { top: 60, gap: 12 }, note).value).toBe('eighth')
+})

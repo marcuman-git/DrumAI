@@ -1,3 +1,4 @@
+import { validReviewedBar } from './reviewedRhythm'
 import { validChartReview } from './chartReviewLogic'
 import type { ChartReview } from './chartReviewLogic'
 import { validMix, validTraining } from './chartPracticeSettings'
@@ -22,7 +23,7 @@ export function isSongChart(value: unknown): value is SongChart {
   const chart = value as SongChart
   return typeof chart.id === 'string' && chart.id.length > 0 && chart.id.length <= 120 && typeof chart.title === 'string' && chart.title.trim().length > 0 && chart.title.length <= 80
     && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 16
-    && chart.bars.every((bar) => bar && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note) => Number.isInteger(note) && note >= 0 && note <= 3))))
+    && chart.bars.every((bar) => bar && validReviewedBar(bar) && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note) => Number.isInteger(note) && note >= 0 && note <= 3))))
     && (chart.review === undefined || validChartReview(chart.review, chart.bars.length))
     && (chart.mix === undefined || validMix(chart.mix))
     && (chart.training === undefined || validTraining(chart.training))
@@ -34,7 +35,7 @@ export function isSongChart(value: unknown): value is SongChart {
 }
 export function cycleChartNote(chart: SongChart, bar: number, instrument: ChartInstrument, step: number): SongChart {
   const cycle = [0, 2, 1, 3]
-  return { ...chart, bars: chart.bars.map((row, index) => index === bar ? { ...row, [instrument]: notesFor(row, instrument).map((note, position) => position === step ? cycle[(cycle.indexOf(note) + 1) % cycle.length] : note) } : row) }
+  return { ...chart, bars: chart.bars.map((row, index) => index === bar ? { ...row, rhythmEvents: undefined, [instrument]: notesFor(row, instrument).map((note, position) => position === step ? cycle[(cycle.indexOf(note) + 1) % cycle.length] : note) } : row) }
 }
 export function loadSongCharts(): SongChart[] {
   try { const parsed: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]'); return Array.isArray(parsed) ? parsed.filter(isSongChart) : [] } catch { return [] }
