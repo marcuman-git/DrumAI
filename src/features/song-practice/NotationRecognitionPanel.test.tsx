@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
+const scanOptions = vi.hoisted(() => ({ multiBar: false }))
 vi.mock('./notationRecognition', async (original) => {
   const actual = await original<typeof import('./notationRecognition')>()
-  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: new Uint8Array(20000), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
+  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: (() => { const ink = new Uint8Array(20000); if (scanOptions.multiBar) for (const x of [65, 130]) for (let y = 40; y <= 80; y++) ink[y * 200 + x] = 1; return ink })(), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
 })
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); scanOptions.multiBar = false; vi.restoreAllMocks() })
 it('requires accepted candidates and acknowledgement before sending an editable draft', () => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
   const onDraft = vi.fn()
@@ -117,4 +118,15 @@ it('invalidates drafts after floor calibration controls change', () => {
   fireEvent.change(screen.getByLabelText('Notehead size'), { target: { value: '75' } })
   expect(screen.getByLabelText('Floor tom 1 staff offset')).toHaveValue(3.5)
   expect(screen.getByLabelText('Notehead size')).toHaveValue('75')
+})
+it('blocks multiple-bar regions rather than compressing them into a single draft', () => {
+  scanOptions.multiBar = true
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
+  render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Select all candidates' }))
+  fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+  expect(screen.getByText(/Multiple barline hints inside/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: 'Confirm reviewed bar' })).toBeNull()
 })

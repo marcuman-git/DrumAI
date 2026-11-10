@@ -2,7 +2,7 @@ import { inspectHatMark } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
 import { completeBar } from './chartKit'
 export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
-export interface RecognitionOptions { floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number }
+export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
@@ -56,8 +56,8 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   const headScale = options.headScale ?? 1
   if (!Number.isFinite(headScale) || headScale < 0.6 || headScale > 1.4) throw new Error('Invalid notehead scale.')
   const tolerance = options.tolerance ?? 0
-  if (!Number.isInteger(tolerance) || tolerance < 0 || tolerance > 4 || [options.floorTom1, options.floorTom2].some((offset) => offset !== undefined && (!Number.isFinite(offset) || offset < -1 || offset > 6))) throw new Error('Invalid recognition calibration.')
-  const key = `${staff.top}:${staff.gap}:${profile}:${tolerance}:${options.floorTom1}:${options.floorTom2}:${headScale}`; const cache = candidateCache.get(image)
+  if (!Number.isInteger(tolerance) || tolerance < 0 || tolerance > 4 || [options.floorTom1, options.floorTom2, options.kick, options.snare].some((offset) => offset !== undefined && (!Number.isFinite(offset) || offset < -1 || offset > 6))) throw new Error('Invalid recognition calibration.')
+  const key = `${staff.top}:${staff.gap}:${profile}:${tolerance}:${options.floorTom1}:${options.floorTom2}:${options.kick}:${options.snare}:${headScale}:${!!options.cleanHeads}`; const cache = candidateCache.get(image)
   const existing = cache?.get(key)
   if (existing) return existing.map((note) => ({ ...note }))
   const { width, height, ink } = image; const notes: NoteCandidate[] = []
@@ -67,6 +67,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   let ovalArea = 0
   for (let dy = -halfY; dy <= halfY; dy++) { let radius = 0; for (let dx = 0; dx <= halfX; dx++) if ((dx / halfX) ** 2 + (dy / halfY) ** 2 <= 1) radius = dx; oval.push([dy, radius]); ovalArea += radius * 2 + 1 }
   for (let dx = -halfX; dx <= halfX; dx++) for (const sign of [-1, 1]) cross.push([dx, Math.round(sign * dx / halfX * halfY)])
+  const staffLines = Array.from({ length: 5 }, (_, index) => staff.top + index * staff.gap)
   const rowSums = new Map<number, Uint32Array>()
   function rowPrefix(y: number) {
     if (y < 0 || y >= height) return null
@@ -80,9 +81,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
     : profile === 'master-key'
     ? [['Crash', -2], ['Crash', -1.5], ['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Pedal hi-hat', 4.5], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Tom 3', 2], ['Floor tom 1', 2.5], ['Floor tom 2', 3], ['Kick', 3.5], ['Kick 2', 4]]
     : [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ...Array.from({ length: 11 }, (_, index): [ChartInstrument, number] => { const offset = (index + 1) / 2; return [offset === 3.5 || offset >= 4.5 ? 'Kick' : 'Snare', offset] })]
-  const calibrated = levels.filter(([instrument, offset]) => !(options.floorTom1 !== undefined && (instrument === 'Floor tom 1' || offset === options.floorTom1)) && !(options.floorTom2 !== undefined && (instrument === 'Floor tom 2' || offset === options.floorTom2)))
-  if (options.floorTom1 !== undefined) calibrated.push(['Floor tom 1', options.floorTom1])
-  if (options.floorTom2 !== undefined) calibrated.push(['Floor tom 2', options.floorTom2])
+  const overrides: [ChartInstrument, number | undefined][] = [['Floor tom 1', options.floorTom1], ['Floor tom 2', options.floorTom2], ['Kick', options.kick], ['Snare', options.snare]]
+  const calibrated = levels.filter(([instrument, offset]) => !overrides.some(([name, value]) => value !== undefined && (instrument === name || (!['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat'].includes(instrument) && offset === value))))
+  for (const [name, offset] of overrides) if (offset !== undefined) calibrated.push([name, offset])
   for (const [instrument, offset] of calibrated) {
     const crossHead = ['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat'].includes(instrument)
     const y = Math.round(staff.top + offset * staff.gap)
@@ -90,10 +91,29 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
     for (let x = halfX; x < width - halfX; x++) {
       let bestScore = -1; let bestY = y
       for (let shift = -tolerance; shift <= tolerance; shift++) {
-        const centerY = y + shift; let dark = 0
+        const centerY = y + shift; let dark = 0; let area = ovalArea; let usefulRows = 0
         if (crossHead) { for (const [dx, dy] of cross) dark += Math.max(at(x + dx, centerY + dy - 1), at(x + dx, centerY + dy), at(x + dx, centerY + dy + 1)) }
-        else { for (const [dy, radius] of oval) { const sums = rowPrefix(centerY + dy); if (sums) dark += sums[x + radius + 1] - sums[x - radius] } }
-        const score = dark / (crossHead ? cross.length : ovalArea)
+        else { for (const [dy, radius] of oval) { const rowY = centerY + dy; const sums = rowPrefix(rowY)
+          if (options.cleanHeads && sums) {
+            const line = staffLines.some((line) => Math.abs(line - rowY) <= 1)
+            let extended = 0; let total = 0
+            for (let dx = halfX + 3; dx <= halfX + 8; dx++) { extended += at(x - dx, rowY) + at(x + dx, rowY); total += 2 }
+            if (line || extended / total > 0.35) { area -= radius * 2 + 1; continue }
+          }
+          if (sums) { dark += sums[x + radius + 1] - sums[x - radius]; usefulRows++ }
+        } }
+        let score = dark / (crossHead ? cross.length : area)
+        if (options.cleanHeads && !crossHead && (usefulRows < 3 || area < ovalArea * 0.3)) score = 0
+        if (options.cleanHeads && crossHead) { let core = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) core += at(x + dx, centerY + dy); if (core >= 8) score = 0 }
+        if (options.cleanHeads && !crossHead && score > 0) {
+          let mass = 0; let moment = 0
+          for (let dy = -halfY * 2; dy <= halfY * 2; dy++) {
+            const rowY = centerY + dy
+            if (staffLines.some((line) => Math.abs(line - rowY) <= 1)) continue
+            for (let dx = -halfX; dx <= halfX; dx++) { const value = at(x + dx, rowY); mass += value; moment += value * dy }
+          }
+          if (mass) score -= Math.abs(moment / mass) / (halfY * 4)
+        }
         if (score > bestScore || (score === bestScore && Math.abs(shift) < Math.abs(bestY - y))) { bestScore = score; bestY = centerY }
       }
       if (bestScore >= (crossHead ? 0.78 : 0.58)) peaks.push({ x, score: bestScore, y: bestY })
@@ -108,7 +128,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const result = notes.map((note) => { if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + 0.12 && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * 0.6)).sort((a, b) => a.x - b.x)
+  const result = notes.map((note) => { if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)
@@ -127,4 +147,11 @@ export function candidatesToBar(notes: NoteCandidate[], first: number, last: num
   const bar = completeBar()
   for (const note of notes) { const raw = (note.x - first) / (last - first) * 15; const step = Math.round(raw); if (step >= 0 && step < 16 && Math.abs(raw - step) <= 0.4) bar[note.instrument][step] = 2 }
   return bar
+}
+/** Distinct vertical-line hints inside slot guides; not confirmed measure parsing. */
+export function interiorBarlines(image: RecognitionImage, staff: StaffCandidate, first: number, last: number): number[] {
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) return []
+  const lines: number[] = []
+  for (const x of findBarlineHints(image, staff)) if (x > first + staff.gap && x < last - staff.gap && (!lines.length || x - lines[lines.length - 1] > staff.gap)) lines.push(x)
+  return lines
 }

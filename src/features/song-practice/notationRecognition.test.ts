@@ -97,3 +97,11 @@ it('calibrates narrow displaced floor-tom heads without retaining cached generic
   expect(() => findNoteCandidates(image, staff, 'generic', { tolerance: 20 })).toThrow()
   expect(() => findNoteCandidates(image, staff, 'generic', { headScale: 0.1 })).toThrow()
 })
+it('separates several internal barlines from one thick boundary', async () => {
+  const { interiorBarlines } = await import('./notationRecognition')
+  const width = 260; const height = 140; const ink = new Uint8Array(width * height)
+  for (const start of [65, 150]) for (let x = start; x < start + 5; x++) for (let y = 40; y <= 84; y++) ink[y * width + x] = 1
+  const image = { width, height, ink, angle: 0, staffs: [] }; const staff = { top: 40, gap: 11 }
+  expect(interiorBarlines(image, staff, 20, 240)).toHaveLength(2)
+  expect(interiorBarlines(image, staff, 20, 110)).toHaveLength(1)
+})
