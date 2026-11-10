@@ -11,3 +11,10 @@ it('detects controlled isolated rest templates and does not invent rests in blan
     expect(detectRestHints(image, { top: 20, gap: 10 })).toEqual([])
   }
 })
+it('suppresses template-like regions around supplied noteheads', () => {
+  const image: RecognitionImage = { width: 80, height: 70, ink: new Uint8Array(5600), angle: 0, staffs: [] }
+  REST_TEMPLATES[0].rows.forEach((row, dy) => [...row].forEach((value, dx) => { if (value === '1') image.ink[(12 + dy * 2) * 80 + 25 + dx * 2] = 1 }))
+  const staff = { top: 20, gap: 10 }
+  expect(detectRestHints(image, staff).length).toBeGreaterThan(0)
+  expect(detectRestHints(image, staff, [{ x: 31, y: 20 }])).toEqual([])
+})

@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
 vi.mock('./notationRecognition', async (original) => {
   const actual = await original<typeof import('./notationRecognition')>()
-  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: new Uint8Array(20000), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
+  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: new Uint8Array(20000), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
 })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 it('requires accepted candidates and acknowledgement before sending an editable draft', () => {
@@ -53,4 +53,24 @@ it('changes the instrument profile without inserting or retaining an accepted dr
   fireEvent.change(screen.getByLabelText('Recognition instrument profile'),{target:{value:'master-key'}})
   expect(screen.getByRole('button',{name:'Build draft preview'})).toBeDisabled()
   expect(onDraft).not.toHaveBeenCalled()
+})
+
+it('selects all, excludes unchecked heads from drafts, and invalidates stale previews', () => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
+  const onDraft = vi.fn()
+  render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} onDraft={onDraft} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Select all candidates' }))
+  expect(screen.getByText(/Selected 2.*2/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText(/Snare, x=20/))
+  fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+  fireEvent.click(screen.getByRole('button', { name: 'Build draft preview' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send draft to chart editor' }))
+  expect(onDraft.mock.calls[0][0].bar.Snare.every((value: number) => value === 0)).toBe(true)
+  expect(onDraft.mock.calls[0][0].bar.Kick[15]).toBe(2)
+  fireEvent.click(screen.getByRole('button', { name: 'Clear candidate selection' }))
+  expect(screen.getByText(/Selected 0.*2/)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Send draft to chart editor' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
 })
