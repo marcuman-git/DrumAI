@@ -1,3 +1,4 @@
+import { CandidateNavigator } from './CandidateNavigator'
 import { alignedCandidates, selectedCandidates } from './candidateSelection'
 import { ReviewedNotationPanel } from './ReviewedNotationPanel'
 import { RhythmReview } from './RhythmReview'
@@ -12,6 +13,8 @@ import { DRUM_KEY_REFERENCE } from './drumKeyReference'
 export function NotationRecognitionPanel({ pixels, width, height, source, page, onDraft }: { pixels: Uint8ClampedArray; width: number; height: number; source: string; page: number; onDraft?: (draft: RecognitionDraft) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const analysisCache = useRef<{ pixels: Uint8ClampedArray; width: number; height: number; threshold: number; angle: string; result: RecognitionImage } | null>(null)
+  const [focusedId, setFocusedId] = useState<number | null>(null)
+  const [showNumbers, setShowNumbers] = useState(true)
   const [elapsed, setElapsed] = useState<number | null>(null)
   const [reused, setReused] = useState(false)
   const [image, setImage] = useState<RecognitionImage | null>(null)
@@ -34,6 +37,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   const alignedNotes = alignedCandidates(checkedNotes, width * first / 100, width * last / 100)
   const barlineCount = useMemo(() => image && staff ? findBarlineHints(image, staff).length : 0, [image, staff])
   useEffect(() => {
+    setFocusedId(null)
     analysisCache.current = null
     setImage(null); setStaff(null); setStaffIndex(0); setNotes([]); setAccepted([]); setDraft(null); setConfirmed(false); setElapsed(null); setReused(false)
     setMessage('New crop ready. Detect candidates and check them before building a draft.')
@@ -56,7 +60,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   function chooseStaff(result: RecognitionImage, selected: StaffCandidate) {
     const candidates = findNoteCandidates(result, selected, profile)
     const hints = Object.fromEntries(candidates.map((note) => [note.id, inspectNoteValue(result, selected, note)]))
-    setValueHints(hints); setStaff(selected); setNotes(candidates); setAccepted([]); setDraft(null); setConfirmed(false); draw(result, selected, candidates, hints)
+    setFocusedId(null); setValueHints(hints); setStaff(selected); setNotes(candidates); setAccepted([]); setDraft(null); setConfirmed(false); draw(result, selected, candidates, hints)
   }
   function scan(force = false) {
     const started = performance.now()
@@ -93,7 +97,15 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
     <p className="text-xs text-amber-100">Dashed blue boxes inspect wider stem/beam context. Quarter/eighth/sixteenth labels are possible values, not confirmed rhythm transcription. Flags, ties, dots and overlapping voices can mislead these hints; draft timing still uses your slot-center guides.</p>
     {elapsed !== null && <p className="text-xs text-zinc-300">Last scan: {Math.round(elapsed)} ms{reused ? ' (staff analysis reused)' : ''}. This is processing time, not recognition accuracy. Changing the crop, threshold or skew triggers fresh staff analysis.</p>}
     <p className="text-xs text-zinc-300">Crop: {width} x {height} pixels. Candidate x positions use this crop. Green guides mark your first/last slot centers, not automatically detected bar boundaries.</p>
-    <div className="relative"><canvas ref={canvas} aria-label="Recognition candidate overlay" className="block h-auto w-full rounded bg-white" /><div className="pointer-events-none absolute inset-y-0 border-l-2 border-dashed border-emerald-500" style={{ left: first + '%' }} /><div className="pointer-events-none absolute inset-y-0 border-l-2 border-dashed border-emerald-500" style={{ left: last + '%' }} /></div>
+    <label className="block text-sm"><input type="checkbox" checked={showNumbers} onChange={(event) => setShowNumbers(event.target.checked)} /> Show candidate numbers</label>
+    <p className="text-xs text-zinc-300">Overlay numbers: amber unchecked, green checked, cyan focused. Click a number to locate its row without checking it.</p>
+    <div className="relative"><canvas ref={canvas} aria-label="Recognition candidate overlay" className="block h-auto w-full rounded bg-white" />
+      {image && showNumbers && notes.map((note) => {
+        const y = note.y + Math.tan(image.angle * Math.PI / 180) * (note.x - width / 2)
+        return <button key={note.id} aria-label={`Locate candidate ${note.id + 1}`} aria-pressed={focusedId === note.id} onClick={() => setFocusedId(note.id)} style={{ left: `${Math.max(0, Math.min(97, note.x / width * 100))}%`, top: `${Math.max(0, Math.min(92, (y - 8) / height * 100))}%` }} className={`absolute z-10 rounded border px-1 text-xs font-bold shadow ${focusedId === note.id ? 'border-cyan-100 bg-cyan-800 text-white' : accepted.includes(note.id) ? 'border-emerald-200 bg-emerald-900 text-white' : 'border-amber-200 bg-amber-950 text-amber-100'}`}>#{note.id + 1}</button>
+      })}
+      <div className="pointer-events-none absolute inset-y-0 border-l-2 border-dashed border-emerald-500" style={{ left: first + '%' }} /><div className="pointer-events-none absolute inset-y-0 border-l-2 border-dashed border-emerald-500" style={{ left: last + '%' }} />
+    </div>
     {image && <>
       {image.staffs.length > 0 && <label className="block text-sm">Detected staff<select aria-label="Detected staff" value={staffIndex} onChange={(event) => { const index = Number(event.target.value); setStaffIndex(index); setManualStaff(false); chooseStaff(image, image.staffs[index]) }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2">{image.staffs.map((_, index) => <option key={index} value={index}>Staff {index + 1}</option>)}</select></label>}
       <div className="grid gap-2 sm:grid-cols-2"><label className="text-sm">Staff top (crop pixels)<input aria-label="Manual staff top" type="number" min={0} max={height - 1} value={staff?.top ?? Math.round(height / 3)} onChange={(event) => { const top = Number(event.target.value); if (top >= 0 && top < height) { setNotes([]); setValueHints({}); setManualStaff(true); setStaff({ top, gap: staff?.gap ?? 10 }); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label><label className="text-sm">Line spacing (pixels)<input aria-label="Manual staff spacing" type="number" min={4} max={80} value={staff?.gap ?? 10} onChange={(event) => { const gap = Number(event.target.value); if (gap >= 4 && gap <= 80) { setNotes([]); setValueHints({}); setManualStaff(true); setStaff({ top: staff?.top ?? Math.round(height / 3), gap }); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label></div>
@@ -101,7 +113,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
       {staff && <p className="text-xs text-zinc-300">Barline hints: {barlineCount}. Stem/beam hints are diagnostic only; durations are not automatically assigned and rest symbols are not recognized. Candidate strength is not a probability of correctness.</p>}
       <div className="flex flex-wrap items-center gap-2"><button disabled={!notes.length} onClick={() => { setAccepted(notes.map((note) => note.id)); setDraft(null); setConfirmed(false) }} className="rounded border border-cyan-300/40 bg-cyan-900/30 px-3 py-2 disabled:opacity-40">Select all candidates</button><button disabled={!accepted.length} onClick={() => { setAccepted([]); setDraft(null); setConfirmed(false) }} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Clear candidate selection</button><span className="text-xs text-zinc-300">Selected {checkedNotes.length} / {notes.length}. {checkedNotes.length - alignedNotes.length} cannot align to the current slot guides.</span></div>
       <p className="text-xs text-amber-100">Select all is a convenience, not verification. Uncheck false detections. Build draft preview uses only checked candidates that align to your slot guides.</p>
-      <div className="max-h-56 overflow-y-auto rounded border border-white/20 p-2">{notes.length ? notes.map((note) => <label key={note.id} className="block text-xs"><input type="checkbox" checked={accepted.includes(note.id)} onChange={(event) => { setAccepted((values) => event.target.checked ? [...values, note.id] : values.filter((id) => id !== note.id)); setDraft(null); setConfirmed(false) }} /> {note.sourceLabel ?? note.instrument}, x={note.x}, {note.shape}; shape strength {Math.round(note.strength * 100)}%, stem {note.stemHint ? 'possible' : 'unknown'}, flags {note.flagHint ? 'possible' : 'unknown'}; value {valueHints[note.id]?.value ?? 'unknown'} (possible), beams {valueHints[note.id]?.beamBands ?? 0} <select aria-label={`Map candidate ${note.id}`} value={note.instrument} onChange={(event) => { setNotes((values) => values.map((item) => item.id === note.id ? { ...item, instrument: event.target.value as typeof item.instrument } : item)); setDraft(null); setConfirmed(false) }} className="rounded bg-zinc-900 p-1">{CHART_INSTRUMENTS.map((instrument) => <option key={instrument}>{instrument}</option>)}</select></label>) : <p className="text-sm">No candidates. Adjust the crop or staff geometry; no notes will be invented.</p>}</div>
+      <CandidateNavigator notes={notes} accepted={accepted} hints={valueHints} focusedId={focusedId} onFocus={setFocusedId} onAccept={(id, checked) => { setAccepted((values) => checked ? [...new Set([...values, id])] : values.filter((value) => value !== id)); setDraft(null); setConfirmed(false) }} onMap={(id, instrument) => { setNotes((values) => values.map((note) => note.id === id ? { ...note, instrument } : note)); setDraft(null); setConfirmed(false) }} />
       <div className="grid gap-2 sm:grid-cols-2">{(['first', 'last'] as const).map((key) => <label key={key} className="text-sm">{key === 'first' ? 'Slot 1 center' : 'Slot 16 center'} (% of crop width)<input aria-label={key === 'first' ? 'First slot center' : 'Last slot center'} type="number" min={0} max={100} value={key === 'first' ? first : last} onChange={(event) => { const value = Number(event.target.value); if (value >= 0 && value <= 100) { if (key === 'first') setFirst(value); else setLast(value); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label>)}</div>
       <ReviewedNotationPanel key={JSON.stringify([source, page, staff, profile, notes, accepted, first, last])} notes={checkedNotes} hints={valueHints} first={width * first / 100} last={width * last / 100} image={image} staff={staff} onInvalidate={() => { setDraft(null); setConfirmed(false) }} onConfirm={(bar) => { setDraft(bar); setConfirmed(true); setMessage('Duration-reviewed draft ready. Send explicitly to the chart editor.') }} />
       <RhythmReview notes={checkedNotes} hints={valueHints} first={width * first / 100} last={width * last / 100} />
