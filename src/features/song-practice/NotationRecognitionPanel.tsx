@@ -5,7 +5,7 @@ import { ReviewedNotationPanel } from './ReviewedNotationPanel'
 import { RhythmReview } from './RhythmReview'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { analyzeStaffs, candidatesToBar, findBarlineHints, findNoteCandidates } from './notationRecognition'
-import type { NoteCandidate, RecognitionDraft, RecognitionImage, RecognitionProfile, StaffCandidate } from './notationRecognition'
+import type { NoteCandidate, RecognitionDraft, RecognitionImage, RecognitionProfile, RecognitionOptions, StaffCandidate } from './notationRecognition'
 import { CHART_INSTRUMENTS, notesFor } from './songChartLogic'
 import type { ChartBar } from './songChartLogic'
 import { inspectNoteValue } from './noteValueHints'
@@ -14,6 +14,11 @@ import { DRUM_KEY_REFERENCE } from './drumKeyReference'
 export function NotationRecognitionPanel({ pixels, width, height, source, page, onDraft }: { pixels: Uint8ClampedArray; width: number; height: number; source: string; page: number; onDraft?: (draft: RecognitionDraft) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const analysisCache = useRef<{ pixels: Uint8ClampedArray; width: number; height: number; threshold: number; angle: string; result: RecognitionImage } | null>(null)
+  const [floorCalibration, setFloorCalibration] = useState(false)
+  const [floorOne, setFloorOne] = useState(2.5)
+  const [floorTwo, setFloorTwo] = useState(3)
+  const [headScale, setHeadScale] = useState(1)
+  const [headTolerance, setHeadTolerance] = useState(2)
   const [excludeClef, setExcludeClef] = useState(true)
   const [focusedId, setFocusedId] = useState<number | null>(null)
   const [showNumbers, setShowNumbers] = useState(true)
@@ -60,9 +65,9 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
       ctx.strokeStyle = '#d97706'; const y = note.y + slope * (note.x - width / 2); ctx.strokeRect(note.x - 6, y - 5, 12, 10)
     }
   }
-  function chooseStaff(result: RecognitionImage, selected: StaffCandidate, omitClef = excludeClef) {
+  function chooseStaff(result: RecognitionImage, selected: StaffCandidate, omitClef = excludeClef, calibration: RecognitionOptions = { headScale, tolerance: profile === 'generic' && !floorCalibration ? 0 : headTolerance, ...(floorCalibration ? { floorTom1: floorOne, floorTom2: floorTwo } : {}) }) {
     const clef = omitClef ? percussionClefHint(result, selected) : null
-    const candidates = findNoteCandidates(result, selected, profile).filter((note) => !clef || note.x < clef.left || note.x > clef.right)
+    const candidates = findNoteCandidates(result, selected, profile, calibration).filter((note) => !clef || note.x < clef.left || note.x > clef.right)
     const hints = Object.fromEntries(candidates.map((note) => [note.id, inspectNoteValue(result, selected, note)]))
     setFocusedId(null); setValueHints(hints); setStaff(selected); setNotes(candidates); setAccepted([]); setDraft(null); setConfirmed(false); draw(result, selected, candidates, hints)
   }
@@ -96,6 +101,14 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
     <p className="text-sm text-amber-100">Include space above and below the staff in your crop. Generic-profile crosses start with a Hi-hat suggestion; the Master Drum Key profile suggests cymbal and pedal voices by position. Verify every instrument against your chart legend. Clefs are structural symbols, not strokes; exclude them from accepted candidates.</p>
     <p className="text-sm text-amber-100">Not production transcription. Candidates can be wrong. Only one evenly spaced 4/4 bar with heads inside and below the staff is supported. Empty slots become guessed rests. Tuplets, variable spacing, flams, drags, ties, repeats, ghost notes and accents are not automatically interpreted.</p>
     <div className="grid gap-2 sm:grid-cols-2"><label className="text-sm">Ink threshold {threshold}<input aria-label="Recognition threshold" type="range" min={40} max={230} value={threshold} onChange={(event) => { setThreshold(Number(event.target.value)); setImage(null); setNotes([]); setAccepted([]); setConfirmed(false); setDraft(null) }} className="block w-full" /></label><label className="text-sm">Skew angle (blank = auto)<input aria-label="Recognition skew" type="number" min={-5} max={5} step={0.5} value={angle} onChange={(event) => { if (event.target.value === '' || (Number(event.target.value) >= -5 && Number(event.target.value) <= 5)) { setAngle(event.target.value); setImage(null); setNotes([]); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label></div>
+    <fieldset className="space-y-2 rounded border border-cyan-300/30 p-3"><legend className="text-sm font-semibold">Floor-tom calibration</legend>
+      <label className="block text-sm"><input type="checkbox" checked={floorCalibration} onChange={(event) => { setFloorCalibration(event.target.checked); setNotes([]); setAccepted([]); setDraft(null); setConfirmed(false); setMessage('Calibration changed. Detect again with the source staff positions.') }} /> Use calibrated floor-tom positions</label>
+      <div className="grid gap-2 sm:grid-cols-2">{([1, 2] as const).map((number) => <label key={number} className="text-sm">Floor tom {number} staff offset<input aria-label={`Floor tom ${number} staff offset`} type="number" min={-1} max={6} step={0.5} value={number === 1 ? floorOne : floorTwo} onChange={(event) => { const value = Number(event.target.value); if (value >= -1 && value <= 6) { if (number === 1) setFloorOne(value); else setFloorTwo(value); setNotes([]); setAccepted([]); setDraft(null); setConfirmed(false) } }} className="ml-2 w-20 rounded bg-zinc-900 p-2" /></label>)}</div>
+      <label className="block text-sm">Head-position tolerance {headTolerance} px<input aria-label="Head-position tolerance" type="range" min={0} max={4} value={headTolerance} onChange={(event) => { setHeadTolerance(Number(event.target.value)); setNotes([]); setAccepted([]); setDraft(null); setConfirmed(false) }} className="block w-full" /></label>
+      <label className="block text-sm">Notehead size {Math.round(headScale * 100)}%<input aria-label="Notehead size" type="range" min={60} max={140} step={5} value={Math.round(headScale * 100)} onChange={(event) => { setHeadScale(Number(event.target.value) / 100); setNotes([]); setAccepted([]); setDraft(null); setConfirmed(false) }} className="block w-full" /></label>
+      <p className="text-xs text-amber-100">Use 100% first. If filled heads are smaller than the detector boxes, try 60-80%; larger values fit wider heads. Smaller templates may mistake stems or text for notes. Rescan and verify.</p>
+      <p className="text-xs text-amber-100">Offsets count line spacings down from the top: 2.5 is between lines 3 and 4; 3 is line 4. Match the chart legend. Calibration replaces other suggestions at those positions. Tolerance can help displaced heads but add false detections. Generic mode stays strict unless calibration is enabled. Detect again after changes.</p>
+    </fieldset>
     <div className="flex flex-wrap gap-2"><button onClick={() => scan()} className="rounded border border-cyan-200/40 px-3 py-2">Detect staffs and note candidates</button><button onClick={() => scan(true)} className="rounded border border-white/25 px-3 py-2">Run fresh detection</button></div>
     <p className="text-xs text-zinc-300">Completed scans: {scanCount}. Repeated detection retains edited staff geometry; fresh detection bypasses the pixel cache. Identical input may correctly produce identical boxes.</p>
     <p className="text-xs text-amber-100">Dashed blue boxes inspect wider stem/beam context. Quarter/eighth/sixteenth labels are possible values, not confirmed rhythm transcription. Flags, ties, dots and overlapping voices can mislead these hints; draft timing still uses your slot-center guides.</p>

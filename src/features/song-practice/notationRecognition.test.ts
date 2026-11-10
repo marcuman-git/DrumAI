@@ -86,3 +86,14 @@ it('maps the floor-tom space from both supplied beginner guides', () => {
   const notes = findNoteCandidates({ width, height, ink, angle: 0, staffs: [] }, { top: 40, gap: 12 }, 'guide-kit')
   expect(notes.some((note) => note.instrument === 'Floor tom 1' && Math.abs(note.x - 120) < 4)).toBe(true)
 })
+it('calibrates narrow displaced floor-tom heads without retaining cached generic mappings', () => {
+  const width = 220; const height = 140; const ink = new Uint8Array(width * height)
+  for (let dx = -3; dx <= 3; dx++) for (let dy = -2; dy <= 2; dy++) if ((dx / 3) ** 2 + (dy / 2) ** 2 <= 1) ink[(72 + dy) * width + 100 + dx] = 1
+  const image = { width, height, ink, angle: 0, staffs: [] }; const staff = { top: 40, gap: 12 }
+  const original = findNoteCandidates(image, staff)
+  const calibrated = findNoteCandidates(image, staff, 'generic', { floorTom1: 2.5, floorTom2: 3, tolerance: 2, headScale: 0.6 })
+  expect(calibrated.some((note) => note.instrument === 'Floor tom 1' && Math.abs(note.x - 100) < 4)).toBe(true)
+  expect(findNoteCandidates(image, staff)).toEqual(original)
+  expect(() => findNoteCandidates(image, staff, 'generic', { tolerance: 20 })).toThrow()
+  expect(() => findNoteCandidates(image, staff, 'generic', { headScale: 0.1 })).toThrow()
+})

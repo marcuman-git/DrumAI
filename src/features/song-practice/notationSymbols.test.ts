@@ -16,3 +16,11 @@ it('distinguishes a hollow open-circle hint from a filled marker', () => {
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) sample.ink[(center + dy) * 240 + x + dx] = 1
   expect(hasOpenHatRing(sample, staff, x, y)).toBe(false)
 })
+it('searches higher open markers and distinguishes crossed half-open circles', async () => {
+  const { inspectHatMark } = await import('./notationSymbols')
+  const sample = image(); const staff = { top: 40, gap: 10 }; const x = 100; const y = 55; const center = 25
+  for (let step = 0; step < 24; step++) { const angle = step / 24 * Math.PI * 2; sample.ink[Math.round(center + Math.sin(angle) * 4) * 240 + Math.round(x + Math.cos(angle) * 4)] = 1 }
+  expect(inspectHatMark(sample, staff, x, y)).toBe('open')
+  for (let dy = -6; dy <= 6; dy++) sample.ink[(center + dy) * 240 + x] = 1
+  expect(inspectHatMark(sample, staff, x, y)).toBe('half-open')
+})
