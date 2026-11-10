@@ -12,7 +12,7 @@ export function importMusicXml(xml: string): SongChart {
   for (const item of document.querySelectorAll('score-part > midi-instrument')) {
     const midi = Number(text(item, 'midi-unpitched'))
     // MusicXML midi-unpitched is one-based (GM drum-note number plus one).
-    const gm: Record<number, ChartInstrument> = { 36: 'Kick 2', 37: 'Kick', 39: 'Snare', 41: 'Snare', 42: 'Floor tom 2', 44: 'Floor tom 1', 46: 'Tom 3', 48: 'Tom 2', 49: 'Tom 2', 51: 'Tom 1', 43: 'Hi-hat', 45: 'Pedal hi-hat', 47: 'Hi-hat', 50: 'Crash', 58: 'Crash', 52: 'Ride', 54: 'Ride', 60: 'Ride' }
+    const gm: Record<number, ChartInstrument> = { 36: 'Kick 2', 37: 'Kick', 39: 'Snare', 41: 'Snare', 42: 'Floor tom 2', 44: 'Floor tom 1', 46: 'Tom 3', 48: 'Tom 2', 49: 'Tom 2', 51: 'Tom 1', 43: 'Hi-hat', 45: 'Pedal hi-hat', 47: 'Open hi-hat', 50: 'Crash', 58: 'Crash', 52: 'Ride', 54: 'Ride', 60: 'Ride' }
     const instrument = gm[midi]
     if (instrument) mapping.set(item.getAttribute('id') ?? '', instrument)
   }

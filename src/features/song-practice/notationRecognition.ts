@@ -1,6 +1,7 @@
+import { hasOpenHatRing } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
 import { completeBar } from './chartKit'
-export type RecognitionProfile = 'generic' | 'master-key'
+export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
@@ -69,7 +70,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
     return sums
   }
   // Cymbal positions vary by publisher; retain their position for manual identification.
-  const levels: [ChartInstrument, number][] = profile === 'master-key'
+  const levels: [ChartInstrument, number][] = profile === 'guide-kit'
+    ? [['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Floor tom 1', 2.5], ['Kick', 3.5], ['Pedal hi-hat', 4.5]]
+    : profile === 'master-key'
     ? [['Crash', -2], ['Crash', -1.5], ['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Pedal hi-hat', 4.5], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Tom 3', 2], ['Floor tom 1', 2.5], ['Floor tom 2', 3], ['Kick', 3.5], ['Kick 2', 4]]
     : [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ...Array.from({ length: 11 }, (_, index): [ChartInstrument, number] => { const offset = (index + 1) / 2; return [offset === 3.5 || offset >= 4.5 ? 'Kick' : 'Snare', offset] })]
   for (const [instrument, offset] of levels) {
@@ -88,12 +91,12 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
       if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * 1.1)) continue
       let stem = 0; for (let dy = 4; dy < staff.gap * 3; dy++) stem += at(peak.x + halfX, y - dy)
       let flags = 0; for (let dx = 3; dx < staff.gap; dx++) flags += at(peak.x + halfX + dx, y - staff.gap * 2)
-      notes.push({ id: notes.length, x: peak.x, y, instrument, sourceLabel: profile === 'master-key' ? `${instrument} key-profile suggestion (staff offset ${offset}; verify)` : instrument === 'Hi-hat' ? `Cymbal/Hi-hat candidate (staff offset ${offset})` : `${instrument} suggestion (staff offset ${offset}; verify instrument)`, shape: crossHead ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
+      notes.push({ id: notes.length, x: peak.x, y, instrument, sourceLabel: profile === 'guide-kit' ? `${instrument} supplied-guide suggestion (staff offset ${offset}; verify)` : profile === 'master-key' ? `${instrument} key-profile suggestion (staff offset ${offset}; verify)` : instrument === 'Hi-hat' ? `Cymbal/Hi-hat candidate (staff offset ${offset})` : `${instrument} suggestion (staff offset ${offset}; verify instrument)`, shape: crossHead ? 'cross' : 'oval', strength: peak.score, stemHint: stem > staff.gap, flagHint: flags > 2 })
     }
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const result = notes.filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + 0.12 && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * 0.6)).sort((a, b) => a.x - b.x)
+  const result = notes.map((note) => note.instrument === 'Hi-hat' && hasOpenHatRing(image, staff, note.x, note.y) ? { ...note, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : note).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + 0.12 && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * 0.6)).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)

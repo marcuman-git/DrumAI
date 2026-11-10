@@ -40,3 +40,14 @@ it('preserves hidden selections and navigates the filtered list only', () => {
   expect(screen.getAllByRole('checkbox', { name: /Snare, x=20/ })[0]).toBeChecked()
   expect(onAccept).not.toHaveBeenCalled()
 })
+it('filters by instrument without clearing hidden checked rows', () => {
+  const onAccept = vi.fn()
+  const kitNotes: NoteCandidate[] = [{ ...notes[0], instrument: 'Floor tom 1' }, { ...notes[1], instrument: 'Open hi-hat' }]
+  render(<CandidateNavigator notes={kitNotes} accepted={[3, 9]} hints={{}} focusedId={3} onFocus={vi.fn()} onAccept={onAccept} onMap={vi.fn()} />)
+  fireEvent.change(screen.getByLabelText('Instrument filter'), { target: { value: 'Open hi-hat' } })
+  expect(screen.queryByTestId('candidate-row-3')).toBeNull()
+  expect(screen.getByTestId('candidate-row-9')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Show all candidates' }))
+  expect(screen.getByRole('checkbox', { name: /Floor tom 1, x=20/ })).toBeChecked()
+  expect(onAccept).not.toHaveBeenCalled()
+})

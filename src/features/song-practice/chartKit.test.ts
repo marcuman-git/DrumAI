@@ -40,3 +40,10 @@ it('retains optional tom, second-bass and pedal rows through chart JSON', () => 
   expect(isSongChart({ ...chart, bars: [{ ...bar, 'Tom 1': [0] }] })).toBe(false)
   expect(isSongChart({ ...chart, bars: [{ ...bar, 'Pedal hi-hat': null }] })).toBe(false)
 })
+it('preserves open hi-hat notes while older charts omit the optional row', () => {
+  const chart = newSongChart(); chart.bars[0]['Open hi-hat']![0] = 2
+  expect(parseSongChart(JSON.stringify({ app: 'DrumMaster AI Chart', schema: 1, chart })).bars[0]['Open hi-hat']![0]).toBe(2)
+  const legacy = structuredClone(chart); delete legacy.bars[0]['Open hi-hat']
+  expect(isSongChart(legacy)).toBe(true)
+  expect(notesFor(legacy.bars[0], 'Open hi-hat')).toEqual(Array(16).fill(0))
+})

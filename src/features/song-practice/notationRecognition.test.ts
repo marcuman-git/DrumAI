@@ -73,3 +73,16 @@ it('maps supplied-key tom positions separately without changing the generic prof
   expect(key.some((note)=>note.instrument==='Floor tom 2' && Math.abs(note.x-170)<4)).toBe(true)
   expect(generic.some((note)=>note.instrument==='Tom 1')).toBe(false)
 })
+it('detects both floor-tom key positions on controlled heads', () => {
+  const width = 260; const height = 150; const ink = new Uint8Array(width * height)
+  for (const [x, y] of [[70, 70], [180, 76]]) for (let dx = -6; dx <= 6; dx++) for (let dy = -4; dy <= 4; dy++) if ((dx / 6) ** 2 + (dy / 4) ** 2 <= 1) ink[(y + dy) * width + x + dx] = 1
+  const notes = findNoteCandidates({ width, height, ink, angle: 0, staffs: [] }, { top: 40, gap: 12 }, 'master-key')
+  expect(notes.some((note) => note.instrument === 'Floor tom 1' && Math.abs(note.x - 70) < 4)).toBe(true)
+  expect(notes.some((note) => note.instrument === 'Floor tom 2' && Math.abs(note.x - 180) < 4)).toBe(true)
+})
+it('maps the floor-tom space from both supplied beginner guides', () => {
+  const width = 260; const height = 150; const ink = new Uint8Array(width * height)
+  for (let dx = -6; dx <= 6; dx++) for (let dy = -4; dy <= 4; dy++) if ((dx / 6) ** 2 + (dy / 4) ** 2 <= 1) ink[(70 + dy) * width + 120 + dx] = 1
+  const notes = findNoteCandidates({ width, height, ink, angle: 0, staffs: [] }, { top: 40, gap: 12 }, 'guide-kit')
+  expect(notes.some((note) => note.instrument === 'Floor tom 1' && Math.abs(note.x - 120) < 4)).toBe(true)
+})

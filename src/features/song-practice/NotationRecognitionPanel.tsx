@@ -1,3 +1,4 @@
+import { percussionClefHint } from './notationSymbols'
 import { CandidateNavigator } from './CandidateNavigator'
 import { alignedCandidates, selectedCandidates } from './candidateSelection'
 import { ReviewedNotationPanel } from './ReviewedNotationPanel'
@@ -13,6 +14,7 @@ import { DRUM_KEY_REFERENCE } from './drumKeyReference'
 export function NotationRecognitionPanel({ pixels, width, height, source, page, onDraft }: { pixels: Uint8ClampedArray; width: number; height: number; source: string; page: number; onDraft?: (draft: RecognitionDraft) => void }) {
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const analysisCache = useRef<{ pixels: Uint8ClampedArray; width: number; height: number; threshold: number; angle: string; result: RecognitionImage } | null>(null)
+  const [excludeClef, setExcludeClef] = useState(true)
   const [focusedId, setFocusedId] = useState<number | null>(null)
   const [showNumbers, setShowNumbers] = useState(true)
   const [elapsed, setElapsed] = useState<number | null>(null)
@@ -35,6 +37,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   const [message, setMessage] = useState('Experimental: select exactly one bar. Instrument suggestions need checking; evenly spaced 16 slots are required.')
   const checkedNotes = selectedCandidates(notes, accepted)
   const alignedNotes = alignedCandidates(checkedNotes, width * first / 100, width * last / 100)
+  const clefHint = useMemo(() => image && staff ? percussionClefHint(image, staff) : null, [image, staff])
   const barlineCount = useMemo(() => image && staff ? findBarlineHints(image, staff).length : 0, [image, staff])
   useEffect(() => {
     setFocusedId(null)
@@ -57,8 +60,9 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
       ctx.strokeStyle = '#d97706'; const y = note.y + slope * (note.x - width / 2); ctx.strokeRect(note.x - 6, y - 5, 12, 10)
     }
   }
-  function chooseStaff(result: RecognitionImage, selected: StaffCandidate) {
-    const candidates = findNoteCandidates(result, selected, profile)
+  function chooseStaff(result: RecognitionImage, selected: StaffCandidate, omitClef = excludeClef) {
+    const clef = omitClef ? percussionClefHint(result, selected) : null
+    const candidates = findNoteCandidates(result, selected, profile).filter((note) => !clef || note.x < clef.left || note.x > clef.right)
     const hints = Object.fromEntries(candidates.map((note) => [note.id, inspectNoteValue(result, selected, note)]))
     setFocusedId(null); setValueHints(hints); setStaff(selected); setNotes(candidates); setAccepted([]); setDraft(null); setConfirmed(false); draw(result, selected, candidates, hints)
   }
@@ -87,7 +91,7 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
   }
   return <section className="space-y-3 rounded-lg border border-amber-200/40 bg-amber-950/15 p-3" aria-label="Experimental notation recognition">
     <h4 className="font-semibold">Experimental Region-to-Chart Prototype</h4>
-    <label className="block text-sm">Instrument-position profile<select aria-label="Recognition instrument profile" value={profile} onChange={(event) => { setProfile(event.target.value as RecognitionProfile); setNotes([]); setValueHints({}); setAccepted([]); setDraft(null); setConfirmed(false); setMessage('Profile changed. Detect again; existing chart notes are unchanged.') }} className="mt-1 block w-full rounded border border-white/25 bg-zinc-900 p-2"><option value="generic">Generic positions (verify mapping)</option><option value="master-key">Supplied Master Drum Key</option></select></label>
+    <label className="block text-sm">Instrument-position profile<select aria-label="Recognition instrument profile" value={profile} onChange={(event) => { setProfile(event.target.value as RecognitionProfile); setNotes([]); setValueHints({}); setAccepted([]); setDraft(null); setConfirmed(false); setMessage('Profile changed. Detect again; existing chart notes are unchanged.') }} className="mt-1 block w-full rounded border border-white/25 bg-zinc-900 p-2"><option value="generic">Generic positions (verify mapping)</option><option value="master-key">Supplied Master Drum Key</option><option value="guide-kit">Supplied beginner notation guides</option></select></label>
     <p className="text-xs text-amber-100">Use Master Drum Key only when the source follows that legend. It suggests tom, bass and pedal-hi-hat rows, not guaranteed identities. Splash/China/second crash and articulations still require interpretation.</p>
     <p className="text-sm text-amber-100">Include space above and below the staff in your crop. Generic-profile crosses start with a Hi-hat suggestion; the Master Drum Key profile suggests cymbal and pedal voices by position. Verify every instrument against your chart legend. Clefs are structural symbols, not strokes; exclude them from accepted candidates.</p>
     <p className="text-sm text-amber-100">Not production transcription. Candidates can be wrong. Only one evenly spaced 4/4 bar with heads inside and below the staff is supported. Empty slots become guessed rests. Tuplets, variable spacing, flams, drags, ties, repeats, ghost notes and accents are not automatically interpreted.</p>
@@ -111,6 +115,9 @@ export function NotationRecognitionPanel({ pixels, width, height, source, page, 
       <div className="grid gap-2 sm:grid-cols-2"><label className="text-sm">Staff top (crop pixels)<input aria-label="Manual staff top" type="number" min={0} max={height - 1} value={staff?.top ?? Math.round(height / 3)} onChange={(event) => { const top = Number(event.target.value); if (top >= 0 && top < height) { setNotes([]); setValueHints({}); setManualStaff(true); setStaff({ top, gap: staff?.gap ?? 10 }); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label><label className="text-sm">Line spacing (pixels)<input aria-label="Manual staff spacing" type="number" min={4} max={80} value={staff?.gap ?? 10} onChange={(event) => { const gap = Number(event.target.value); if (gap >= 4 && gap <= 80) { setNotes([]); setValueHints({}); setManualStaff(true); setStaff({ top: staff?.top ?? Math.round(height / 3), gap }); setAccepted([]); setConfirmed(false); setDraft(null) } }} className="block w-full rounded border border-white/25 bg-zinc-900 p-2" /></label></div>
       <button onClick={rescanManual} className="rounded border border-white/25 px-3 py-2">Rescan with manual staff</button>
       {staff && <p className="text-xs text-zinc-300">Barline hints: {barlineCount}. Stem/beam hints are diagnostic only; durations are not automatically assigned and rest symbols are not recognized. Candidate strength is not a probability of correctness.</p>}
+      <label className="block text-sm"><input type="checkbox" checked={excludeClef} onChange={(event) => { setExcludeClef(event.target.checked); if (image && staff) chooseStaff(image, staff, event.target.checked) }} /> Exclude suspected percussion clef</label>
+      <p className="text-xs text-amber-100">{clefHint ? `Possible two-bar percussion clef near crop x=${clefHint.left}-${clefHint.right}. Verify before excluding; disable if it hides a real note.` : 'No reliable two-bar percussion clef hint. Other clefs still require manual rejection.'}</p>
+      <p className="text-xs text-zinc-300">Floor tom mapping is available with Supplied Master Drum Key or Supplied beginner notation guides; generic positions are ambiguous. Use candidate instrument mapping to correct the source legend. Open-circle detection is tentative and font-dependent.</p>
       <div className="flex flex-wrap items-center gap-2"><button disabled={!notes.length} onClick={() => { setAccepted(notes.map((note) => note.id)); setDraft(null); setConfirmed(false) }} className="rounded border border-cyan-300/40 bg-cyan-900/30 px-3 py-2 disabled:opacity-40">Select all candidates</button><button disabled={!accepted.length} onClick={() => { setAccepted([]); setDraft(null); setConfirmed(false) }} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Clear candidate selection</button><span className="text-xs text-zinc-300">Selected {checkedNotes.length} / {notes.length}. {checkedNotes.length - alignedNotes.length} cannot align to the current slot guides.</span></div>
       <p className="text-xs text-amber-100">Select all is a convenience, not verification. Uncheck false detections. Build draft preview uses only checked candidates that align to your slot guides.</p>
       <CandidateNavigator previewSource={{ pixels, width, height, angle: image.angle }} notes={notes} accepted={accepted} hints={valueHints} focusedId={focusedId} onFocus={setFocusedId} onAccept={(id, checked) => { setAccepted((values) => checked ? [...new Set([...values, id])] : values.filter((value) => value !== id)); setDraft(null); setConfirmed(false) }} onMap={(id, instrument) => { setNotes((values) => values.map((note) => note.id === id ? { ...note, instrument } : note)); setDraft(null); setConfirmed(false) }} />

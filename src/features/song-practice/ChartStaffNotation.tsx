@@ -1,6 +1,6 @@
 import { CHART_INSTRUMENTS, notesFor } from './songChartLogic'
 import type { ChartBar } from './songChartLogic'
-const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100 }
+const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
 export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
@@ -10,7 +10,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = C
     <p className="text-xs text-zinc-400">One 4/4 percussion staff. Reviewed bars show quarter/eighth/sixteenth durations and rests; ordinary grid bars show sixteenth slots. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
     <div className="overflow-hidden rounded-lg border border-white/20 bg-zinc-100 p-2">
       <svg role="img" aria-label={`Bar ${barNumber} drum notation`} viewBox={`0 -25 ${width} 190`} className="block h-auto w-full max-w-full" style={{ color: '#18181b' }}>
-        <title>One percussion staff for the supported twelve-voice drum kit</title>
+        <title>One percussion staff for the supported drum kit</title>
         {[55, 65, 75, 85, 95].map((y) => <line key={y} x1={108} y1={y} x2={width - 12} y2={y} stroke="currentColor" strokeWidth={0.7} />)}
         <line x1={108} y1={55} x2={108} y2={95} stroke="currentColor" /><line x1={width - 12} y1={55} x2={width - 12} y2={95} stroke="currentColor" />
         <path d="M 116 64 v 22 M 120 64 v 22" stroke="currentColor" strokeWidth={2} />
@@ -42,7 +42,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = C
                 {bar.rhythmEvents && note > 0 && event?.kind === 'note' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${event.duration <= 2 ? ` M ${x + 5} ${y - 32} q 15 8 8 18` : ''}${event.duration === 1 ? ` M ${x + 5} ${y - 25} q 15 8 8 18` : ''}`} fill="none" strokeWidth={1.5} />}
                 {note > 0 && headOffsets.get(instrument) === -11 && <path d={`M ${x - 5} ${y} H ${x + 5}`} fill="none" strokeWidth={1} />}
                 {note > 0 && <g transform={`translate(${headOffsets.get(instrument) ?? 0},0)`}>
-                  {['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Crash' && <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} />}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
+                  {['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'Crash' && <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} />}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
                   {note === 1 && <><text x={x - 13} y={y + 5} fontSize={18} stroke="none">(</text><text x={x + 8} y={y + 5} fontSize={18} stroke="none">)</text></>}
                 </g>}
               </g>

@@ -11,3 +11,8 @@ it('filters only the view and treats missing duration hints as unknown', () => {
   expect(filterCandidates(notes, accepted, hints, 'unknown').map((note) => note.id)).toEqual([0])
   expect(accepted).toEqual([1]); expect(notes).toHaveLength(2)
 })
+it('combines instrument and checked filters without changing selection', () => {
+  const kitNotes: NoteCandidate[] = [{ ...notes[0], instrument: 'Floor tom 1' }, { ...notes[1], instrument: 'Open hi-hat' }]
+  expect(filterCandidates(kitNotes, [0, 1], {}, 'checked', 'Floor tom 1').map((note) => note.id)).toEqual([0])
+  expect(filterCandidates(kitNotes, [0], {}, 'checked', 'Open hi-hat')).toEqual([])
+})

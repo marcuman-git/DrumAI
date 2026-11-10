@@ -1,4 +1,4 @@
-export const CHART_INSTRUMENTS = ['Hi-hat', 'Snare', 'Kick', 'Crash', 'Ride', 'Kick 2', 'Floor tom 2', 'Floor tom 1', 'Tom 3', 'Tom 2', 'Tom 1', 'Pedal hi-hat'] as const
+export const CHART_INSTRUMENTS = ['Hi-hat', 'Snare', 'Kick', 'Crash', 'Ride', 'Kick 2', 'Floor tom 2', 'Floor tom 1', 'Tom 3', 'Tom 2', 'Tom 1', 'Pedal hi-hat', 'Open hi-hat'] as const
 export type ChartInstrument = typeof CHART_INSTRUMENTS[number]
 export type ChartBar = Record<'Hi-hat' | 'Snare' | 'Kick', number[]> & Partial<Record<Exclude<ChartInstrument, 'Hi-hat' | 'Snare' | 'Kick'>, number[]>> & { rhythmEvents?: import('./rhythmTypes').RhythmEvent[] }
 export function isCoreInstrument(name: ChartInstrument) { return name === 'Hi-hat' || name === 'Snare' || name === 'Kick' }

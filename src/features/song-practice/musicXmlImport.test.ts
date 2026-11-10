@@ -30,3 +30,7 @@ it('maps encoded bass/tom/pedal voices using one-based GM MusicXML numbers', () 
     expect(importMusicXml(score(hit.repeat(4),midi)).bars[0][row]?.filter(Boolean)).toHaveLength(4)
   }
 })
+it('keeps GM open hi-hat separate from closed hi-hat', () => {
+  expect(importMusicXml(score(hit.repeat(4), 47)).bars[0]['Open hi-hat']?.filter(Boolean)).toHaveLength(4)
+  expect(importMusicXml(score(hit.repeat(4), 43)).bars[0]['Hi-hat'].filter(Boolean)).toHaveLength(4)
+})
