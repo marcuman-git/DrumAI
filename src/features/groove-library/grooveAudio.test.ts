@@ -16,3 +16,10 @@ it('uses descending tom pitches and separate bass attack pitches', () => {
   for(const name of ['Floor tom 2','Floor tom 1','Tom 3','Tom 2','Tom 1','Kick','Kick 2'] as const)play(name,0,false,0.3)
   expect(pitches).toEqual([85,105,135,170,215,130,95])
 })
+it('gives open hi-hat a longer tail than closed hi-hat', () => {
+  const stops: number[] = []
+  const context = { sampleRate: 1000, destination: {}, createBuffer: () => ({ getChannelData: () => new Float32Array(600) }), createGain: () => ({ gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }), createBufferSource: () => ({ connect: vi.fn(), start: vi.fn(), stop: (time: number) => stops.push(time) }), createBiquadFilter: () => ({ frequency: { value: 0 }, Q: { value: 0 }, connect: vi.fn() }) } as unknown as AudioContext
+  const play = createGroovePlayer(context)
+  play('Hi-hat', 0, false, 0.3); play('Open hi-hat', 0, false, 0.3)
+  expect(stops).toEqual([0.055, 0.35])
+})

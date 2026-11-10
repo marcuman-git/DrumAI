@@ -5,12 +5,12 @@ export function createGroovePlayer(context: AudioContext) {
   const noise = context.createBuffer(1, Math.ceil(context.sampleRate * 0.6), context.sampleRate)
   const samples = noise.getChannelData(0)
   for (let index = 0; index < samples.length; index++) samples[index] = Math.random() * 2 - 1
-  return (instrument: GrooveInstrument | ChartInstrument, time: number, soft: boolean, volume: number) => {
+  return (instrument: GrooveInstrument | ChartInstrument | 'Open hi-hat', time: number, soft: boolean, volume: number) => {
     if (volume <= 0) return
     const gain = context.createGain()
     const tom = TOM_PITCH[instrument as ChartInstrument]
     const bass = instrument === 'Kick' || instrument === 'Kick 2'
-    const duration = tom ? 0.24 : instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : bass ? 0.16 : instrument === 'Pedal hi-hat' ? 0.035 : instrument === 'Snare' ? 0.12 : 0.055
+    const duration = tom ? 0.24 : instrument === 'Open hi-hat' ? 0.35 : instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : bass ? 0.16 : instrument === 'Pedal hi-hat' ? 0.035 : instrument === 'Snare' ? 0.12 : 0.055
     const strength = volume * (soft ? 0.22 : 0.8)
     gain.gain.setValueAtTime(Math.max(0.0001, strength * (bass ? 1 : 0.5)), time)
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration)
