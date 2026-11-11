@@ -121,3 +121,10 @@ Later conversion version assignments remain provisional until recognition valida
 - Four fully labelled synthetic scale/skew head-recovery regressions and expanded local benchmark report. These do not establish real PDF notation accuracy.
 - No detection/audio/schema/dependency changes. Build and 232 tests pass.
 - Next proposed v0.10.16: uncertainty-group review efficiency and source-position validation. Broader verified real-source benchmarks, measure parsing, faithful dotted/tied/tuplet/32nd transcription and reviewed PDF-to-MusicXML conversion remain pending.
+
+### v0.10.16 delivered
+- Actionable per-candidate manual duration controls and uncertain-review shortcut; source staff offsets for manual position validation.
+- Discount likely stem boundary hints and allow explicitly verified false-region recovery. Heuristics do not replace real measure parsing.
+- Build blockers explained; manual changes invalidate stale draft/duration review state. Direct grid drafts remain onset-only; duration metadata requires confirming the duration-aware reviewed bar.
+- Build and 236 tests pass. Unsupported dotted/tied/tuplet/32nd durations remain cautions, not automatically resolved.
+- Next proposed v0.10.17: more specific duration-aware gap/overlap diagnostics and faster event correction. Broader verified source crops and reliable PDF-to-MusicXML conversion remain pending.

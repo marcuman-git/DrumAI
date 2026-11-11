@@ -493,3 +493,14 @@
 - Detection scoring, durations, chart schema, audio, packages and workflow remain unchanged. Candidate uncertainty and multi-staff safeguards from prior releases remain.
 - Build and 232 unit tests across 75 files pass; targeted lint clean. Browser E2E/mobile/physical audio checks remain manual.
 - Next proposed v0.10.16: faster review of uncertain candidate groups and source-dependent instrument-position validation; continue real-chart benchmark expansion when clean crops and verified source labels are available.
+
+### v0.10.16 - Actionable duration review and false-region recovery
+- Inspected issue one bar.png locally. Full-height stems attached to detected heads can be mistaken for internal measure boundaries by the previous vertical ink heuristic.
+- Added bar-region review: discount interior boundary hints near candidate heads, retaining independent boundaries. Conservative heuristic only; missed heads or heads close to true barlines can still mislead it.
+- False-region confirmation offers an explicit recovery path after verifying exactly one bar on one staff. Actual multi-bar/staff selections must be recropped. Confirmation resets on scanning, staff selection and guide changes; it is not automated measure validation.
+- Build Draft explains missing verification, selection, invalid guide order, region warnings or complete onset misalignment. Checking candidate boxes alone is not the final source-verification checkbox.
+- Added per-candidate Manual duration selection with Quarter/Eighth/Sixteenth. Changing instrument alone does not review duration. Manual values update initialization hints, invalidate stale drafts and reset final verification. Actual duration metadata requires Duration-aware review -> Initialize accepted notes -> correct onset/gaps/overlaps -> Confirm reviewed bar; direct grid draft uses checked onsets only.
+- Added Review uncertain candidates shortcut and source head offset from selected staff for manual drum-key comparison. Dots, ties, tuplets, >2 beams and half-open playback remain unsupported; their caution is not resolved merely by selecting a supported value.
+- Manual duration changes reset the duration-aware review panel to prevent sending events initialized with stale hints. Detection confidence is not increased by manual edits.
+- Build and 236 unit tests across 76 files pass. Lint has no errors, retaining the pre-existing effect advisory. Browser E2E, physical audio and mobile checks remain manual.
+- Next proposed v0.10.17: streamline duration-aware event editing and make remaining gap/overlap corrections more specific; retain experimental recognition and the PDF-to-MusicXML roadmap.
