@@ -115,3 +115,9 @@ Later conversion version assignments remain provisional until recognition valida
 - Needs review filter and specific duration/voice/articulation guidance; checked-only review counts. No automatic selection/mapping/playback changes.
 - Build and 225 unit tests pass. No new dependencies or detection scoring changes.
 - Next proposed v0.10.15: broader clean-source benchmarks and clearer source comparison before further scoring changes. Reliable PDF-to-MusicXML conversion remains deferred pending faithful rhythm and measure recognition.
+
+### v0.10.15 delivered
+- Clean-source/outline toggle, wider original-pixel context and aspect-ratio-preserving focused inspection.
+- Four fully labelled synthetic scale/skew head-recovery regressions and expanded local benchmark report. These do not establish real PDF notation accuracy.
+- No detection/audio/schema/dependency changes. Build and 232 tests pass.
+- Next proposed v0.10.16: uncertainty-group review efficiency and source-position validation. Broader verified real-source benchmarks, measure parsing, faithful dotted/tied/tuplet/32nd transcription and reviewed PDF-to-MusicXML conversion remain pending.

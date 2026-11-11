@@ -484,3 +484,12 @@
 - No detection-score, audio, chart schema, package or workflow changes. Existing v0.10.13 instrument visibility and multi-staff safeguards remain.
 - Build and 225 unit tests across 73 files pass; changed-file lint has no warnings/errors. Browser E2E and physical audio/mobile tests not run.
 - Next proposed v0.10.15: clean PDF crop regression expansion and candidate-to-source review improvements before changing recognition scoring. Measure parsing, faithful dots/ties/tuplets/32nds and reviewed PDF-to-MusicXML conversion remain on the roadmap.
+
+### v0.10.15 - Clean source comparison and controlled benchmark expansion
+- Focused candidate inspection adds Clean source view (hide outline) and Wider context. Both operate on original local crop pixels without changing acceptance, instrument mapping or chart data.
+- Preview scaling now preserves source aspect ratio within canvas limits, avoiding distortion of large/wide beam context. Expanded bounds stay clipped to original image; skew-coordinate handling remains intact.
+- Added a fully labelled synthetic head fixture and four scale/skew regressions (1x/2x, 0/+2/-2 degrees) covering snare, below-staff kick, floor tom and hi-hat. All four recover four reference heads, with remaining unmatched suggestions reported honestly.
+- Existing real source benchmark still recovers 13 checked heads with nine unmatched clean-mode candidates. No new clean PDF source samples or exhaustive real-song labels were added this turn. Synthetic results are not a real-PDF accuracy estimate.
+- Detection scoring, durations, chart schema, audio, packages and workflow remain unchanged. Candidate uncertainty and multi-staff safeguards from prior releases remain.
+- Build and 232 unit tests across 75 files pass; targeted lint clean. Browser E2E/mobile/physical audio checks remain manual.
+- Next proposed v0.10.16: faster review of uncertain candidate groups and source-dependent instrument-position validation; continue real-chart benchmark expansion when clean crops and verified source labels are available.
