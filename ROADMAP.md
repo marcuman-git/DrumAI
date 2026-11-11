@@ -109,3 +109,9 @@ Later conversion version assignments remain provisional until recognition valida
 - Cross/beam contrast and neighboring suggestion filtering; tentative dot evidence flags unsupported duration.
 - Build and 216 unit tests pass. Recognition remains experimental; false candidates and missed heads still require manual review.
 - Next proposed v0.10.14: clean source-crop detection benchmarks and more explicit uncertain duration/voice review. Reliable measure parsing, rests, dotted/tied/tuplet/32nd rhythms and reviewed PDF-to-MusicXML conversion remain future work.
+
+### v0.10.14 delivered
+- One-to-one checked-head benchmarks separate recovered references, misses and unmatched suggestions. Current source fixture: 13 checked heads recovered, 9 unmatched clean-mode candidates. Not a full notation accuracy benchmark.
+- Needs review filter and specific duration/voice/articulation guidance; checked-only review counts. No automatic selection/mapping/playback changes.
+- Build and 225 unit tests pass. No new dependencies or detection scoring changes.
+- Next proposed v0.10.15: broader clean-source benchmarks and clearer source comparison before further scoring changes. Reliable PDF-to-MusicXML conversion remains deferred pending faithful rhythm and measure recognition.

@@ -475,3 +475,12 @@
 - Tentative isolated dot evidence marks duration unknown and displays a review warning. Dotted, tied, tuplet and 32nd-note transcription remains unsupported. No unsupported duration is automatically applied to chart playback.
 - Build and 216 unit tests across 70 files pass. Targeted lint has no errors and the existing set-state-in-effect advisory. Physical audio, mobile and browser E2E checks not executed here.
 - Next proposed v0.10.14: clean source-crop benchmarking for missed cymbal/floor-tom heads and explicit duration/voice uncertainty review; multi-bar transcription stays deferred until measure parsing is reliable.
+
+### v0.10.14 - Head-recovery benchmarks and candidate review guidance
+- Added a one-to-one head matcher with maximum matching, so duplicate suggestions cannot inflate recovered-head counts. Misses and unmatched suggestions are reported separately; no precision/global accuracy claim from partially labelled references.
+- Benchmarked the existing isolated source fixture: all 11 checked filled heads plus 2 position/shape-checked cymbal crosses recovered. Raw 57 candidates/44 unmatched; clean-head mode 22 candidates/9 unmatched. Cymbal identity, rests, durations and whole songs are not validated by this benchmark. No new clean PDF or new exhaustive annotations were supplied this turn.
+- Added Needs review filter and per-candidate reasons: uncertain durations, possible unsupported dots, more than two beams, nearby competing instrument suggestions and unsupported half-open playback. Proximity is fixed at four pixels and is heuristic, not instrument confidence or a diagnosis of false notes.
+- Rhythm Review summarizes checked candidates needing review. Filter never unchecks hidden selections or modifies mappings/durations; manually verified simultaneous voices may legitimately be close together.
+- No detection-score, audio, chart schema, package or workflow changes. Existing v0.10.13 instrument visibility and multi-staff safeguards remain.
+- Build and 225 unit tests across 73 files pass; changed-file lint has no warnings/errors. Browser E2E and physical audio/mobile tests not run.
+- Next proposed v0.10.15: clean PDF crop regression expansion and candidate-to-source review improvements before changing recognition scoring. Measure parsing, faithful dots/ties/tuplets/32nds and reviewed PDF-to-MusicXML conversion remain on the roadmap.
