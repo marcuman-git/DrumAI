@@ -23,7 +23,8 @@ concurrency:
 
 jobs:
   full-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,15 +39,28 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-ubuntu24-playwright-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-playwright-
+            ${{ runner.os }}-${{ runner.arch }}-ubuntu24-playwright-
 
       - name: Install dependencies
         run: npm ci
 
       - name: Install Playwright browser + deps
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if npx --no-install playwright install --with-deps chromium; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Browser setup failed on attempt $attempt; retrying in 15 seconds."
+              sleep 15
+            fi
+          done
+          echo "Browser setup failed after three attempts. Tests have not been skipped."
+          exit 1
 
       - name: Run unit tests
         run: npm run test:unit
