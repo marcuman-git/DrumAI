@@ -1,5 +1,5 @@
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
-export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; possibleDot?: boolean; left: number; top: number; width: number; height: number }
+export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; possibleDot?: boolean; manualReviewed?: boolean; left: number; top: number; width: number; height: number }
 /** Local stem/beam evidence only. Missing flags, ties and adjacent voices can mislead it. */
 export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate, note: NoteCandidate): NoteValueHint {
   const { width, height, ink } = image; const gap = staff.gap
