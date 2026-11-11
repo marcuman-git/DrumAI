@@ -1,3 +1,4 @@
+import { candidateReviewReasons } from './candidateReview'
 import { filterCandidates } from './candidateFilters'
 import type { CandidateFilter } from './candidateFilters'
 import { FocusedCandidatePreview } from './FocusedCandidatePreview'
@@ -16,7 +17,7 @@ export function CandidateNavigator({ notes, accepted, hints, focusedId, onFocus,
   const index = shown.findIndex((note) => note.id === focusedId)
   useEffect(() => { if (focusedId !== null) rows.current.get(focusedId)?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }) }, [focusedId, filter, instrument])
   return <section aria-label="Candidate navigation" className="space-y-2">
-    <label className="block text-sm">Candidate filter<select aria-label="Candidate filter" value={filter} onChange={(event) => setFilter(event.target.value as CandidateFilter)} className="ml-2 rounded bg-zinc-900 p-2"><option value="all">All candidates</option><option value="checked">Checked only</option><option value="unchecked">Unchecked only</option><option value="unknown">Unknown duration</option></select></label>
+    <label className="block text-sm">Candidate filter<select aria-label="Candidate filter" value={filter} onChange={(event) => setFilter(event.target.value as CandidateFilter)} className="ml-2 rounded bg-zinc-900 p-2"><option value="all">All candidates</option><option value="checked">Checked only</option><option value="unchecked">Unchecked only</option><option value="unknown">Unknown duration</option><option value="review">Needs review</option></select></label>
     <label className="block text-sm">Instrument filter<select aria-label="Instrument filter" value={instrument} onChange={(event) => setInstrument(event.target.value as ChartInstrument | '')} className="ml-2 rounded bg-zinc-900 p-2"><option value="">All instruments</option>{CHART_INSTRUMENTS.map((name) => <option key={name}>{name}</option>)}</select></label>
     <p className="text-xs text-zinc-300">Showing {shown.length} / {notes.length}. Filtering never unchecks hidden candidates; draft building still uses all checked candidates.</p>
     {focused && !shown.some((note) => note.id === focused.id) && <p className="text-sm text-amber-100">Focused candidate #{focused.id + 1} is hidden by this filter. <button onClick={() => { setFilter('all'); setInstrument('') }} className="rounded border border-white/25 p-1">Show all candidates</button></p>}
@@ -27,6 +28,7 @@ export function CandidateNavigator({ notes, accepted, hints, focusedId, onFocus,
       <button aria-pressed={focusedId === note.id} onClick={() => onFocus(note.id)} className="mr-2 rounded border border-white/25 px-2 py-1">Focus #{note.id + 1}</button>
       {(!hints[note.id] || hints[note.id].value === 'unknown') && <span className="mr-2 rounded bg-amber-900/40 px-2 py-1 text-amber-100">Needs duration review</span>}
       {hints[note.id]?.possibleDot && <span className="text-amber-100">Possible dot: dotted duration unsupported; review manually. </span>}
+      {candidateReviewReasons(note, notes, hints).map((reason) => <p key={reason} className="text-amber-100">{reason}</p>)}
       <label><input type="checkbox" checked={accepted.includes(note.id)} onChange={(event) => onAccept(note.id, event.target.checked)} /> {note.sourceLabel ?? note.instrument}, x={note.x}, {note.shape}; shape strength {Math.round(note.strength * 100)}%, stem {note.stemHint ? 'possible' : 'unknown'}, flags {note.flagHint ? 'possible' : 'unknown'}; value {hints[note.id]?.value ?? 'unknown'} (possible), beams {hints[note.id]?.beamBands ?? 0}</label>
       <select aria-label={`Map candidate ${note.id}`} value={note.instrument} onChange={(event) => onMap(note.id, event.target.value as NoteCandidate['instrument'])} className="ml-2 rounded bg-zinc-900 p-1">{CHART_INSTRUMENTS.map((instrument) => <option key={instrument}>{instrument}</option>)}</select>
     </div>) : <p className="text-sm">No candidates match this filter. Choose All candidates or rescan if the detection is empty.</p>}</div>
