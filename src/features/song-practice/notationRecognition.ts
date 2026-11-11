@@ -104,7 +104,23 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
         } }
         let score = dark / (crossHead ? cross.length : area)
         if (options.cleanHeads && !crossHead && (usefulRows < 3 || area < ovalArea * 0.3)) score = 0
-        if (options.cleanHeads && crossHead) { let core = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) core += at(x + dx, centerY + dy); if (core >= 8) score = 0 }
+        if (options.cleanHeads && crossHead) {
+          // A beam can match the diagonal template. Reject long horizontal
+          // support on both sides, but retain thick engraved cross heads.
+          let core = 0
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) core += at(x + dx, centerY + dy)
+          const axes = at(x - halfX, centerY) + at(x + halfX, centerY) + at(x, centerY - halfY) + at(x, centerY + halfY)
+          if (core >= 8 && axes >= 3) score = 0
+          for (let dy = -halfY; dy <= halfY; dy++) {
+            const row = centerY + dy
+            if (staffLines.some((line) => Math.abs(line - row) <= 1)) continue
+            let extended = 0; let total = 0
+            for (let dx = halfX + 2; dx <= halfX + 8; dx++) {
+              extended += at(x - dx, row) + at(x + dx, row); total += 2
+            }
+            if (extended / total > 0.65) score = 0
+          }
+        }
         if (options.cleanHeads && !crossHead && score > 0) {
           let mass = 0; let moment = 0
           for (let dy = -halfY * 2; dy <= halfY * 2; dy++) {
@@ -128,7 +144,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const result = notes.map((note) => { if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
+  const result = notes.map((note) => { if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !notes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)

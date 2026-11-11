@@ -1,5 +1,5 @@
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
-export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; left: number; top: number; width: number; height: number }
+export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; possibleDot?: boolean; left: number; top: number; width: number; height: number }
 /** Local stem/beam evidence only. Missing flags, ties and adjacent voices can mislead it. */
 export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate, note: NoteCandidate): NoteValueHint {
   const { width, height, ink } = image; const gap = staff.gap
@@ -50,8 +50,17 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
     }
     if (longest >= 3) bands = 1
   }
+  // Isolated ink to the right is only tentative dot evidence. Dotted
+  // durations are unsupported and must never be silently labelled straight.
+  let possibleDot = false
+  for (let dx = radius + 3; dx <= gap * 1.6; dx++) for (let dy = -gap * 0.45; dy <= gap * 0.45; dy++) {
+    const x = Math.round(note.x + dx); const y = Math.round(note.y + dy)
+    if (staffLines.some((line) => Math.abs(line - y) <= 2)) continue
+    if (at(x, y) && at(x + 1, y) && at(x, y + 1)
+      && !at(x - 2, y) && !at(x + 3, y) && !at(x, y - 2) && !at(x, y + 3)) possibleDot = true
+  }
   const left = Math.max(0, Math.floor(note.x - gap * 2)); const right = Math.min(width, Math.ceil(note.x + gap * 2))
   const top = Math.max(0, Math.floor(Math.min(note.y - gap * 0.6, best.end) - 3))
   const bottom = Math.min(height, Math.ceil(Math.max(note.y + gap * 0.6, best.end) + 3))
-  return { value: best.length < gap * 1.6 || bands > 2 ? 'unknown' : bands === 2 ? 'sixteenth' : bands === 1 ? 'eighth' : 'quarter', stemDirection: best.length < gap * 1.6 ? 'unknown' : best.direction === -1 ? 'up' : 'down', beamBands: bands, left, top, width: right - left, height: bottom - top }
+  return { value: possibleDot || best.length < gap * 1.6 || bands > 2 ? 'unknown' : bands === 2 ? 'sixteenth' : bands === 1 ? 'eighth' : 'quarter', stemDirection: best.length < gap * 1.6 ? 'unknown' : best.direction === -1 ? 'up' : 'down', beamBands: bands, possibleDot, left, top, width: right - left, height: bottom - top }
 }

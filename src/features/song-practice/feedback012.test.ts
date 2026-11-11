@@ -14,3 +14,9 @@ it('reduces extra candidates on the feedback bar while retaining checked filled 
   expect(after.length).toBeLessThan(before.length)
   expect(after.length).toBeLessThanOrEqual(25)
 })
+it('retains the two source cymbal crosses during beam filtering', () => {
+ const ink = new Uint8Array(sample.width * sample.height); for (const index of sample.ink) ink[index] = 1
+ const image = { width: sample.width, height: sample.height, ink, angle: 0, staffs: [] }
+ const notes = findNoteCandidates(image, sample.staff, 'master-key', { cleanHeads: true, tolerance: 2, kick: 4.5, snare: 1.5 })
+ for (const [x, y] of [[21, 54], [67, 44]]) expect(notes.some((note) => note.shape === 'cross' && Math.abs(note.x - x) <= 4 && Math.abs(note.y - y) <= 3)).toBe(true)
+})

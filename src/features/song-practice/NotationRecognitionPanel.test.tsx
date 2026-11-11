@@ -1,12 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
-const scanOptions = vi.hoisted(() => ({ multiBar: false }))
+const scanOptions = vi.hoisted(() => ({ multiBar: false, multipleStaffs: false, singleBoundary: false }))
 vi.mock('./notationRecognition', async (original) => {
   const actual = await original<typeof import('./notationRecognition')>()
-  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: (() => { const ink = new Uint8Array(20000); if (scanOptions.multiBar) for (const x of [65, 130]) for (let y = 40; y <= 80; y++) ink[y * 200 + x] = 1; return ink })(), angle: 0, staffs: [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
+  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: (() => { const ink = new Uint8Array(20000); if (scanOptions.multiBar || scanOptions.singleBoundary) for (const x of scanOptions.singleBoundary ? [65] : [65, 130]) for (let y = 40; y <= 80; y++) ink[y * 200 + x] = 1; return ink })(), angle: 0, staffs: scanOptions.multipleStaffs ? [{ top: 10, gap: 10 }, { top: 50, gap: 10 }] : [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
 })
-afterEach(() => { cleanup(); scanOptions.multiBar = false; vi.restoreAllMocks() })
+afterEach(() => { cleanup(); scanOptions.multiBar = false; scanOptions.multipleStaffs = false; scanOptions.singleBoundary = false; vi.restoreAllMocks() })
 it('requires accepted candidates and acknowledgement before sending an editable draft', () => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
   const onDraft = vi.fn()
@@ -126,7 +126,18 @@ it('blocks multiple-bar regions rather than compressing them into a single draft
   fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
   fireEvent.click(screen.getByRole('button', { name: 'Select all candidates' }))
   fireEvent.click(screen.getByLabelText(/I checked the candidates/))
-  expect(screen.getByText(/Multiple barline hints inside/)).toBeInTheDocument()
+  expect(screen.getByText(/Multiple barline hints or multiple staffs/)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
   expect(screen.queryByRole('button', { name: 'Confirm reviewed bar' })).toBeNull()
+})
+
+for (const option of ['multipleStaffs', 'singleBoundary'] as const) it('blocks draft for ' + option, () => {
+ scanOptions[option] = true
+ vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
+ render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
+ fireEvent.click(screen.getByRole('button', { name: 'Select all candidates' }))
+ fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+ expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
+ expect(screen.queryByRole('button', { name: 'Confirm reviewed bar' })).toBeNull()
 })

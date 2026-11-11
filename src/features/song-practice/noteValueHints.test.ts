@@ -39,3 +39,10 @@ it('finds a short isolated flag that does not span the long beam window', () => 
   for (let y = 44; y <= 47; y++) for (let x = 79; x <= 84; x++) image.ink[y * image.width + x] = 1
   expect(inspectNoteValue(image, { top: 60, gap: 12 }, note).value).toBe('eighth')
 })
+it('marks possible dotted notes unknown instead of straight quarter notes', () => {
+ const { image, note } = sample()
+ for (const y of [78, 79]) for (const x of [83, 84]) image.ink[y * image.width + x] = 1
+ const hint = inspectNoteValue(image, { top: 60, gap: 12 }, note)
+ expect(hint.possibleDot).toBe(true)
+ expect(hint.value).toBe('unknown')
+})
