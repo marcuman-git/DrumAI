@@ -128,3 +128,10 @@ Later conversion version assignments remain provisional until recognition valida
 - Build blockers explained; manual changes invalidate stale draft/duration review state. Direct grid drafts remain onset-only; duration metadata requires confirming the duration-aware reviewed bar.
 - Build and 236 tests pass. Unsupported dotted/tied/tuplet/32nd durations remain cautions, not automatically resolved.
 - Next proposed v0.10.17: more specific duration-aware gap/overlap diagnostics and faster event correction. Broader verified source crops and reliable PDF-to-MusicXML conversion remain pending.
+
+### v0.10.17 delivered
+- Per-voice gap/overlap ranges, event-level bar-end diagnostics and jump-to-correction controls.
+- Instrument correction, non-destructive event filtering and explicit first-gap manual rest filling with capacity protection.
+- No automatic overlap correction or PDF-rest recognition claim. Existing confirmation and draft invalidation remain mandatory.
+- Build and 244 unit tests pass; no runtime packages, chart schema or workflow changes.
+- Next proposed v0.10.18: undo/redo for duration-aware review without restoring stale confirmation. Broader verified real-source recognition and reviewed PDF-to-MusicXML conversion remain future work.

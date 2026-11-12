@@ -504,3 +504,17 @@
 - Manual duration changes reset the duration-aware review panel to prevent sending events initialized with stale hints. Detection confidence is not increased by manual edits.
 - Build and 236 unit tests across 76 files pass. Lint has no errors, retaining the pre-existing effect advisory. Browser E2E, physical audio and mobile checks remain manual.
 - Next proposed v0.10.17: streamline duration-aware event editing and make remaining gap/overlap corrections more specific; retain experimental recognition and the PDF-to-MusicXML roadmap.
+
+### CI follow-up before v0.10.17
+- Repeated GitHub Ubuntu mirror DNS failures blocked browser dependency installation before browser tests ran. Runner pinning and bounded retries did not resolve the reported network problem.
+- Full-test workflow now uses matching official Playwright v1.64.1-jammy container with bundled Chromium and dependency libraries; verifies package/browser match and still runs unit tests, E2E and build. Network is still needed for container/npm downloads. User reported the workaround works; remote final test results are not independently observed here.
+
+### v0.10.17 - Specific rhythm diagnostics and faster corrections
+- Duration-aware review now reports missing/overlapping slot ranges per participating instrument, identifies affected event numbers and flags events crossing the bar end even when aggregate validation fails.
+- Different instruments may overlap in time legitimately; conflict diagnostics concern coverage within the same instrument voice only.
+- Jump-to-event controls select the relevant review instrument, highlight/scroll the event row and focus its onset field. Events now offer direct instrument correction. Selected-instrument-only filtering hides rows without deleting them.
+- Fill next gap with manual rests explicitly fills only the first uncovered range of the selected voice using supported durations. It preserves existing notes and other voices, refuses event-limit overflow and is not automatic PDF rest detection. Existing full-voice manual gap fill remains available.
+- Edits and gap fills invalidate prior source confirmation/drafts through the existing callback. No automatic overlap resolution or confirmation; manual source checks still required.
+- Build and 244 unit tests across 77 files pass; changed-file lint clean. Browser E2E, physical playback and mobile interaction checks remain manual for this patch.
+- No audio/schema/dependency/workflow changes in this release; previous false-region and manual-candidate-duration controls retained.
+- Next proposed v0.10.18: undo/redo for duration-review edits, preserving explicit confirmation/invalidation rules. Faithful PDF measure/rest/dotted/tied/tuplet/32nd recognition and reviewed MusicXML conversion remain pending.
