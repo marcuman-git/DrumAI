@@ -1,5 +1,6 @@
+import { createReviewHistory, reviewHistoryReducer } from './reviewEventHistory'
 import { diagnoseReviewedRhythm, fillNextReviewedGap, formatSlotRanges } from './reviewedRhythmDiagnostics'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useReducer } from 'react'
 import { CHART_INSTRUMENTS } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
@@ -10,7 +11,8 @@ import { detectRestHints } from './restRecognition'
 import { ChartStaffNotation } from './ChartStaffNotation'
 
 export function ReviewedNotationPanel({ notes, hints, first, last, image, staff, onConfirm, onInvalidate }: { notes: NoteCandidate[]; hints: Record<number, NoteValueHint>; first: number; last: number; image: RecognitionImage | null; staff: StaffCandidate | null; onConfirm: (bar: ChartBar) => void; onInvalidate?: () => void }) {
-  const [events, setEvents] = useState<RhythmEvent[]>([])
+  const [history, dispatchHistory] = useReducer(reviewHistoryReducer, undefined, createReviewHistory)
+  const events = history.present
   const [instrument, setInstrument] = useState<ChartInstrument>('Snare')
   const [rests, setRests] = useState<ReturnType<typeof detectRestHints>>([])
   const [confirmed, setConfirmed] = useState(false)
@@ -22,10 +24,17 @@ export function ReviewedNotationPanel({ notes, hints, first, last, image, staff,
   useEffect(() => { if (focusedEvent !== null) { const row = rows.current.get(focusedEvent); row?.scrollIntoView?.({ block: 'nearest' }); row?.querySelector<HTMLInputElement>('input')?.focus() } }, [focusedEvent, selectedOnly, instrument])
   function jump(index: number) { setInstrument(events[index].instrument); setFocusedEvent(index); const row = rows.current.get(index); row?.scrollIntoView?.({ block: 'nearest' }); row?.querySelector<HTMLInputElement>('input')?.focus() }
   const check = checkReviewedRhythm(events)
-  const update = (next: RhythmEvent[]) => { setEvents(next); setConfirmed(false); onInvalidate?.() }
+  const update = (next: RhythmEvent[]) => { dispatchHistory({ type: 'edit', events: next }); setConfirmed(false); onInvalidate?.() }
+  function navigateHistory(type: 'undo' | 'redo') {
+    if (type === 'undo' ? !history.past.length : !history.future.length) return
+    dispatchHistory({ type }); setConfirmed(false); setFocusedEvent(null); setRests([]); onInvalidate?.()
+    setMessage(type === 'undo' ? 'Edit undone. Recheck the source and confirm again.' : 'Edit redone. Recheck the source and confirm again.')
+  }
   return <section className="space-y-3 rounded border border-cyan-300/40 p-3" aria-label="Duration-aware notation review">
     <h4 className="font-semibold">Duration-aware notation review</h4>
     <p className="text-xs text-amber-100">Single 4/4 bar; quarter, eighth and sixteenth only. No ties, dots, tuplets or rolls. Simultaneous instruments are checked independently. Source spacing is not proportional to time: correct onset slots manually.</p>
+    <div className="flex flex-wrap items-center gap-2"><button disabled={!history.past.length} onClick={() => navigateHistory('undo')} className="rounded border border-white/30 px-3 py-2 disabled:opacity-40">Undo review edit</button><button disabled={!history.future.length} onClick={() => navigateHistory('redo')} className="rounded border border-white/30 px-3 py-2 disabled:opacity-40">Redo review edit</button><span className="text-xs text-zinc-300">Undo: {history.past.length} / 50 edits · Redo: {history.future.length}</span></div>
+    <p className="text-xs text-amber-100">History covers event edits only, not source scans or filters. Undo/Redo clears source confirmation and unaccepted rest hints. Rescan hints if needed. History resets when the source/candidate selection changes or this review is closed.</p>
     <button disabled={last <= first || !notes.length} className="rounded border border-white/25 p-2 disabled:opacity-40" onClick={() => { update(notes.map((note) => ({ instrument: note.instrument, step: Math.max(0, Math.min(15, Math.round((note.x - first) / (last - first) * 15))), duration: hints[note.id]?.value === 'quarter' ? 4 : hints[note.id]?.value === 'eighth' ? 2 : 1, kind: 'note', dynamic: 2 }))); setMessage('Candidates copied. Unknown duration defaults to sixteenth for manual correction, not a recognition claim.') }}>Initialize accepted notes</button>
     <label className="block text-sm">Review instrument<select aria-label="Review instrument" value={instrument} onChange={(event) => setInstrument(event.target.value as ChartInstrument)} className="ml-2 rounded bg-zinc-900 p-2">{CHART_INSTRUMENTS.map((name) => <option key={name}>{name}</option>)}</select></label>
     <div className="flex flex-wrap gap-2"><button disabled={events.length >= 192} onClick={() => update([...events, { instrument, step: 0, duration: 1, kind: 'note', dynamic: 2 }])} className="rounded border border-white/25 p-2">Add reviewed note</button><button disabled={events.length >= 192} onClick={() => update([...events, { instrument, step: 0, duration: 1, kind: 'rest', dynamic: 2 }])} className="rounded border border-white/25 p-2">Add reviewed rest</button><button onClick={() => update(fillReviewedRests(events, instrument))} className="rounded border border-white/25 p-2">Fill gaps with manual rests</button><button disabled={!image || !staff} onClick={() => { if (image && staff) { try { const found = detectRestHints(image, staff, notes); setRests(found); setMessage(`${found.length} template rest hints. Their crop x/y positions need manual checking; absence is not proof of no rests.`) } catch { setMessage('Rest scan unavailable. Use a smaller single-bar crop and valid staff spacing; manual rests remain available.') } } }} className="rounded border border-white/25 p-2">Detect rest hints (Experimental)</button></div>
