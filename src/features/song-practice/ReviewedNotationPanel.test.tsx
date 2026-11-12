@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ReviewedNotationPanel } from './ReviewedNotationPanel'
 afterEach(cleanup)
@@ -14,4 +14,42 @@ it('requires full rhythm and explicit confirmation before passing a reviewed bar
   expect(onConfirm.mock.calls[0][0].rhythmEvents[0].duration).toBe(4)
   fireEvent.change(screen.getByLabelText('Event 1 slot'), { target: { value: '2' } })
   expect(screen.getByRole('button', { name: 'Confirm reviewed bar' })).toBeDisabled()
+})
+it('jumps to an overlapping event and requires explicit re-verification after correction', () => {
+ render(<ReviewedNotationPanel notes={[]} hints={{}} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Add reviewed note' }))
+ fireEvent.change(screen.getByLabelText('Event 1 duration'), { target: { value: '4' } })
+ fireEvent.click(screen.getByRole('button', { name: 'Add reviewed note' }))
+ expect(within(screen.getByLabelText('Voice correction diagnostics')).getByText(/Overlapping slots: 1/)).toBeVisible()
+ fireEvent.click(screen.getByRole('button', { name: 'Jump to event 2 (overlap)' }))
+ expect(screen.getByLabelText('Event 2 slot')).toHaveFocus()
+ fireEvent.change(screen.getByLabelText('Event 2 slot'), { target: { value: '5' } })
+ expect(screen.queryByRole('button', { name: 'Jump to event 2 (overlap)' })).toBeNull()
+ fireEvent.click(screen.getByRole('button', { name: 'Fill next gap with manual rests' }))
+ expect(screen.getByText(/First gap filled with manual rests/)).toBeVisible()
+ expect(screen.getByRole('button', { name: 'Confirm reviewed bar' })).toBeDisabled()
+})
+it('filters event rows without dropping hidden voices or changing confirmation data', () => {
+ const onConfirm = vi.fn()
+ render(<ReviewedNotationPanel notes={[]} hints={{}} first={0} last={150} image={null} staff={null} onConfirm={onConfirm} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Add reviewed note' }))
+ fireEvent.change(screen.getByLabelText('Review instrument'), { target: { value: 'Kick' } })
+ fireEvent.click(screen.getByRole('button', { name: 'Add reviewed note' }))
+ fireEvent.click(screen.getByLabelText('Show selected review instrument only'))
+ expect(screen.queryByLabelText('Event 1 slot')).toBeNull()
+ expect(screen.getByLabelText('Event 2 slot')).toBeVisible()
+ fireEvent.click(screen.getByLabelText('Show selected review instrument only'))
+ expect(screen.getByLabelText('Event 1 slot')).toBeVisible()
+ expect(onConfirm).not.toHaveBeenCalled()
+})
+it('points to an overflowing event and clears that warning when corrected', () => {
+ render(<ReviewedNotationPanel notes={[]} hints={{}} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Add reviewed note' }))
+ fireEvent.change(screen.getByLabelText('Event 1 duration'), { target: { value: '4' } })
+ fireEvent.change(screen.getByLabelText('Event 1 slot'), { target: { value: '16' } })
+ fireEvent.click(screen.getByRole('button', { name: 'Jump to event 1 (crosses bar end)' }))
+ expect(screen.getByLabelText('Event 1 slot')).toHaveFocus()
+ fireEvent.change(screen.getByLabelText('Event 1 slot'), { target: { value: '13' } })
+ expect(screen.queryByRole('button', { name: 'Jump to event 1 (crosses bar end)' })).toBeNull()
+ expect(screen.getByRole('button', { name: 'Confirm reviewed bar' })).toBeDisabled()
 })
