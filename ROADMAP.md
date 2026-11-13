@@ -135,3 +135,18 @@ Later conversion version assignments remain provisional until recognition valida
 - No automatic overlap correction or PDF-rest recognition claim. Existing confirmation and draft invalidation remain mandatory.
 - Build and 244 unit tests pass; no runtime packages, chart schema or workflow changes.
 - Next proposed v0.10.18: undo/redo for duration-aware review without restoring stale confirmation. Broader verified real-source recognition and reviewed PDF-to-MusicXML conversion remain future work.
+
+### v0.10.18 delivered
+- Undo/Redo for up to 50 duration-review event edits, including bulk initialization/gap fills and removals.
+- Restores events without restoring source confirmation/drafts; history navigation invalidates the previous review. New edits clear redo.
+- Existing source/candidate changes remount and reset history; no persistence or schema changes.
+- Build and 251 unit tests pass. Browser/mobile checks remain manual.
+- Next proposed v0.10.19: source-to-reviewed-event traceability and comparison. Faithful measure parsing, rests, dotted/tied/tuplet/32nd recognition and reviewed PDF-to-MusicXML conversion remain pending.
+
+### v0.10.19 delivered
+- PDF reselection and current-page rendering reset without modifying chart notes.
+- Tentative crossed-ledger cymbal hints with explicit manual Crash mapping; staff crossed-ledger/circled Crash styles.
+- Display-only quarter/eighth/sixteenth count-label choices. Actual 2/4 meter remains unsupported, not silently relabelled.
+- Temporary initialized-event source references survive review edits/history and are stripped from saved reviewed bars.
+- Build and 259 tests pass; no runtime dependencies/workflow changes.
+- Next proposed v0.10.20: coordinated 2/4 and 4/4 meter-aware chart data, notation and playback with backwards compatibility (clarification requested). Reliable multi-bar PDF transcription, dotted/tied/tuplet/32nd rhythms and reviewed PDF-to-MusicXML conversion remain pending.

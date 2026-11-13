@@ -518,3 +518,25 @@
 - Build and 244 unit tests across 77 files pass; changed-file lint clean. Browser E2E, physical playback and mobile interaction checks remain manual for this patch.
 - No audio/schema/dependency/workflow changes in this release; previous false-region and manual-candidate-duration controls retained.
 - Next proposed v0.10.18: undo/redo for duration-review edits, preserving explicit confirmation/invalidation rules. Faithful PDF measure/rest/dotted/tied/tuplet/32nd recognition and reviewed MusicXML conversion remain pending.
+
+### v0.10.18 - Duration-review Undo/Redo (2026-11-12)
+- Added bounded event-edit history (50 snapshots) for duration-aware review: additions, removals, initialization, instrument/onset/duration/kind edits and manual gap fills.
+- Undo/Redo restores events only. Scan results, instrument/filter choices, source confirmation and existing sent drafts are not restored. Unaccepted rest hints are cleared during history navigation; users can rescan them.
+- Every Undo/Redo invalidates the parent draft and requires explicit source confirmation again, including after restoring a structurally valid rhythm. No automatic confirmation or transfer to the chart.
+- New edits clear redo; identical edits do not consume history. Deep-copied event objects prevent input mutations from changing saved snapshots. Invalid rhythms are retained for manual correction, not automatically accepted.
+- History resets with the existing source/candidate-key remount workflow and is not persisted across refresh/navigation. Saved chart schemas and playback unchanged.
+- Build and 251 unit tests across 78 files pass; changed-file lint clean. Browser E2E, mobile and physical playback checks remain manual.
+- No package, audio, schema or test-workflow changes. Keep the working container-based full-tests workflow.
+- Next proposed v0.10.19: clearer source-to-reviewed-event traceability and comparison workflow; automatic full-chart/PDF-to-MusicXML transcription remains experimental and pending.
+
+### v0.10.19 - PDF reselection, cymbal hints, staff counting and source traceability
+- Fixed the post-analysis selection dead end: Select another region clears prior crop/analysis and enables dragging again without re-rendering or changing chart notes. Clear region also re-enables selection.
+- Added Reset PDF rendering to re-render the current page and clear crop/analysis. Rendering requests are aborted/reset safely when preparation restarts; page controls still preserve chart data.
+- Added tentative isolated crossed-ledger evidence above the staff. Candidate review offers manual Crash mapping; no automatic instrument remap or universal crash/ride/hi-hat identity claim. Publisher/source legends remain authoritative.
+- Staff displays Quarter/Eighth/Sixteenth count-label choices, preserving actual note data and playback. Crash head style supports crossed ledger (default) or circled cross. Reviewed event duration still determines note flags.
+- User phrase '2 4' is ambiguous; requested clarification. Current implementation remains 4/4 and explicitly says display counting is not a 2/4 time-signature conversion. Actual meter support must change bar timing/data/reading together.
+- Initialized review events retain temporary source candidate IDs through field edits and Undo/Redo. Inspect source buttons focus/scroll to source review. These links describe initialization provenance, not proven detection correctness.
+- reviewedBar strips temporary source IDs before saved/chart JSON data; no persisted schema change or audio change.
+- Build and 259 tests across 80 files pass. Targeted lint has no errors, retaining prior crop-effect advisory. Browser E2E, mobile selection/scroll and physical playback remain manual.
+- No package or workflow changes. Upload dependency-first bundle before final full tests/deploy.
+- Next proposed v0.10.20: meter-aware charts starting 2/4 alongside 4/4, with coordinated notation, duration validation, playback and saved-chart compatibility, subject to clarification. Broader verified PDF recognition and MusicXML conversion remain pending.
