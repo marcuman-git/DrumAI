@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { ChartStaffNotation } from './ChartStaffNotation'
 import { blankBar } from './songChartLogic'
@@ -41,7 +41,10 @@ it('renders distinct cymbal heads on the same staff', () => {
   const bar = blankBar(); bar.Crash[0] = 2; bar.Ride[4] = 3
   render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={4} />)
   expect(screen.getByTestId('staff-Crash-0')).toHaveAttribute('aria-label', 'Crash slot 1: sixteenth note')
+  expect(screen.getByTestId('crash-ledger-0')).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Crash head style'), { target: { value: 'circle' } })
   expect(screen.getByTestId('staff-Crash-0').querySelector('circle')).not.toBeNull()
+  expect(screen.queryByTestId('crash-ledger-0')).toBeNull()
   expect(screen.getByTestId('staff-Ride-4')).toHaveAttribute('data-active', 'true')
 })
 it('renders floor/rack toms, second bass and pedal hi-hat without separate staves', () => {
@@ -59,4 +62,16 @@ it('renders reviewed durations without extra flags or continuation rests', async
   expect(screen.getByTestId('review-stem-Snare-0').getAttribute('d')).not.toContain('q')
   expect(screen.queryByTestId('review-rest-Snare-1')).not.toBeInTheDocument()
   expect(screen.getByTestId('review-rest-Snare-4')).toBeInTheDocument()
+})
+it('switches count labels without changing notes or reviewed durations', () => {
+ const bar = blankBar(); bar.Snare[1] = 2
+ render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={1} />)
+ fireEvent.change(screen.getByLabelText('Staff count labels'), { target: { value: 'quarter' } })
+ expect(screen.getByTestId('staff-count-1')).toBeEmptyDOMElement()
+ expect(screen.getByTestId('staff-count-4')).toHaveTextContent('2')
+ fireEvent.change(screen.getByLabelText('Staff count labels'), { target: { value: 'eighth' } })
+ expect(screen.getByTestId('staff-count-2')).toHaveTextContent('&')
+ expect(bar.Snare[1]).toBe(2)
+ expect(screen.getByTestId('staff-Snare-1')).toHaveAttribute('data-active', 'true')
+ fireEvent.change(screen.getByLabelText('Crash head style'), { target: { value: 'circle' } })
 })

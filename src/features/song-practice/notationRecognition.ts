@@ -1,10 +1,11 @@
+import { hasIsolatedCymbalLedger } from './cymbalLedgerHint'
 import { inspectHatMark } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
 import { completeBar } from './chartKit'
 export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
 export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
 export interface StaffCandidate { top: number; gap: number }
-export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; articulationHint?: 'open' | 'half-open' }
+export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
 export interface RecognitionDraft { bar: ChartBar; source: string; page: number }
 const candidateCache = new WeakMap<RecognitionImage, Map<string, NoteCandidate[]>>()
@@ -144,7 +145,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const result = notes.map((note) => { if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !notes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
+  const result = notes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !notes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)

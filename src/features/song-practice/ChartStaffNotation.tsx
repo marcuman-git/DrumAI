@@ -1,13 +1,20 @@
+import { useState } from 'react'
+import { staffCountLabel } from './staffCountLabels'
+import type { StaffCountMode } from './staffCountLabels'
 import { CHART_INSTRUMENTS, notesFor } from './songChartLogic'
 import type { ChartBar } from './songChartLogic'
 const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
 export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
+  const [countMode, setCountMode] = useState<StaffCountMode>('sixteenth')
+  const [crashStyle, setCrashStyle] = useState<'ledger' | 'circle'>('ledger')
   const width = 1080; const start = 140; const spacing = 56
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
     <h4 className="font-semibold">Musical Staff - Bar {barNumber}</h4>
     <p className="text-xs text-zinc-400">One 4/4 percussion staff. Reviewed bars show quarter/eighth/sixteenth durations and rests; ordinary grid bars show sixteenth slots. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
+    <div className="flex flex-wrap gap-3"><label className="text-sm">Count labels<select aria-label="Staff count labels" value={countMode} onChange={(event) => setCountMode(event.target.value as StaffCountMode)} className="ml-2 rounded bg-zinc-900 p-2"><option value="quarter">Quarter: 1 2 3 4</option><option value="eighth">Eighth: 1 & 2 &</option><option value="sixteenth">Sixteenth: 1 e & a</option></select></label><label className="text-sm">Crash head style<select aria-label="Crash head style" value={crashStyle} onChange={(event) => setCrashStyle(event.target.value as 'ledger' | 'circle')} className="ml-2 rounded bg-zinc-900 p-2"><option value="ledger">Cross with ledger line</option><option value="circle">Circled cross</option></select></label></div>
+    <p className="text-xs text-zinc-400">Count labels change the display only, not note durations or playback. Supported meter remains 4/4; 2/4 is not converted by this control. Reviewed event durations determine quarter/eighth symbols. Cymbal legends vary by publisher.</p>
     <div className="overflow-hidden rounded-lg border border-white/20 bg-zinc-100 p-2">
       <svg role="img" aria-label={`Bar ${barNumber} drum notation`} viewBox={`0 -25 ${width} 190`} className="block h-auto w-full max-w-full" style={{ color: '#18181b' }}>
         <title>One percussion staff for the supported drum kit</title>
@@ -42,7 +49,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = C
                 {bar.rhythmEvents && note > 0 && event?.kind === 'note' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${event.duration <= 2 ? ` M ${x + 5} ${y - 32} q 15 8 8 18` : ''}${event.duration === 1 ? ` M ${x + 5} ${y - 25} q 15 8 8 18` : ''}`} fill="none" strokeWidth={1.5} />}
                 {note > 0 && headOffsets.get(instrument) === -11 && <path d={`M ${x - 5} ${y} H ${x + 5}`} fill="none" strokeWidth={1} />}
                 {note > 0 && <g transform={`translate(${headOffsets.get(instrument) ?? 0},0)`}>
-                  {['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'Crash' && <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} />}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
+                  {['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'Crash' && (crashStyle === 'circle' ? <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} /> : <path data-testid={`crash-ledger-${step}`} d={`M ${x - 12} ${y} H ${x + 12}`} strokeWidth={1.2} fill="none" />)}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
                   {note === 1 && <><text x={x - 13} y={y + 5} fontSize={18} stroke="none">(</text><text x={x + 8} y={y + 5} fontSize={18} stroke="none">)</text></>}
                 </g>}
               </g>
@@ -51,7 +58,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = C
               <path d={`M ${x + 5} ${Math.max(...hits.map((instrument) => HEAD_Y[instrument]))} V ${stemTop} M ${x + 5} ${stemTop} q 15 8 8 18 M ${x + 5} ${stemTop + 7} q 15 8 8 18`} />
               {hits.some((instrument) => notesFor(bar, instrument)[step] === 3) && <path d={`M ${x - 6} ${stemTop - 12} l 12 4 -12 4`} strokeWidth={1.8} />}
             </g>}
-            <text x={x} y={133} textAnchor="middle" fontSize={11} fill={color}>{step % 4 === 0 ? step / 4 + 1 : ['e', '&', 'a'][step % 4 - 1]}</text>
+            <text data-testid={`staff-count-${step}`} x={x} y={133} textAnchor="middle" fontSize={11} fill={color}>{staffCountLabel(step, countMode)}</text>
           </g>
         })}
       </svg>

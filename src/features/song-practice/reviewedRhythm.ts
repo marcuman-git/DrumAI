@@ -21,7 +21,7 @@ export function reviewedBar(events: RhythmEvent[]): ChartBar {
   if (!checkReviewedRhythm(events).valid) throw new Error('Resolve missing time and overlaps before confirming.')
   const bar: ChartBar = completeBar()
   for (const event of events) if (event.kind === 'note') bar[event.instrument]![event.step] = event.dynamic
-  bar.rhythmEvents = structuredClone(events)
+  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic }) => ({ instrument, step, duration, kind, dynamic }))
   return bar
 }
 export function validReviewedBar(bar: ChartBar): boolean {

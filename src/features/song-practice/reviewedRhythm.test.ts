@@ -28,3 +28,9 @@ it('rejects malformed metadata and unrepresented grid strokes without throwing',
   const malformed = { ...chart, bars: [{ ...chart.bars[0], rhythmEvents: null }] }
   expect(() => parseSongChart(JSON.stringify({ app: 'DrumMaster AI Chart', schema: 1, chart: malformed }))).toThrow('Invalid drum chart')
 })
+it('does not export temporary source candidate references into saved reviewed bars', () => {
+ const events = fillReviewedRests([{ instrument: 'Snare', step: 0, duration: 4, kind: 'note', dynamic: 2, sourceCandidateId: 7 }], 'Snare')
+ const bar = reviewedBar(events)
+ expect(bar.rhythmEvents![0].sourceCandidateId).toBeUndefined()
+ expect(events[0].sourceCandidateId).toBe(7)
+})

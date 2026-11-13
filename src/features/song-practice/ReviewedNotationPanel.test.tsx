@@ -97,3 +97,14 @@ it('resets event history when the source review remounts', () => {
  expect(screen.getByRole('button', { name: 'Undo review edit' })).toBeDisabled()
  expect(screen.queryByLabelText('Event 1 slot')).toBeNull()
 })
+it('links initialized events to source candidates through edits and undo', () => {
+ const onInspectCandidate = vi.fn()
+ const notes = [{ id: 7, x: 0, y: 50, instrument: 'Snare' as const, shape: 'oval' as const, strength: 1, stemHint: true, flagHint: false }]
+ render(<ReviewedNotationPanel notes={notes} hints={{}} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} onInspectCandidate={onInspectCandidate} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ fireEvent.change(screen.getByLabelText('Event 1 instrument'), { target: { value: 'Kick' } })
+ fireEvent.click(screen.getByRole('button', { name: 'Inspect source for event 1' }))
+ expect(onInspectCandidate).toHaveBeenCalledWith(7)
+ fireEvent.click(screen.getByRole('button', { name: 'Undo review edit' }))
+ expect(screen.getByRole('button', { name: 'Inspect source for event 1' })).toBeVisible()
+})

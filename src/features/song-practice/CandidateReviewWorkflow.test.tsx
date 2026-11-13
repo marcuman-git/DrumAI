@@ -17,3 +17,11 @@ it('summarizes checked candidates needing review without altering chart data', (
  render(<RhythmReview notes={notes} hints={{}} first={20} last={170} />)
  expect(screen.getByText(/Checked candidates needing review: 1/)).toBeVisible()
 })
+it('offers a ledger-cross Crash correction without automatic instrument remapping', () => {
+ const onMap = vi.fn(); const onAccept = vi.fn()
+ render(<CandidateNavigator notes={[{ ...notes[0], instrument: 'Hi-hat', cymbalHint: 'ledger-cross' }]} accepted={[0]} hints={{}} focusedId={null} onFocus={vi.fn()} onAccept={onAccept} onMap={onMap} />)
+ expect(onMap).not.toHaveBeenCalled()
+ fireEvent.click(screen.getByRole('button', { name: 'Map candidate 1 to Crash' }))
+ expect(onMap).toHaveBeenCalledWith(0, 'Crash')
+ expect(onAccept).not.toHaveBeenCalled()
+})

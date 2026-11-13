@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PdfRegionSelector } from './PdfRegionSelector'
 const draw = vi.hoisted(() => vi.fn())
+vi.mock('./NotationRecognitionPanel', () => ({ NotationRecognitionPanel: () => <div>Region analysis active</div> }))
 vi.mock('./pdfPageRenderer', () => ({ renderLocalPdfPage: draw }))
-afterEach(() => { cleanup(); vi.clearAllMocks() })
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks() })
 describe('local PDF page controls', () => {
   it('opens rendering, switches page, and closes safely', async () => {
     draw.mockResolvedValue({ pageCount: 2, width: 600, height: 800, rotation: 0 })
@@ -42,4 +43,29 @@ it('selects a region using pointer coordinates and clears it', async () => {
   expect(screen.getByRole('button', { name: 'Download region PNG' })).toBeEnabled()
   fireEvent.click(screen.getByRole('button', { name: 'Clear region' }))
   expect(screen.getByRole('button', { name: 'Export region JSON' })).toBeDisabled()
+})
+it('clears analysis and allows another bar selection without rerendering the PDF', async () => {
+ draw.mockResolvedValue({ pageCount: 1, width: 600, height: 800, rotation: 0 })
+ vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ drawImage: vi.fn(), getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }) } as unknown as CanvasRenderingContext2D)
+ render(<PdfRegionSelector file={{ name: 'source.pdf' } as File} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Render PDF page' }))
+ await screen.findByText(/Page rendered/)
+ fireEvent.click(screen.getByRole('button', { name: 'Select region Off' }))
+ const surface = screen.getByLabelText('Rendered PDF selection surface')
+ surface.getBoundingClientRect = () => ({ x: 0, y: 0, left: 0, top: 0, right: 200, bottom: 200, width: 200, height: 200, toJSON: () => ({}) })
+ surface.setPointerCapture = vi.fn(); surface.hasPointerCapture = () => true; surface.releasePointerCapture = vi.fn()
+ const pointer = (type: string, x: number, y: number) => { const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y }); Object.defineProperty(event, 'pointerId', { value: 1 }); fireEvent(surface, event) }
+ pointer('pointerdown', 20, 20); pointer('pointerup', 120, 120)
+ fireEvent.click(screen.getByRole('button', { name: 'Analyze selected notation region (Experimental)' }))
+ expect(screen.getByText('Region analysis active')).toBeVisible()
+ fireEvent.click(screen.getByRole('button', { name: 'Select another region' }))
+ expect(screen.queryByText('Region analysis active')).toBeNull()
+ expect(screen.getByRole('button', { name: 'Select region On' })).toHaveAttribute('aria-pressed', 'true')
+ pointer('pointerdown', 80, 30); pointer('pointerup', 190, 110)
+ expect(screen.getByRole('button', { name: 'Analyze selected notation region (Experimental)' })).toBeEnabled()
+ expect(draw).toHaveBeenCalledTimes(1)
+ fireEvent.click(screen.getByRole('button', { name: 'Reset PDF rendering' }))
+ await waitFor(() => expect(draw).toHaveBeenCalledTimes(2))
+ expect(screen.queryByText('Region analysis active')).toBeNull()
+ expect(screen.getByRole('button', { name: 'Export region JSON' })).toBeDisabled()
 })
