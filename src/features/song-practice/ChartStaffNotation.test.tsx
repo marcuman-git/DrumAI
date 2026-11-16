@@ -75,3 +75,11 @@ it('switches count labels without changing notes or reviewed durations', () => {
  expect(screen.getByTestId('staff-Snare-1')).toHaveAttribute('data-active', 'true')
  fireEvent.change(screen.getByLabelText('Crash head style'), { target: { value: 'circle' } })
 })
+it('updates sparse grid stems to quarter notation while keeping every stroke', () => {
+ const bar = blankBar(); for (const step of [0, 4, 8, 12]) bar.Snare[step] = 2
+ render(<ChartStaffNotation bar={bar} barNumber={1} activeStep={0} />)
+ fireEvent.change(screen.getByLabelText('Staff count labels'), { target: { value: 'quarter' } })
+ expect(screen.getByLabelText('Snare slot 1: quarter note')).toBeVisible()
+ expect(screen.getByTestId('review-stem-Snare-0').getAttribute('d')).not.toContain('q')
+ expect('rhythmEvents' in bar).toBe(false)
+})

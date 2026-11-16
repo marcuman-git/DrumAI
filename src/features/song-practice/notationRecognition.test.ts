@@ -105,3 +105,12 @@ it('separates several internal barlines from one thick boundary', async () => {
   expect(interiorBarlines(image, staff, 20, 240)).toHaveLength(2)
   expect(interiorBarlines(image, staff, 20, 110)).toHaveLength(1)
 })
+it('recovers an above-staff crossed-ledger Crash instead of rejecting its horizontal stroke as a beam', () => {
+ const source = fixture()
+ const black = (x: number, y: number) => { const index = (y * source.width + x) * 4; source.data[index] = source.data[index + 1] = source.data[index + 2] = 0 }
+ for (let dx = -6; dx <= 6; dx++) for (const sign of [-1, 1]) black(300 + dx, Math.round(22 + sign * dx * 0.6))
+ for (let x = 288; x <= 312; x++) black(x, 22)
+ const image = analyzeStaffs(source.data, source.width, source.height)
+ const notes = findNoteCandidates(image, image.staffs[0], 'master-key', { cleanHeads: true, tolerance: 2 })
+ expect(notes.some((note) => note.instrument === 'Crash' && Math.abs(note.x - 300) <= 4 && Math.abs(note.y - 22) <= 3 && note.cymbalHint === 'ledger-cross')).toBe(true)
+})

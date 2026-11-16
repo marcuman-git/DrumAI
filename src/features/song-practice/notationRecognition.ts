@@ -106,12 +106,13 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
         let score = dark / (crossHead ? cross.length : area)
         if (options.cleanHeads && !crossHead && (usefulRows < 3 || area < ovalArea * 0.3)) score = 0
         if (options.cleanHeads && crossHead) {
+          const isolatedLedger = score >= 0.7 && hasIsolatedCymbalLedger(image, staff, x, centerY)
           // A beam can match the diagonal template. Reject long horizontal
           // support on both sides, but retain thick engraved cross heads.
           let core = 0
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) core += at(x + dx, centerY + dy)
           const axes = at(x - halfX, centerY) + at(x + halfX, centerY) + at(x, centerY - halfY) + at(x, centerY + halfY)
-          if (core >= 8 && axes >= 3) score = 0
+          if (!isolatedLedger && core >= 8 && axes >= 3) score = 0
           for (let dy = -halfY; dy <= halfY; dy++) {
             const row = centerY + dy
             if (staffLines.some((line) => Math.abs(line - row) <= 1)) continue
@@ -119,7 +120,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
             for (let dx = halfX + 2; dx <= halfX + 8; dx++) {
               extended += at(x - dx, row) + at(x + dx, row); total += 2
             }
-            if (extended / total > 0.65) score = 0
+            if (!isolatedLedger && extended / total > 0.65) score = 0
           }
         }
         if (options.cleanHeads && !crossHead && score > 0) {
