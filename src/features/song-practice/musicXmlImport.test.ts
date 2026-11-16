@@ -34,3 +34,13 @@ it('keeps GM open hi-hat separate from closed hi-hat', () => {
   expect(importMusicXml(score(hit.repeat(4), 47)).bars[0]['Open hi-hat']?.filter(Boolean)).toHaveLength(4)
   expect(importMusicXml(score(hit.repeat(4), 43)).bars[0]['Hi-hat'].filter(Boolean)).toHaveLength(4)
 })
+it('imports two-beat measures with inherited meter and rejects pickups and mixed meters', () => {
+ const two = score(hit.repeat(2)).replace('<beats>4</beats>', '<beats>2</beats>')
+ const xml = two.replace('</measure></part>', '</measure><measure>' + hit.repeat(2) + '</measure></part>')
+ const chart = importMusicXml(xml)
+ expect(chart.meter).toBe('2/4'); expect(chart.bars).toHaveLength(2)
+ expect(chart.bars.every((bar) => bar.beats === 2 && bar.Snare[4] === 2 && bar.Snare.slice(8).every((note) => note === 0))).toBe(true)
+ expect(() => importMusicXml(two.replace(hit.repeat(2), hit))).toThrow('incomplete')
+ const mixed = xml.replace('<measure><note>', '<measure><attributes><time><beats>4</beats><beat-type>4</beat-type></time></attributes><note>')
+ expect(() => importMusicXml(mixed)).toThrow('Mixed meters')
+})

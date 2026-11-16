@@ -8,14 +8,14 @@ function ranges(slots: number[]): SlotRange[] {
  return result
 }
 /** Reports each participating voice independently; simultaneous different drums do not conflict. */
-export function diagnoseReviewedRhythm(events: readonly RhythmEvent[]) {
+export function diagnoseReviewedRhythm(events: readonly RhythmEvent[], slots = 16) {
  return CHART_INSTRUMENTS.filter((instrument) => events.some((event) => event.instrument === instrument)).map((instrument) => {
-  const coverage = Array.from({ length: 16 }, () => [] as number[])
+  const coverage = Array.from({ length: slots }, () => [] as number[])
   const overflowEvents: number[] = []
   events.forEach((event, index) => {
    if (event.instrument !== instrument) return
-   if (event.step + event.duration > 16) overflowEvents.push(index)
-   for (let slot = Math.max(0, event.step); slot < Math.min(16, event.step + event.duration); slot++) coverage[slot].push(index)
+   if (event.step + event.duration > slots) overflowEvents.push(index)
+   for (let slot = Math.max(0, event.step); slot < Math.min(slots, event.step + event.duration); slot++) coverage[slot].push(index)
   })
   const gaps = ranges(coverage.flatMap((owners, slot) => owners.length === 0 ? [slot + 1] : []))
   const overlaps = ranges(coverage.flatMap((owners, slot) => owners.length > 1 ? [slot + 1] : []))
@@ -23,9 +23,9 @@ export function diagnoseReviewedRhythm(events: readonly RhythmEvent[]) {
   return { instrument, gaps, overlaps, conflictEvents, overflowEvents }
  })
 }
-export function fillNextReviewedGap(events: readonly RhythmEvent[], instrument: ChartInstrument): RhythmEvent[] {
- const voice = diagnoseReviewedRhythm(events).find((item) => item.instrument === instrument)
- const gap = voice?.gaps[0] ?? (voice ? undefined : { start: 1, end: 16 })
+export function fillNextReviewedGap(events: readonly RhythmEvent[], instrument: ChartInstrument, slots = 16): RhythmEvent[] {
+ const voice = diagnoseReviewedRhythm(events, slots).find((item) => item.instrument === instrument)
+ const gap = voice?.gaps[0] ?? (voice ? undefined : { start: 1, end: slots })
  if (!gap) return [...events]
  const added: RhythmEvent[] = []
  let step = gap.start - 1

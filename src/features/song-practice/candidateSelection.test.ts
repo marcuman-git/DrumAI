@@ -10,3 +10,6 @@ it('reports candidates that cannot align to the selected slot guides', () => {
   expect(alignedCandidates(notes, 20, 190).map((note) => note.id)).toEqual([0, 1])
   expect(alignedCandidates(notes, 20, 20)).toEqual([])
 })
+it('uses eight source slots for a 2/4 draft without accepting unchecked heads', () => {
+ const selected = selectedCandidates(notes, [0, 1]); expect(alignedCandidates(selected, 20, 190, 8).map((note) => note.id)).toEqual([0, 1])
+})

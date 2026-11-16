@@ -17,18 +17,20 @@ export function importMusicXml(xml: string): SongChart {
     if (instrument) mapping.set(item.getAttribute('id') ?? '', instrument)
   }
   const measures = parts[0].querySelectorAll(':scope > measure')
-  if (!measures.length || measures.length > 16) throw new Error('Import between one and sixteen complete 4/4 bars.')
-  let divisions = 0; let bpm = 60; let meter = false; let barsTempoSeen = false
+  if (!measures.length || measures.length > 16) throw new Error('Import between one and sixteen complete 2/4 or 4/4 bars.')
+  let divisions = 0; let bpm = 60; let meter: '2/4' | '4/4' | null = null; let chartMeter: '2/4' | '4/4' | null = null; let barsTempoSeen = false
   const bars = Array.from(measures, (measure) => {
     const attributes = measure.querySelector(':scope > attributes')
     if (attributes) {
       if (text(attributes, 'divisions')) divisions = Number(text(attributes, 'divisions'))
-      if (attributes.querySelector('time')) { meter = text(attributes, 'time > beats') === '4' && text(attributes, 'time > beat-type') === '4' }
+      if (attributes.querySelector('time')) { const beats = text(attributes, 'time > beats'); meter = ['2', '4'].includes(beats) && text(attributes, 'time > beat-type') === '4' ? (beats === '2' ? '2/4' : '4/4') : null }
     }
-    if (!meter || !Number.isFinite(divisions) || divisions <= 0) throw new Error('Explicit divisions and 4/4 meter are required.')
+    if (!meter || !Number.isFinite(divisions) || divisions <= 0) throw new Error('Explicit divisions and 2/4 or 4/4 meter are required.')
+    if (chartMeter && chartMeter !== meter) throw new Error('Mixed meters within a chart are not supported. Import separate sections.'); chartMeter = meter
+    const slots = meter === '2/4' ? 8 : 16
     const tempo = measure.querySelector('sound[tempo]')?.getAttribute('tempo')
     if (tempo) { const next = Number(tempo); if (!Number.isInteger(next) || next < 40 || next > 240) throw new Error('Tempo must be 40–240 BPM.'); if (barsTempoSeen && next !== bpm) throw new Error('Tempo changes within imported charts are not supported.'); bpm = next; barsTempoSeen = true }
-    const bar = blankBar(); let cursor = 0; let previous = 0; let extent = 0; let hasPrevious = false
+    const bar = { ...blankBar(), ...(meter === '2/4' ? { beats: 2 as const } : {}) }; let cursor = 0; let previous = 0; let extent = 0; let hasPrevious = false
     for (const entry of Array.from(measure.children)) {
       if (!['note','backup','forward'].includes(entry.localName)) continue
       if (entry.querySelector('grace, time-modification, tie')) throw new Error('Grace notes and tuplets require manual entry in this editor.')
@@ -37,7 +39,7 @@ export function importMusicXml(xml: string): SongChart {
       if (entry.localName === 'backup') { cursor -= duration; hasPrevious = false; if (cursor < 0) throw new Error('Invalid voice timing.'); continue }
       const chord = !!entry.querySelector('chord'); const start = chord ? previous : cursor
       if (chord && !hasPrevious) throw new Error('Chord has no preceding note.')
-      if (start + duration > 16 || start < 0) throw new Error('Incomplete or overflowing bar timing.')
+      if (start + duration > slots || start < 0) throw new Error('Incomplete or overflowing bar timing.')
       if (entry.localName === 'note' && !entry.querySelector('rest')) {
         const instrument = mapping.get(entry.querySelector('instrument')?.getAttribute('id') ?? '')
         if (!instrument || !entry.querySelector('unpitched')) throw new Error('Unsupported or unspecified instrument. Use supported GM drum/tom/cymbal voices; extras such as cowbell remain unsupported.')
@@ -46,8 +48,8 @@ export function importMusicXml(xml: string): SongChart {
       if (!chord) { previous = cursor; cursor += duration; hasPrevious = entry.localName === 'note' }
       extent = Math.max(extent, start + duration)
     }
-    if (extent !== 16) throw new Error('Pickup or incomplete bars require manual entry.')
+    if (extent !== slots) throw new Error('Pickup or incomplete bars require manual entry.')
     return bar
   })
-  return { id: crypto.randomUUID(), title: (text(document.documentElement, 'work-title') || 'Imported MusicXML').slice(0, 80), bpm, bars }
+  return { id: crypto.randomUUID(), title: (text(document.documentElement, 'work-title') || 'Imported MusicXML').slice(0, 80), bpm, bars, ...(chartMeter === '2/4' ? { meter: '2/4' as const } : {}) }
 }

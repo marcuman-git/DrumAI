@@ -28,3 +28,10 @@ it('fills a new voice explicitly but never exceeds the event limit', () => {
  const full = Array.from({ length: 192 }, () => ({ ...event }))
  expect(fillNextReviewedGap(full, 'Kick')).toEqual(full)
 })
+it('diagnoses and fills 2/4 gaps without introducing slots beyond beat two', () => {
+ const voice = diagnoseReviewedRhythm([event], 8)[0]
+ expect(formatSlotRanges(voice.gaps)).toBe('5-8')
+ const filled = fillNextReviewedGap([event], 'Snare', 8)
+ expect(filled).toHaveLength(2); expect(filled[1]).toMatchObject({ step: 4, duration: 4 })
+ expect(diagnoseReviewedRhythm([{ ...event, step: 7 }], 8)[0].overflowEvents).toEqual([0])
+})

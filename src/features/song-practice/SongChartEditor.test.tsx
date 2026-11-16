@@ -252,3 +252,16 @@ it('plays a selected 2/4 bar for two beats and preserves meter when clearing and
  fireEvent.click(screen.getByRole('button', { name: 'Save as new' }))
  expect(JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!)[0].bars[0].beats).toBe(2)
 })
+it('blocks a mismatched PDF draft until the chart meter matches and saves its 2/4 metadata', () => {
+ const bar = { Snare: Array<number>(16).fill(0), Kick: Array<number>(16).fill(0), 'Hi-hat': Array<number>(16).fill(0), beats: 2 as const }; bar.Snare[7] = 2
+ const consumed = vi.fn()
+ render(<SongChartEditor recognitionDraft={{ bar, source: 'two.pdf', page: 1 }} onDraftConsumed={consumed} />)
+ expect(screen.getByRole('button', { name: 'Add detected bar' })).toBeDisabled()
+ fireEvent.change(screen.getByLabelText('Chart time signature'), { target: { value: '2/4' } })
+ fireEvent.click(screen.getByRole('button', { name: 'Add detected bar' }))
+ expect(consumed).toHaveBeenCalledOnce()
+ expect(screen.getByRole('button', { name: 'Snare step 8: note' })).toBeInTheDocument()
+ fireEvent.click(screen.getByRole('button', { name: 'Save as new' }))
+ const saved = JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!)[0]
+ expect(saved.meter).toBe('2/4'); expect(saved.bars[2].beats).toBe(2); expect(saved.bars[2].Snare[7]).toBe(2)
+})

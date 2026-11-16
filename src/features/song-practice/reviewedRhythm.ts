@@ -34,8 +34,8 @@ export function validReviewedBar(bar: ChartBar): boolean {
     return Array.isArray(actual) && actual.length === 16 && actual.every((value, step) => value === expected[instrument]![step])
   })
 }
-export function fillReviewedRests(events: RhythmEvent[], instrument: ChartInstrument): RhythmEvent[] {
+export function fillReviewedRests(events: RhythmEvent[], instrument: ChartInstrument, slots = 16): RhythmEvent[] {
   const covered = new Set<number>()
   for (const event of events.filter((item) => item.instrument === instrument)) for (let step = event.step; step < event.step + event.duration; step++) covered.add(step)
-  return [...events, ...Array.from({ length: 16 }, (_, step) => step).filter((step) => !covered.has(step)).map((step): RhythmEvent => ({ instrument, step, duration: 1, kind: 'rest', dynamic: 2 }))]
+  return [...events, ...Array.from({ length: slots }, (_, step) => step).filter((step) => !covered.has(step)).map((step): RhythmEvent => ({ instrument, step, duration: 1, kind: 'rest', dynamic: 2 }))]
 }

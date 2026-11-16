@@ -160,10 +160,10 @@ export function findBarlineHints(image: RecognitionImage, staff: StaffCandidate)
   }
   return hints
 }
-export function candidatesToBar(notes: NoteCandidate[], first: number, last: number): ChartBar {
+export function candidatesToBar(notes: NoteCandidate[], first: number, last: number, slots = 16): ChartBar {
   if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) throw new Error('Invalid slot centers.')
-  const bar = completeBar()
-  for (const note of notes) { const raw = (note.x - first) / (last - first) * 15; const step = Math.round(raw); if (step >= 0 && step < 16 && Math.abs(raw - step) <= 0.4) bar[note.instrument][step] = 2 }
+  const bar: ChartBar = { ...completeBar(), ...(slots === 8 ? { beats: 2 as const } : {}) }
+  for (const note of notes) { const raw = (note.x - first) / (last - first) * (slots - 1); const step = Math.round(raw); if (step >= 0 && step < slots && Math.abs(raw - step) <= 0.4) bar[note.instrument]![step] = 2 }
   return bar
 }
 /** Distinct vertical-line hints inside slot guides; not confirmed measure parsing. */

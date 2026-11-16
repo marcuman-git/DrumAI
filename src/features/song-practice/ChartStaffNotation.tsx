@@ -8,8 +8,8 @@ import type { ChartBar } from './songChartLogic'
 const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
-export function ChartStaffNotation({ bar, barNumber, activeStep, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
-  const [countMode, setCountMode] = useState<StaffCountMode>('sixteenth')
+export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'sixteenth', instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
+  const [countMode, setCountMode] = useState<StaffCountMode>(initialCountMode)
   const [crashStyle, setCrashStyle] = useState<'ledger' | 'circle'>('ledger')
   const displayBar = groupedGridNotation(bar, countMode)
   const slots = barSlots(bar)
