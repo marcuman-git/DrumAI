@@ -150,3 +150,11 @@ Later conversion version assignments remain provisional until recognition valida
 - Temporary initialized-event source references survive review edits/history and are stripped from saved reviewed bars.
 - Build and 259 tests pass; no runtime dependencies/workflow changes.
 - Next proposed v0.10.20: coordinated 2/4 and 4/4 meter-aware chart data, notation and playback with backwards compatibility (clarification requested). Reliable multi-bar PDF transcription, dotted/tied/tuplet/32nd rhythms and reviewed PDF-to-MusicXML conversion remain pending.
+
+### v0.10.20 delivered (2026-11-13)
+- Crossed-ledger candidate rescue; grid symbol grouping controls wired through renderer.
+- Coordinated 2/4 and 4/4 chart storage, validation, notation and playback with safe split/join conversion.
+- Legacy save compatibility and 268 passing unit tests. Recognition remains experimental.
+### Next proposed v0.10.21
+- Extend PDF duration review/draft construction and MusicXML import to 2/4; explicit meter selection without silently dropping events.
+- Continue source-specific cymbal/head recognition benchmarking; reviewed corrections remain required. PDF-to-MusicXML conversion remains on the longer-term roadmap, not yet delivered.

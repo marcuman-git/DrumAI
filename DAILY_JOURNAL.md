@@ -540,3 +540,13 @@
 - Build and 259 tests across 80 files pass. Targeted lint has no errors, retaining prior crop-effect advisory. Browser E2E, mobile selection/scroll and physical playback remain manual.
 - No package or workflow changes. Upload dependency-first bundle before final full tests/deploy.
 - Next proposed v0.10.20: meter-aware charts starting 2/4 alongside 4/4, with coordinated notation, duration validation, playback and saved-chart compatibility, subject to clarification. Broader verified PDF recognition and MusicXML conversion remain pending.
+
+## 2026-11-13
+### v0.10.20 - Crash recovery, symbol grouping and coordinated 2/4 charts
+- Corrected clean-cross filtering that could reject an isolated crossed-ledger cymbal head as a dense core or beam. Controlled Crash regression passes; source-specific recognition remains experimental and requires manual verification.
+- Staff count choices now derive quarter/eighth grouped symbols for grid bars, preserving every original onset. Fixed remaining renderer paths that read original grid data instead of derived notation. Dense passages retain shorter notes; reviewed durations always override display grouping. No inferred PDF duration claim.
+- Added 2/4 alongside legacy 4/4: eight active slots, two-beat playback, meter-aware validation, grid and staff. Split each 4/4 bar into two 2/4 bars; join pairs to return. Conversion refuses crossing reviewed durations, oversized splits, odd joins and mixed reviewed/grid pairs. Section and review reset after conversion.
+- Optional meter/beat metadata survives saves and chart JSON; legacy charts remain 4/4. Clear/add/duplicate preserve meter. Count-in intentionally remains four clicks.
+- PDF drafts and MusicXML import still use 4/4. Append PDF drafts before meter conversion. No package or CI workflow changes.
+- Build and 268 unit tests across 82 files pass; changed-code lint clean. Browser E2E, actual source PDFs, mobile and physical audio remain manual checks.
+- Next proposed v0.10.21: meter-aware PDF duration review and MusicXML 2/4 import, with explicit source-meter selection and regression coverage.
