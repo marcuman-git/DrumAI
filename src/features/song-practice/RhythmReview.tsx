@@ -4,9 +4,9 @@ import type { NoteValueHint } from './noteValueHints'
 
 import { reviewRhythm } from './rhythmReviewLogic'
 
-export function RhythmReview({ notes, hints, first, last, slots = 16 }: { notes: NoteCandidate[]; hints: Record<string, NoteValueHint>; first: number; last: number; slots?: number }) {
+export function RhythmReview({ notes, hints, first, last, slots = 16, lastGuideStep = slots - 1 }: { notes: NoteCandidate[]; hints: Record<string, NoteValueHint>; first: number; last: number; slots?: number; lastGuideStep?: number }) {
   const needsReview = notes.filter((note) => candidateReviewReasons(note, notes, hints).length > 0).length
-  const result = reviewRhythm(notes, hints, first, last, slots)
+  const result = reviewRhythm(notes, hints, first, last, slots, lastGuideStep)
   return <section aria-label="Experimental rhythm review" className="rounded border border-amber-300/40 bg-amber-950/20 p-3 text-sm">
     <h4 className="font-semibold">Rhythm review - experimental</h4>
     <p className="text-amber-100">Checked candidates needing review: {needsReview}. Instrument suggestions are not verified identities; simultaneous voices can also appear close together.</p>

@@ -8,16 +8,17 @@ import type { ChartBar } from './songChartLogic'
 const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
-export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'sixteenth', instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
-  const [countMode, setCountMode] = useState<StaffCountMode>(initialCountMode)
+export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'eighth', countMode: controlledCountMode, onCountModeChange, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; countMode?: StaffCountMode; onCountModeChange?: (mode: StaffCountMode) => void; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
+  const [localCountMode, setCountMode] = useState<StaffCountMode>(initialCountMode)
+  const countMode = controlledCountMode ?? localCountMode
   const [crashStyle, setCrashStyle] = useState<'ledger' | 'circle'>('ledger')
   const displayBar = groupedGridNotation(bar, countMode)
   const slots = barSlots(bar)
   const width = 1080; const start = 140; const spacing = 896 / slots
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
     <h4 className="font-semibold">Musical Staff - Bar {barNumber}</h4>
-    <p className="text-xs text-zinc-400">One {slots / 4}/4 percussion staff. Reviewed bars show quarter/eighth/sixteenth durations and rests; ordinary grid bars show sixteenth slots. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
-    <div className="flex flex-wrap gap-3"><label className="text-sm">Count labels<select aria-label="Staff count labels" value={countMode} onChange={(event) => setCountMode(event.target.value as StaffCountMode)} className="ml-2 rounded bg-zinc-900 p-2"><option value="quarter">Quarter: 1 2 3 4</option><option value="eighth">Eighth: 1 & 2 &</option><option value="sixteenth">Sixteenth: 1 e & a</option></select></label><label className="text-sm">Crash head style<select aria-label="Crash head style" value={crashStyle} onChange={(event) => setCrashStyle(event.target.value as 'ledger' | 'circle')} className="ml-2 rounded bg-zinc-900 p-2"><option value="ledger">Cross with ledger line</option><option value="circle">Circled cross</option></select></label></div>
+    <p className="text-xs text-zinc-400">One {slots / 4}/4 percussion staff. Reviewed bars show quarter/eighth/sixteenth durations and rests; grid symbols follow the selected count mode where onsets allow grouping. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
+    <div className="flex flex-wrap gap-3"><label className="text-sm">Count labels<select aria-label="Staff count labels" value={countMode} onChange={(event) => { const mode = event.target.value as StaffCountMode; setCountMode(mode); onCountModeChange?.(mode) }} className="ml-2 rounded bg-zinc-900 p-2"><option value="quarter">Quarter: 1 2 3 4</option><option value="eighth">Eighth: 1 & 2 &</option><option value="sixteenth">Sixteenth: 1 e & a</option></select></label><label className="text-sm">Crash head style<select aria-label="Crash head style" value={crashStyle} onChange={(event) => setCrashStyle(event.target.value as 'ledger' | 'circle')} className="ml-2 rounded bg-zinc-900 p-2"><option value="ledger">Cross with ledger line</option><option value="circle">Circled cross</option></select></label></div>
     <p className="text-xs text-zinc-400">Count mode also groups grid symbols where no stroke is lost. This is a display assumption, not PDF rhythm recognition. Reviewed durations remain authoritative. Playback onsets are unchanged. Cymbal legends vary by publisher.</p>
     <div className="overflow-hidden rounded-lg border border-white/20 bg-zinc-100 p-2">
       <svg role="img" aria-label={`Bar ${barNumber} drum notation`} viewBox={`0 -25 ${width} 190`} className="block h-auto w-full max-w-full" style={{ color: '#18181b' }}>
@@ -67,6 +68,6 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
         })}
       </svg>
     </div>
-    <p className="text-xs text-zinc-400">Reviewed rests are shown per instrument; continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards reviewed durations for that bar and returns it to sixteenth-slot notation.</p>
+    <p className="text-xs text-zinc-400">Reviewed rests are shown per instrument; continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards reviewed durations for that bar and returns it to grid notation using the selected count mode.</p>
   </section>
 }

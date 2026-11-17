@@ -7,3 +7,14 @@ describe('PDF region coordinates', () => {
     expect(usableRegion(selectRegion({ x: 0.1, y: 0.1 }, { x: 0.5, y: 0.5 }))).toBe(true)
   })
 })
+it('extends analysis above and below the selected staff and clips at page edges', async () => {
+ const { analysisRegion } = await import('./pdfRegionLogic')
+ const selected = { x: 0.2, y: 0.4, width: 0.5, height: 0.1 }
+ const scan = analysisRegion(selected, 1000, 1000)
+ expect(scan.y).toBeCloseTo(0.365)
+ expect(scan.y + scan.height).toBeCloseTo(0.535)
+ expect(scan.x).toBeLessThan(selected.x)
+ expect(selected).toEqual({ x: 0.2, y: 0.4, width: 0.5, height: 0.1 })
+ const edge = analysisRegion({ x: 0, y: 0, width: 1, height: 1 }, 1000, 1000)
+ expect(edge).toEqual({ x: 0, y: 0, width: 1, height: 1 })
+})

@@ -1,13 +1,13 @@
 import type { NoteCandidate } from './notationRecognition'
 import type { NoteValueHint } from './noteValueHints'
 
-export function reviewRhythm(notes: NoteCandidate[], hints: Record<string, NoteValueHint>, first: number, last: number, slotCount = 16) {
+export function reviewRhythm(notes: NoteCandidate[], hints: Record<string, NoteValueHint>, first: number, last: number, slotCount = 16, lastGuideStep = slotCount - 1) {
   const slots = new Set<number>()
   const endings = new Map<string, number>()
   let unknown = 0; let outside = 0; let conflicts = 0; let overflow = 0
   for (const note of [...notes].sort((a, b) => a.x - b.x)) {
     if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first || note.x < first || note.x > last) { outside++; continue }
-    const slot = Math.round((note.x - first) / (last - first) * (slotCount - 1))
+    const slot = Math.round((note.x - first) / (last - first) * lastGuideStep)
     slots.add(slot)
     const value = hints[note.id]?.value
     const duration = value === 'quarter' ? 4 : value === 'eighth' ? 2 : value === 'sixteenth' ? 1 : 0

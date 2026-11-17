@@ -5,7 +5,7 @@ import { completeBar } from './chartKit'
 export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
 export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
 export interface StaffCandidate { top: number; gap: number }
-export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; articulationHint?: 'open' | 'half-open' }
+export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; positionHint?: 'above-line' | 'on-line' | 'ambiguous'; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
 export interface RecognitionDraft { bar: ChartBar; source: string; page: number }
 const candidateCache = new WeakMap<RecognitionImage, Map<string, NoteCandidate[]>>()
@@ -78,9 +78,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Cymbal positions vary by publisher; retain their position for manual identification.
   const levels: [ChartInstrument, number][] = profile === 'guide-kit'
-    ? [['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Floor tom 1', 2.5], ['Kick', 3.5], ['Pedal hi-hat', 4.5]]
+    ? [['Crash', -1], ['Hi-hat', -0.5], ['Hi-hat', -0.25], ['Ride', 0], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Floor tom 1', 2.5], ['Kick', 3.5], ['Pedal hi-hat', 4.5]]
     : profile === 'master-key'
-    ? [['Crash', -2], ['Crash', -1.5], ['Crash', -1], ['Hi-hat', -0.5], ['Ride', 0], ['Pedal hi-hat', 4.5], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Tom 3', 2], ['Floor tom 1', 2.5], ['Floor tom 2', 3], ['Kick', 3.5], ['Kick 2', 4]]
+    ? [['Crash', -2], ['Crash', -1.5], ['Crash', -1], ['Hi-hat', -0.5], ['Hi-hat', -0.25], ['Ride', 0], ['Pedal hi-hat', 4.5], ['Tom 1', 0.5], ['Tom 2', 1], ['Snare', 1.5], ['Tom 3', 2], ['Floor tom 1', 2.5], ['Floor tom 2', 3], ['Kick', 3.5], ['Kick 2', 4]]
     : [['Hi-hat', -2], ['Hi-hat', -1.5], ['Hi-hat', -1], ['Hi-hat', -0.5], ['Hi-hat', 0], ...Array.from({ length: 11 }, (_, index): [ChartInstrument, number] => { const offset = (index + 1) / 2; return [offset === 3.5 || offset >= 4.5 ? 'Kick' : 'Snare', offset] })]
   const overrides: [ChartInstrument, number | undefined][] = [['Floor tom 1', options.floorTom1], ['Floor tom 2', options.floorTom2], ['Kick', options.kick], ['Snare', options.snare]]
   const calibrated = levels.filter(([instrument, offset]) => !overrides.some(([name, value]) => value !== undefined && (instrument === name || (!['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat'].includes(instrument) && offset === value))))
@@ -112,7 +112,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
           let core = 0
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) core += at(x + dx, centerY + dy)
           const axes = at(x - halfX, centerY) + at(x + halfX, centerY) + at(x, centerY - halfY) + at(x, centerY + halfY)
-          if (!isolatedLedger && core >= 8 && axes >= 3) score = 0
+          if (!isolatedLedger && !staffLines.some((line) => Math.abs(line - centerY) <= halfY) && core >= 8 && axes >= 3) score = 0
           for (let dy = -halfY; dy <= halfY; dy++) {
             const row = centerY + dy
             if (staffLines.some((line) => Math.abs(line - row) <= 1)) continue
@@ -146,7 +146,23 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const result = notes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !notes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
+  const centeredNotes = notes.map((note) => {
+    if (profile === 'generic' || note.shape !== 'cross' || !['Hi-hat', 'Ride'].includes(note.instrument)) return note
+    // Ignore staff ink and the outer stem column when measuring cross-head mass.
+    let mass = 0; let moment = 0
+    for (let dy = -halfY - tolerance; dy <= halfY + tolerance; dy++) {
+      const row = note.y + dy
+      if (staffLines.some((line) => Math.abs(line - row) <= 1)) continue
+      for (let dx = -halfX + 1; dx < halfX; dx++) { const value = at(note.x + dx, row); mass += value; moment += value * row }
+    }
+    const center = mass ? moment / mass : note.y
+    const distance = (center - staff.top) / staff.gap
+    const positionHint = distance < -0.22 ? 'above-line' as const : Math.abs(distance) <= 0.12 ? 'on-line' as const : 'ambiguous' as const
+    // Named key profiles distinguish hats above the line from rides centered on it.
+    const instrument = distance >= -0.8 && distance <= 0.25 && positionHint !== 'ambiguous' ? positionHint === 'above-line' ? 'Hi-hat' as const : 'Ride' as const : note.instrument
+    return { ...note, instrument, y: Math.round(center), positionHint, sourceLabel: instrument + ' position suggestion (' + positionHint + '; verify source legend)' }
+  }).filter((note, index, all) => !all.some((other, otherIndex) => otherIndex < index && note.shape === 'cross' && other.shape === 'cross' && other.instrument === note.instrument && Math.abs(other.x - note.x) < staff.gap * 0.9 && Math.abs(other.y - note.y) < staff.gap * 0.4))
+  const result = centeredNotes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !centeredNotes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)
@@ -160,10 +176,10 @@ export function findBarlineHints(image: RecognitionImage, staff: StaffCandidate)
   }
   return hints
 }
-export function candidatesToBar(notes: NoteCandidate[], first: number, last: number, slots = 16): ChartBar {
-  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first) throw new Error('Invalid slot centers.')
+export function candidatesToBar(notes: NoteCandidate[], first: number, last: number, slots = 16, lastGuideStep = slots - 1): ChartBar {
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last <= first || !Number.isInteger(lastGuideStep) || lastGuideStep < 1 || lastGuideStep >= slots) throw new Error('Invalid slot centers.')
   const bar: ChartBar = { ...completeBar(), ...(slots === 8 ? { beats: 2 as const } : {}) }
-  for (const note of notes) { const raw = (note.x - first) / (last - first) * (slots - 1); const step = Math.round(raw); if (step >= 0 && step < slots && Math.abs(raw - step) <= 0.4) bar[note.instrument]![step] = 2 }
+  for (const note of notes) { const raw = (note.x - first) / (last - first) * lastGuideStep; const step = Math.round(raw); if (step >= 0 && step < slots && Math.abs(raw - step) <= 0.4) bar[note.instrument]![step] = 2 }
   return bar
 }
 /** Distinct vertical-line hints inside slot guides; not confirmed measure parsing. */

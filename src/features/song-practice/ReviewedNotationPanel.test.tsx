@@ -124,3 +124,26 @@ it('reviews only eight slots in 2/4 and previews participating instruments with 
  expect(bar.rhythmEvents).toHaveLength(2)
  expect(bar.rhythmEvents[1]).toMatchObject({ step: 4, duration: 4, kind: 'rest' })
 })
+it('starts unknown durations as eighths and allows an explicit sixteenth assumption', () => {
+ render(<ReviewedNotationPanel notes={[{ id: 0, x: 0, y: 20, instrument: 'Snare', shape: 'oval', strength: 1, stemHint: false, flagHint: false }]} hints={{}} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('2')
+ fireEvent.change(screen.getByLabelText('Unknown duration starting value'), { target: { value: '1' } })
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('2')
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('1')
+})
+it('uses the eighth assumption over tentative sixteenth hints while honoring manual review', () => {
+ const note = { id: 0, x: 0, y: 20, instrument: 'Snare' as const, shape: 'oval' as const, strength: 1, stemHint: true, flagHint: true }
+ const hint = { value: 'sixteenth' as const, stemDirection: 'up' as const, beamBands: 2, left: 0, top: 0, width: 50, height: 50 }
+ const view = render(<ReviewedNotationPanel notes={[note]} hints={{ 0: hint }} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('2')
+ fireEvent.click(screen.getByLabelText('Use tentative duration hints'))
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('1')
+ fireEvent.click(screen.getByLabelText('Use tentative duration hints'))
+ view.rerender(<ReviewedNotationPanel notes={[note]} hints={{ 0: { ...hint, manualReviewed: true } }} first={0} last={150} image={null} staff={null} onConfirm={vi.fn()} />)
+ fireEvent.click(screen.getByRole('button', { name: 'Initialize accepted notes' }))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('1')
+})
