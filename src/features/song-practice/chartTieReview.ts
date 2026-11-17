@@ -1,3 +1,4 @@
+import { reviewAfterBarEdits } from './chartReviewLogic'
 import { CHART_INSTRUMENTS, notesFor } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 import type { SongChart } from './songChartLogic'
@@ -13,7 +14,8 @@ export function setBoundaryTie(chart:SongChart,index:number,instrument:ChartInst
  if(!chart.bars.every((bar,position)=>validReviewedBar(bar,chart.bars[position-1])))throw new Error('Resolve reviewed bar errors before changing a tie.')
  const events=chart.bars[index].rhythmEvents!.map(event=>event.instrument===instrument&&event.step===0?{...event,tieFromPrevious:tied}:event)
  const bar=reviewedBar(events,slots(chart.bars[index]),chart.bars[index-1])
- return {...chart,bars:chart.bars.map((value,position)=>position===index?bar:value),review:undefined}
+ const bars=chart.bars.map((value,position)=>position===index?bar:value)
+ return {...chart,bars,review:reviewAfterBarEdits(chart,bars)}
 }
 /** Editing/deleting the preceding reviewed bar must not leave a silent orphan continuation. */
 export function detachOrphanBoundaryTies(chart:SongChart, previousChart?:SongChart):SongChart {
@@ -31,7 +33,7 @@ export function detachOrphanBoundaryTies(chart:SongChart, previousChart?:SongCha
   changed=true
   return {...bar,...Object.fromEntries(CHART_INSTRUMENTS.map(instrument=>[instrument,notesFor(bar,instrument).map((note,step)=>step===0?updated.find(event=>event.instrument===instrument&&event.step===0&&event.kind==='note'&&!event.tieFromPrevious)?.dynamic??note:note)])),rhythmEvents:updated}
  })
- return changed?{...chart,bars,review:undefined}:chart
+ return changed?{...chart,bars,review:reviewAfterBarEdits(chart,bars)}:chart
 }
 export function chartPlaybackNote(bar:ChartBar,instrument:ChartInstrument,step:number,sectionEntry=false):number {
  return notesFor(bar,instrument)[step] || (sectionEntry&&step===0?bar.rhythmEvents?.find(event=>event.instrument===instrument&&event.step===0&&event.kind==='note'&&event.tieFromPrevious)?.dynamic??0:0)

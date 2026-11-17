@@ -283,3 +283,18 @@ it('edits loaded reviewed durations, keeps applied chart Undo/Redo and saves the
  fireEvent.click(screen.getByRole('button',{name:'Save as new'}))
  expect(JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).some((chart:{id:string;bars:{rhythmEvents:{duration:number}[]}[]})=>chart.id!=='duration-review'&&chart.bars[0].rhythmEvents[0].duration===3)).toBe(true)
 })
+
+it('retains an appended draft source/page, navigates to it and saves those references',()=>{
+ const onSourceReference=vi.fn();render(<SongChartEditor recognitionDraft={{bar:{'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)},source:'study.pdf',page:3}} onDraftConsumed={vi.fn()} onSourceReference={onSourceReference}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Add detected bar'}));fireEvent.click(screen.getByText('Source reference — Bar 2'));expect(screen.getByLabelText('Chart source PDF name')).toHaveValue('study.pdf');expect(screen.getByLabelText('Chart source page')).toHaveValue(3)
+ fireEvent.click(screen.getByRole('button',{name:'Show source reference — page 3'}));expect(onSourceReference).toHaveBeenCalledWith({source:'study.pdf',page:3})
+ fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!);expect(saved[0].review.source).toBe('study.pdf');expect(saved[0].review.bars[1].page).toBe(3)
+ fireEvent.change(screen.getByLabelText('Chart source PDF name'),{target:{value:'other.pdf'}});expect(screen.getByRole('button',{name:'Add detected bar'})).toBeDisabled()
+})
+
+it('resets unapplied duration drafts and source verification when the saved reference changes',async()=>{
+ const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8)
+ localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'source-edit',title:'Source edit',bpm:60,meter:'2/4',bars:[bar]}]));render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'source-edit'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
+ fireEvent.change(screen.getByLabelText('Reviewed event 1 dynamic'),{target:{value:'3'}});fireEvent.click(screen.getByLabelText('Verify edited durations against source'));expect(screen.getByLabelText('Verify edited durations against source')).toBeChecked()
+ fireEvent.click(screen.getByText('Source reference — Bar 1'));fireEvent.change(screen.getByLabelText('Chart source PDF name'),{target:{value:'new.pdf'}});fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/));expect(screen.getByLabelText('Verify edited durations against source')).not.toBeChecked();expect(screen.getByLabelText('Reviewed event 1 dynamic')).toHaveValue('2');expect(screen.getByRole('button',{name:'Undo draft edit'})).toBeDisabled()
+})

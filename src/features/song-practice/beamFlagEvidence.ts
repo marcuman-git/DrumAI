@@ -15,22 +15,25 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
   for(const value of [...rows,false]) {if(value===null)continue; if(value)length++;else if(length){lengths.push(length);length=0}}
   return lengths.filter(length=>length>=minimum).length
  }
- let beamBands=0; let bestSupport=0
+ let beamBands=0; let bestSupport=0; let shortBands=0
  for(const side of [-1,1]) for(const slope of [0,-0.15,0.15,-0.3,0.3,-0.45,0.45]) {
-  const rows:(boolean|null)[]=[]; let support=0
+  const rows:(boolean|null)[]=[]; const shortRows:(boolean|null)[]=[]; let support=0
   for(let index=-2;index<=distance;index++) {
-   const y=stem.end-stem.direction*index; let dark=0;let total=0
-   for(let dx=3;dx<=gap*1.5;dx++) {
+   const y=stem.end-stem.direction*index; let dark=0;let total=0;let shortDark=0;let shortTotal=0
+   for(let dx=3;dx<=gap*1.8;dx++) {
     const row=y+slope*dx*side; const column=stem.x+side*dx
     if(onStaff(row)||row<0||row>=height||column<0||column>=width)continue
-    total++;dark+=at(column,row)
+    total++;dark+=at(column,row);if(dx<=gap*0.85){shortTotal++;shortDark+=at(column,row)}
    }
    const supported=total>=Math.max(4,gap*0.65)&&dark/total>=0.7
+   shortRows.push(shortTotal<3?null:shortDark/shortTotal>=0.7);
    rows.push(total<4?null:supported);if(supported)support+=dark/total
   }
   const count=runs(rows)
   if(support>bestSupport){bestSupport=support;beamBands=count}
+  shortBands=Math.max(shortBands,runs(shortRows,2))
  }
+ if(beamBands)beamBands=Math.max(beamBands,shortBands)
  let flagBands=0
  if(!beamBands&&stem.length>=gap*2) {
   // Flags curve to the right for both stem directions. Count separated short clusters.

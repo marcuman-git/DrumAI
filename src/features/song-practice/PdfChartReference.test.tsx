@@ -36,3 +36,13 @@ describe('local PDF reference', () => {
     expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src', 'blob:valid')
   })
 })
+
+it('navigates only matching local PDFs, repeats requests and retries a pending reference after choosing the file',async()=>{
+ vi.spyOn(URL,'createObjectURL').mockReturnValueOnce('blob:study').mockReturnValueOnce('blob:target');vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>undefined)
+ const view=render(<PdfChartReference sourceReference={{source:'target.pdf',page:3,requestId:1}}/>);expect(screen.getByRole('status')).toHaveTextContent('Choose the matching local PDF: target.pdf')
+ fireEvent.change(screen.getByLabelText('Choose local PDF'),{target:{files:[file()]}});await screen.findByTitle('Local PDF chart preview');expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:study')
+ fireEvent.change(screen.getByLabelText('Choose local PDF'),{target:{files:[file('target.pdf')]}});await waitFor(()=>expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:target#page=3'))
+ expect(screen.getByRole('link',{name:'Open PDF locally'})).toHaveAttribute('href','blob:target#page=3')
+ view.rerender(<PdfChartReference sourceReference={{source:'target.pdf',page:5,requestId:2}}/>);expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:target#page=5')
+ view.rerender(<PdfChartReference sourceReference={{source:'other.pdf',page:7,requestId:3}}/>);expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:target#page=5')
+})

@@ -8,8 +8,10 @@ import { checkReviewedRhythm, reviewedBar } from './reviewedRhythm'
 import { diagnoseReviewedRhythm, fillNextReviewedGap, formatSlotRanges } from './reviewedRhythmDiagnostics'
 import { reviewedEditTieIssues, applyReviewedBarEdit } from './reviewedBarEditing'
 import { ChartStaffNotation } from './ChartStaffNotation'
+import { reviewHistoryReducer, type ReviewHistoryAction, type ReviewEventHistory } from './reviewEventHistory'
 export function ReviewedBarEditor({chart,index,disabled,onApply}:{chart:SongChart;index:number;disabled:boolean;onApply:(chart:SongChart)=>void}) {
- const [events,setEvents]=useState<RhythmEvent[]>(()=>structuredClone(chart.bars[index].rhythmEvents??[]))
+ const [history,setHistory]=useState<ReviewEventHistory>(()=>({past:[],present:structuredClone(chart.bars[index].rhythmEvents??[]),future:[]}))
+ const events=history.present
  const [verified,setVerified]=useState(false),[detach,setDetach]=useState(false)
  const [instrument,setInstrument]=useState<ChartInstrument>('Snare')
  const [message,setMessage]=useState('')
@@ -19,11 +21,13 @@ export function ReviewedBarEditor({chart,index,disabled,onApply}:{chart:SongChar
  const dirty=comparable(events)!==comparable(bar.rhythmEvents??[])
  const nextBar=chart.bars[index+1]
  const previewNext=nextBar?{...nextBar,rhythmEvents:nextBar.rhythmEvents?.map(event=>detach&&event.step===0&&ties.outgoing.includes(event.instrument)?{...event,tieFromPrevious:false}:event)}:undefined
- function edit(next:RhythmEvent[]){setEvents(next);setVerified(false);setDetach(false);setMessage('Draft updated. Playback and saving use the applied chart until you apply this review.')}
+ function historyAction(action:ReviewHistoryAction){setHistory(value=>reviewHistoryReducer(value,action));setVerified(false);setDetach(false);setMessage('Draft history updated. Verify the restored draft against the source before applying.')}
+ function edit(next:RhythmEvent[]){setHistory(value=>reviewHistoryReducer(value,{type:'edit',events:next}));setVerified(false);setDetach(false);setMessage('Draft updated. Playback and saving use the applied chart until you apply this review.')}
  if(!bar.rhythmEvents)return <p className="text-xs text-zinc-400">This bar uses grid timing. Reviewed-duration editing is available after confirming a PDF review or importing complete supported reviewed MusicXML.</p>
  return <details className="space-y-2 rounded border border-cyan-300/40 p-3" aria-label="Edit reviewed bar durations"><summary className="cursor-pointer font-semibold">Edit reviewed durations — Bar {index+1}{dirty?' (unapplied edits)':''}</summary>
  <p className="text-xs">Edit onset slots, durations, rests, voices and ties. Apply or discard before switching bars or changing the chart; unapplied edits reset when the chart changes. Playback uses the applied chart. Chart Undo restores applied reviews.</p>
  <fieldset disabled={disabled} className="space-y-2">
+ <div className="flex gap-2"><button disabled={!history.past.length} onClick={()=>historyAction({type:'undo'})} className="rounded border p-2">Undo draft edit</button><button disabled={!history.future.length} onClick={()=>historyAction({type:'redo'})} className="rounded border p-2">Redo draft edit</button><span className="text-xs">{history.past.length} / 50 draft undo steps; history resets on Apply, Discard or chart navigation.</span></div>
  <label>New event voice<select aria-label="Reviewed edit new voice" value={instrument} onChange={event=>setInstrument(event.target.value as ChartInstrument)} className="rounded bg-zinc-900 p-1">{CHART_INSTRUMENTS.map(name=><option key={name}>{name}</option>)}</select></label>
  <button disabled={events.length>=192} onClick={()=>edit([...events,{instrument,step:0,duration:2,kind:'note',dynamic:2}])} className="m-1 rounded border p-1">Add duration-reviewed note</button><button onClick={()=>edit(fillNextReviewedGap(events,instrument,slots))} className="m-1 rounded border p-1">Fill next reviewed gap with rests</button>
  <div className="max-h-80 space-y-2 overflow-y-auto">{events.map((event,position)=><div key={position} id={`reviewed-edit-event-${position}`} className="flex flex-wrap gap-2 rounded border border-white/20 p-2 text-xs"><span>Event {position+1}</span>
@@ -38,7 +42,7 @@ export function ReviewedBarEditor({chart,index,disabled,onApply}:{chart:SongChar
  {ties.outgoing.length>0&&<label className="block"><input aria-label="Detach affected next-bar ties" type="checkbox" checked={detach} onChange={event=>{setDetach(event.target.checked);setVerified(false)}}/>I verified these next-bar notes should become fresh strikes; detach their ties.</label>}
  {check.valid&&<ChartStaffNotation bar={reviewedBar(events,slots,chart.bars[index-1])} nextBar={previewNext} barNumber={index+1} activeStep={-1} instruments={CHART_INSTRUMENTS.filter(name=>events.some(event=>event.instrument===name))}/>}
  <label className="block"><input aria-label="Verify edited durations against source" type="checkbox" disabled={!check.valid||ties.incoming.length>0||ties.outgoing.length>0&&!detach} checked={verified} onChange={event=>setVerified(event.target.checked)}/>I verified these edited durations, onsets, rests and ties against the source.</label>
- <button disabled={!dirty||!verified||!check.valid||ties.incoming.length>0||ties.outgoing.length>0&&!detach} onClick={()=>{try{onApply(applyReviewedBarEdit(chart,index,events,detach));setVerified(false);setMessage('Reviewed edits applied. Chart Undo can restore the previous bar.')}catch(error){setMessage(error instanceof Error?error.message:'Review could not be applied.')}}} className="m-1 rounded border p-2">Apply reviewed duration edits</button>
- <button disabled={!dirty} onClick={()=>{setEvents(structuredClone(bar.rhythmEvents!));setVerified(false);setDetach(false);setMessage('Unapplied edits discarded.')}} className="m-1 rounded border p-2">Discard reviewed duration edits</button>
+ <button disabled={!dirty||!verified||!check.valid||ties.incoming.length>0||ties.outgoing.length>0&&!detach} onClick={()=>{try{onApply(applyReviewedBarEdit(chart,index,events,detach));setHistory({past:[],present:structuredClone(events),future:[]});setDetach(false);setVerified(false);setMessage('Reviewed edits applied. Chart Undo can restore the previous bar.')}catch(error){setMessage(error instanceof Error?error.message:'Review could not be applied.')}}} className="m-1 rounded border p-2">Apply reviewed duration edits</button>
+ <button disabled={!dirty} onClick={()=>{setHistory({past:[],present:structuredClone(bar.rhythmEvents!),future:[]});setVerified(false);setDetach(false);setMessage('Unapplied edits discarded.')}} className="m-1 rounded border p-2">Discard reviewed duration edits</button>
  </fieldset><p role="status" className="text-xs">{message}</p></details>
 }

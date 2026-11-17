@@ -4,11 +4,11 @@ export type ReviewStatus = 'Pending' | 'Uncertain' | 'Reviewed'
 export interface BarReview { status: ReviewStatus; page: number; notes: string; signature: string }
 export interface ChartReview { source: string; bars: BarReview[] }
 export const SUPPORTED_REVIEW_RULES = [
-  '4/4 only; 16 sixteenth-note slots per bar.',
+  '4/4 and 2/4; 16 or 8 underlying timing slots per bar.',
   'Supported kit rows include bass/snare, toms, hi-hat/pedal, Crash and Ride.',
   'Supported cells: rest, normal stroke, ghost stroke and accent.',
-  'Longer note values must be entered manually as strike positions; the staff view uses sixteenth slots.',
-  'Tuplets, flams, drags, ties, repeats and other meters require manual interpretation and are not recognized.',
+  'Confirmed reviewed durations include sixteenth, eighth, quarter and dotted eighth/quarter; counting is a separate display choice.',
+  'Adjacent within/across-bar ties support manual source review. Tuplets, flams, drags, repeats and other meters require manual interpretation.',
   'PDF recognition is experimental; candidate strength is not recognition confidence.',
 ]
 export function barSignature(bar: ChartBar): string {
@@ -33,4 +33,10 @@ export function normalizeReview(chart: SongChart): SongChart {
   if (!chart.review) return chart
   if (chart.review.bars.length !== chart.bars.length) return { ...chart, review: undefined }
   return { ...chart, review: { ...chart.review, bars: chart.review.bars.map((bar, index) => ({ ...bar, status: reviewStatus(chart, index) })) } }
+}
+
+/** Same-bar edits retain filenames/pages while invalidating affected verification. Rebar operations reset references. */
+export function reviewAfterBarEdits(chart:SongChart,bars:ChartBar[]):ChartReview|undefined {
+ if(!chart.review||chart.review.bars.length!==bars.length)return undefined
+ return {...chart.review,bars:chart.review.bars.map((reference,index)=>barSignature(chart.bars[index])!==barSignature(bars[index])?{...reference,status:'Pending',signature:''}:reference)}
 }

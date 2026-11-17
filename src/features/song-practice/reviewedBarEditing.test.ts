@@ -40,3 +40,12 @@ it('detaches only affected outgoing voices while preserving other boundary ties'
  expect(applied.bars[1].Snare[0]).toBe(2);expect(applied.bars[1].Ride![0]).toBe(0)
  expect(applied.bars[1].rhythmEvents!.find(event=>event.instrument==='Ride'&&event.step===0)?.tieFromPrevious).toBe(true)
 })
+
+import {newChartReview,barSignature} from './chartReviewLogic'
+it('retains source pages and notes through duration edits and affected next-bar detachment, but resets their verification',()=>{
+ const chart=chartFor();chart.bars.push(reviewedBar(events,8));chart.bars.push(reviewedBar(events,8))
+ const tied=setBoundaryTie(chart,1,'Snare',true);const review=newChartReview(tied);review.source='study.pdf';review.bars=review.bars.map((reference,index)=>({...reference,page:index+2,notes:'Compare this bar',status:'Reviewed',signature:barSignature(tied.bars[index])}))
+ const original={...tied,review};const result=applyReviewedBarEdit(original,0,events.map(event=>event.step===4?{...event,kind:'rest' as const}:event),true)
+ expect(result.review?.source).toBe('study.pdf');expect(result.review?.bars.map(bar=>bar.page)).toEqual([2,3,4]);expect(result.review?.bars.map(bar=>bar.status)).toEqual(['Pending','Pending','Reviewed']);expect(result.review?.bars[0].signature).toBe('');expect(result.review?.bars[1].notes).toBe('Compare this bar');expect(isSongChart(JSON.parse(JSON.stringify(result)))).toBe(true);expect(original.review.bars[0].status).toBe('Reviewed')
+ const retied=setBoundaryTie(original,1,'Snare',false);expect(retied.review?.source).toBe('study.pdf')
+})

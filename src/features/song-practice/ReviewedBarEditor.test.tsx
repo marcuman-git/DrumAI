@@ -35,3 +35,15 @@ it('discards local changes and disables duration review during playback',()=>{
  fireEvent.change(screen.getByLabelText('Reviewed event 1 duration'),{target:{value:'3'}});fireEvent.click(screen.getByRole('button',{name:'Discard reviewed duration edits'}));expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('2');expect(onApply).not.toHaveBeenCalled()
  view.rerender(<ReviewedBarEditor chart={chart} index={0} disabled={true} onApply={onApply}/>);expect(screen.getByLabelText('Reviewed event 1 duration')).toBeDisabled()
 })
+
+it('undoes and redoes invalid drafts, clears verification, drops redo branches and resets history on discard',()=>{
+ render(<ReviewedBarEditor chart={fixture()} index={0} disabled={false} onApply={vi.fn()}/>);fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
+ fireEvent.change(screen.getByLabelText('Reviewed event 1 duration'),{target:{value:'3'}})
+ fireEvent.click(screen.getByRole('button',{name:'Undo draft edit'}));expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('2')
+ fireEvent.click(screen.getByRole('button',{name:'Redo draft edit'}));expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('3');expect(screen.getByRole('button',{name:'Apply reviewed duration edits'})).toBeDisabled()
+ fireEvent.click(screen.getByRole('button',{name:'Undo draft edit'}))
+ fireEvent.change(screen.getByLabelText('Reviewed event 1 dynamic'),{target:{value:'3'}});expect(screen.getByRole('button',{name:'Redo draft edit'})).toBeDisabled()
+ fireEvent.click(screen.getByLabelText('Verify edited durations against source'));fireEvent.click(screen.getByRole('button',{name:'Undo draft edit'}));expect(screen.getByLabelText('Verify edited durations against source')).not.toBeChecked()
+ fireEvent.click(screen.getByRole('button',{name:'Redo draft edit'}));expect(screen.getByLabelText('Verify edited durations against source')).not.toBeChecked()
+ fireEvent.click(screen.getByRole('button',{name:'Discard reviewed duration edits'}));expect(screen.getByRole('button',{name:'Undo draft edit'})).toBeDisabled();expect(screen.getByRole('button',{name:'Redo draft edit'})).toBeDisabled()
+})

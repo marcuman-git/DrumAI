@@ -1,3 +1,4 @@
+import { sourceReferencePage, type SourceReferenceRequest } from './sourceReferenceNavigation'
 import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useRef, useState } from 'react'
 import { PdfRegionSelector } from './PdfRegionSelector'
@@ -14,8 +15,10 @@ export async function validatePdfReference(file: File) {
   if (header !== '%PDF-') throw new Error('This file does not have a valid PDF header.')
 }
 
-export function PdfChartReference({ onDraft }: { onDraft?: (draft: RecognitionDraft) => void } = {}) {
+export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (draft: RecognitionDraft) => void; sourceReference?: SourceReferenceRequest | null } = {}) {
   const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
+  const [page, setPage] = useState<number | null>(null)
+  const previewRef = useRef<HTMLIFrameElement | null>(null)
   const [error, setError] = useState(false)
   const [message, setMessage] = useState('Choose a local PDF to read beside the editable drum chart.')
   const generation = useRef(0)
@@ -25,11 +28,20 @@ export function PdfChartReference({ onDraft }: { onDraft?: (draft: RecognitionDr
     if (urlRef.current) URL.revokeObjectURL(urlRef.current)
   }, [])
 
+  useEffect(() => {
+    if (!sourceReference) return
+    const target = reference ? sourceReferencePage(sourceReference, reference.name) : null
+    if (target === null) { setError(false); setMessage('Choose the matching local PDF: ' + sourceReference.source + '. Source navigation has not changed the viewer.'); return }
+    setPage(target); setError(false); setMessage('Source reference: ' + reference!.name + ', page ' + target + '.');
+    previewRef.current?.scrollIntoView?.({block:'center',behavior:'smooth'})
+  }, [sourceReference, reference])
+
   function clear() {
     generation.current += 1
     if (urlRef.current) URL.revokeObjectURL(urlRef.current)
     urlRef.current = null
     setReference(null)
+    setPage(null)
     setError(false)
     setMessage('PDF removed. Your editable chart is unchanged.')
   }
@@ -42,6 +54,7 @@ export function PdfChartReference({ onDraft }: { onDraft?: (draft: RecognitionDr
       const url = URL.createObjectURL(file)
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
       urlRef.current = url
+      setPage(null)
       setReference({ url, name: file.name, file })
       setError(false)
       setMessage('Reference loaded. Enter notes manually in the chart editor. PDF viewing does not create practice events.')
@@ -60,12 +73,12 @@ export function PdfChartReference({ onDraft }: { onDraft?: (draft: RecognitionDr
     {reference && <>
       <p className="break-words text-sm font-semibold">{reference.name}</p>
       <div className="flex flex-wrap gap-2">
-        <a href={reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
+        <a href={page ? `${reference.url}#page=${page}` : reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
         <button onClick={clear} className="rounded border border-white/25 px-3 py-2 text-sm">Remove PDF</button>
       </div>
       <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} onDraft={onDraft} />
       <PdfInspectionPanel key={reference.url} file={reference.file} />
-      <iframe title="Local PDF chart preview" src={reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
+      <iframe ref={previewRef} title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
     </>}
   </GlassCard>

@@ -1,3 +1,4 @@
+import { reviewAfterBarEdits } from './chartReviewLogic'
 import type { SongChart } from './songChartLogic'
 import type { RhythmEvent } from './rhythmTypes'
 import { barSlots } from './chartMeter'
@@ -18,5 +19,5 @@ export function applyReviewedBarEdit(chart:SongChart,index:number,events:RhythmE
  const bars=[...chart.bars];bars[index]=reviewedBar(events,barSlots(original),bars[index-1])
  if(issues.outgoing.length){const next=bars[index+1];bars[index+1]=reviewedBar(next.rhythmEvents!.map(event=>event.step===0&&issues.outgoing.includes(event.instrument)?{...event,tieFromPrevious:false}:event),barSlots(next),bars[index])}
  if(!bars.every((bar,position)=>validReviewedBar(bar,bars[position-1])))throw new Error('Resolve the remaining chart tie or duration errors before applying.')
- return {...chart,bars,review:undefined}
+ return {...chart,bars,review:reviewAfterBarEdits(chart,bars)}
 }
