@@ -269,3 +269,17 @@ it('blocks a mismatched PDF draft until the chart meter matches and saves its 2/
  const saved = JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!)[0]
  expect(saved.meter).toBe('2/4'); expect(saved.bars[2].beats).toBe(2); expect(saved.bars[2].Snare[7]).toBe(2)
 })
+it('edits loaded reviewed durations, keeps applied chart Undo/Redo and saves the edited event data',async()=>{
+ const {reviewedBar}=await import('./reviewedRhythm')
+ const bar=reviewedBar([{instrument:'Snare',step:0,duration:2,kind:'note',dynamic:2},{instrument:'Snare',step:2,duration:2,kind:'rest',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'note',dynamic:2}],8)
+ localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'duration-review',title:'Duration review',bpm:60,meter:'2/4',bars:[bar]}]))
+ render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'duration-review'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}))
+ fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
+ fireEvent.change(screen.getByLabelText('Reviewed event 1 duration'),{target:{value:'3'}});fireEvent.change(screen.getByLabelText('Reviewed event 2 slot'),{target:{value:'4'}});fireEvent.change(screen.getByLabelText('Reviewed event 2 duration'),{target:{value:'1'}})
+ fireEvent.click(screen.getByLabelText('Verify edited durations against source'));fireEvent.click(screen.getByRole('button',{name:'Apply reviewed duration edits'}))
+ expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('3')
+ fireEvent.click(screen.getByRole('button',{name:'Undo'}));expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('2')
+ fireEvent.click(screen.getByRole('button',{name:'Redo'}));expect(screen.getByLabelText('Reviewed event 1 duration')).toHaveValue('3')
+ fireEvent.click(screen.getByRole('button',{name:'Save as new'}))
+ expect(JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).some((chart:{id:string;bars:{rhythmEvents:{duration:number}[]}[]})=>chart.id!=='duration-review'&&chart.bars[0].rhythmEvents[0].duration===3)).toBe(true)
+})

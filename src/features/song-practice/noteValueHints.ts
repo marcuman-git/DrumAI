@@ -7,16 +7,19 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   const { width, height, ink } = image; const gap = staff.gap
   if (!Number.isFinite(gap) || gap < 4 || gap > 80 || !Number.isFinite(staff.top)) throw new Error('Invalid staff geometry.')
   const radius = Math.max(2, Math.round(gap * 0.48))
+  // Stem attachment varies with engraving size; retain a two-pixel minimum for small scans.
+  const stemTolerance = Math.max(2, Math.round(gap * 0.2))
   const at = (x: number, y: number) => x >= 0 && x < width && y >= 0 && y < height ? ink[Math.round(y) * width + Math.round(x)] ?? 0 : 0
   let best = { length: 0, x: note.x, end: note.y, direction: 0 }
-  for (const direction of [-1, 1]) for (let shift = -2; shift <= 2; shift++) {
+  for (const direction of [-1, 1]) for (let shift = -stemTolerance; shift <= stemTolerance; shift++) {
     const x = Math.round(note.x + (direction === -1 ? radius : -radius) + shift)
     let missing = 0; let end = note.y
     for (let distance = 1; distance <= gap * 4.5; distance++) {
       const y = Math.round(note.y + distance * direction)
       if (y < 0 || y >= height) break
       if (at(x, y) || at(x - 1, y) || at(x + 1, y)) { missing = 0; end = y }
-      else if (++missing > 2) break
+      // Allow a scaled attachment gap only inside the head footprint; stem continuity stays strict.
+      else if (++missing > (distance <= radius ? Math.max(2, Math.round(gap * 0.25)) : 2)) break
     }
     const length = Math.abs(end - note.y)
     if (length > best.length) best = { length, x, end, direction }
@@ -24,7 +27,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   const evidence = inspectBeamFlags(image, staff, best)
   const bands = evidence.beamBands || evidence.flagBands
   // Isolated ink to the right is only tentative dot evidence. Dotted
-  // durations are unsupported and must never be silently labelled straight.
+  // durations require manual review and must never be silently labelled straight.
   const possibleDot = possibleNoteDot(image, staff, note.x, note.y)
   const left = Math.max(0, Math.floor(note.x - gap * 2)); const right = Math.min(width, Math.ceil(note.x + gap * 2))
   const top = Math.max(0, Math.floor(Math.min(note.y - gap * 0.6, best.end) - 3))
