@@ -75,3 +75,13 @@ it('finds a larger isolated dot without treating staff ink as a dot', () => {
  for(let y=76;y<=80;y++)for(let x=82;x<=85;x++)image.ink[y*image.width+x]=1
  expect(inspectNoteValue(image,{top:60,gap:12},note).value).toBe('unknown')
 })
+
+it('uses only narrow faint strokes for low-resolution stem recovery and ignores broad gray background',()=>{
+ const {image,note}=sample();for(let row=42;row<74;row++)image.ink[row*image.width+76]=0
+ expect(inspectNoteValue(image,{top:60,gap:8},note).value).toBe('unknown')
+ image.stemInk=new Uint8Array(image.ink);for(let row=42;row<74;row++)image.stemInk[row*image.width+76]=1
+ expect(inspectNoteValue(image,{top:60,gap:8},note).value).toBe('quarter')
+ image.stemInk.fill(1);expect(inspectNoteValue(image,{top:60,gap:8},note).value).toBe('unknown')
+ // Larger engravings keep the selected strict threshold rather than invoking faint recovery.
+ image.stemInk.fill(0);for(let row=42;row<74;row++)image.stemInk[row*image.width+76]=1;expect(inspectNoteValue(image,{top:60,gap:12},note).value).toBe('unknown')
+})

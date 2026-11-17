@@ -10,6 +10,8 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   // Stem attachment varies with engraving size; retain a two-pixel minimum for small scans.
   const stemTolerance = Math.max(2, Math.round(gap * 0.2))
   const at = (x: number, y: number) => x >= 0 && x < width && y >= 0 && y < height ? ink[Math.round(y) * width + Math.round(x)] ?? 0 : 0
+  const faintAt=(x:number,y:number)=>x>=0&&x<width&&y>=0&&y<height?image.stemInk?.[Math.round(y)*width+Math.round(x)]??0:0
+  const stemAt=(x:number,y:number)=>at(x,y)||(gap<10&&faintAt(x,y)&&!(faintAt(x-2,y)&&faintAt(x+2,y))?1:0)
   let best = { length: 0, x: note.x, end: note.y, direction: 0, support: 0 }
   for (const direction of [-1, 1]) for (let shift = -stemTolerance; shift <= stemTolerance; shift++) {
     const x = Math.round(note.x + (direction === -1 ? radius : -radius) + shift)
@@ -17,7 +19,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
     for (let distance = 1; distance <= gap * 7; distance++) {
       const y = Math.round(note.y + distance * direction)
       if (y < 0 || y >= height) break
-      if (at(x, y) || at(x - 1, y) || at(x + 1, y)) { missing = 0; end = y; support += at(x,y) }
+      if (stemAt(x, y) || stemAt(x - 1, y) || stemAt(x + 1, y)) { missing = 0; end = y; support += stemAt(x,y) }
       // Allow a scaled attachment gap only inside the head footprint; stem continuity stays strict.
       else if (++missing > (distance <= radius ? Math.max(2, Math.round(gap * 0.25)) : 2)) break
     }

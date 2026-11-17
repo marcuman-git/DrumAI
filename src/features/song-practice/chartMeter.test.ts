@@ -32,3 +32,10 @@ it('refuses oversized splits and incomplete joins rather than dropping notes', (
  const half = changeChartMeter(newSongChart(), '2/4'); half.bars.pop()
  expect(() => changeChartMeter(half, '4/4')).toThrow(/second 2\/4 bar/)
 })
+
+import {newChartReview,referencePages,barSignature} from './chartReviewLogic'
+it('retains distinct joined source pages through split/join and resets verification without losing notes',()=>{
+ const halves=changeChartMeter(newSongChart(),'2/4');halves.bars[0].Snare[0]=2;halves.bars[1].Kick[7]=3;halves.review=newChartReview(halves);halves.review.source='study.pdf';halves.review.bars=halves.review.bars.map((r,i)=>({...r,page:i+2,notes:'Half '+i,status:'Reviewed',signature:barSignature(halves.bars[i])}))
+ const joined=changeChartMeter(halves,'4/4');expect(joined.review?.source).toBe('study.pdf');expect(referencePages(joined.review!.bars[0])).toEqual([2,3]);expect(joined.review?.bars[0].notes).toBe('Half 0 / Half 1');expect(joined.review?.bars[0].status).toBe('Pending');expect(joined.bars[0].Kick[15]).toBe(3)
+ const split=changeChartMeter(joined,'2/4');expect(split.review?.bars.map(referencePages)).toEqual([[2,3],[2,3]]);expect(isSongChart(split)).toBe(true);expect(split.bars[0].Snare[0]).toBe(2)
+})

@@ -1,3 +1,4 @@
+import { restructureReview } from './chartReviewLogic'
 import { CHART_INSTRUMENTS, completeBar, notesFor } from './chartKit'
 import type { ChartBar } from './chartKit'
 import type { RhythmEvent } from './rhythmTypes'
@@ -43,5 +44,5 @@ export function changeChartMeter(chart: SongChart, meter: ChartMeter): SongChart
    bars.push(joined);labels.push([chart.barLabels?.[index],chart.barLabels?.[index+1]].filter(Boolean).join(' / ').slice(0,40))
   }
  }
- return {...chart,meter,bars,barLabels:labels,section:undefined,review:undefined}
+ return {...chart,meter,bars,barLabels:labels,section:undefined,review:restructureReview(chart,meter==='2/4'?chart.bars.flatMap((_,index)=>[[index],[index]]):Array.from({length:bars.length},(_,index)=>[index*2,index*2+1]))}
 }

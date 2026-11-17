@@ -46,3 +46,11 @@ it('navigates only matching local PDFs, repeats requests and retries a pending r
  view.rerender(<PdfChartReference sourceReference={{source:'target.pdf',page:5,requestId:2}}/>);expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:target#page=5')
  view.rerender(<PdfChartReference sourceReference={{source:'other.pdf',page:7,requestId:3}}/>);expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:target#page=5')
 })
+
+it('shows two matching local PDF pages, keeps them on mismatched requests and clears comparison on single-page navigation',async()=>{
+ vi.spyOn(URL,'createObjectURL').mockReturnValue('blob:compare');vi.spyOn(URL,'revokeObjectURL').mockImplementation(()=>undefined)
+ const view=render(<PdfChartReference sourceReference={{source:'study.pdf',page:2,comparePage:3}}/>);fireEvent.change(screen.getByLabelText('Choose local PDF'),{target:{files:[file()]}})
+ await waitFor(()=>expect(screen.getByTitle('Local PDF comparison preview')).toHaveAttribute('src','blob:compare#page=3'));expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:compare#page=2');expect(screen.getByRole('link',{name:'Open comparison page locally'})).toHaveAttribute('href','blob:compare#page=3')
+ view.rerender(<PdfChartReference sourceReference={{source:'other.pdf',page:6,comparePage:7}}/>);expect(screen.getByTitle('Local PDF comparison preview')).toHaveAttribute('src','blob:compare#page=3')
+ view.rerender(<PdfChartReference sourceReference={{source:'study.pdf',page:4}}/>);expect(screen.queryByTitle('Local PDF comparison preview')).not.toBeInTheDocument();expect(screen.getByTitle('Local PDF chart preview')).toHaveAttribute('src','blob:compare#page=4')
+})

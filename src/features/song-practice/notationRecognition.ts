@@ -9,7 +9,7 @@ export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
 export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; identityReview?: CymbalIdentityReview; symbolHint?: 'circled-cross'; positionHint?: 'above-line' | 'on-line' | 'ambiguous'; articulationHint?: 'open' | 'half-open' }
-export interface RecognitionImage { width: number; height: number; ink: Uint8Array; angle: number; staffs: StaffCandidate[] }
+export interface RecognitionImage { width: number; height: number; ink: Uint8Array; stemInk?: Uint8Array; angle: number; staffs: StaffCandidate[] }
 export interface RecognitionDraft { bar: ChartBar; source: string; page: number }
 const candidateCache = new WeakMap<RecognitionImage, Map<string, NoteCandidate[]>>()
 function rowBands(rows: number[], width: number, ratio = 0.28) {
@@ -53,7 +53,11 @@ export function analyzeStaffs(data: Uint8ClampedArray, width: number, height: nu
   }
   const ink = new Uint8Array(width * height); const slope = Math.tan(angle * Math.PI / 180); const rows = Array<number>(height).fill(0)
   for (let i = 0; i < xs.length; i++) { const x = xs[i]; const y = Math.round(ys[i] - slope * (x - width / 2)); if (y >= 0 && y < height) { ink[y * width + x] = 1; rows[y]++ } }
-  return { width, height, ink, angle, staffs: detectedStaffs(rows, width) }
+  // Retain faint antialiased strokes for narrow low-resolution stem tracing only.
+  // Staff/head/beam recognition continues to use the selected threshold.
+  const stemInk = new Uint8Array(width * height)
+  for (let y=0;y<height;y++) for(let x=0;x<width;x++){const i=(y*width+x)*4;if(data[i+3]<=128||(data[i]+data[i+1]+data[i+2])/3>=Math.max(threshold,210))continue;const row=Math.round(y-slope*(x-width/2));if(row>=0&&row<height)stemInk[row*width+x]=1}
+  return { width, height, ink, stemInk, angle, staffs: detectedStaffs(rows, width) }
 }
 export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidate, profile: RecognitionProfile = 'generic', options: RecognitionOptions = {}): NoteCandidate[] {
   if (!Number.isFinite(staff.top) || !Number.isFinite(staff.gap) || staff.gap < 4 || staff.gap > 80) throw new Error('Invalid staff geometry.')

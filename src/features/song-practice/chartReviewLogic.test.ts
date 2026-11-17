@@ -21,3 +21,14 @@ describe('manual chart review preparation', () => {
     expect(isSongChart(newSongChart())).toBe(true)
   })
 })
+
+import {restructureReview,referencePages} from './chartReviewLogic'
+it('maps references through duplication, removal and new blank bars without mutating the originals',()=>{
+ const chart=newSongChart();chart.bars.push(structuredClone(chart.bars[0]));chart.review=newChartReview(chart);chart.review.source='study.pdf';chart.review.bars[0]={page:2,additionalPages:[3],status:'Reviewed',notes:'Check first',signature:barSignature(chart.bars[0])};chart.review.bars[1].page=5
+ const mapped=restructureReview(chart,[[1],[0],[0],[]])!;expect(mapped.source).toBe('study.pdf');expect(mapped.bars.map(referencePages)).toEqual([[5],[2,3],[2,3],[1]]);expect(mapped.bars.every(b=>b.status==='Pending'&&b.signature==='')).toBe(true);expect(mapped.bars[1].notes).toBe('Check first');expect(chart.review.bars[0].status).toBe('Reviewed')
+ expect(restructureReview(newSongChart(),[[0]])).toBeUndefined()
+})
+it('validates additional pages and keeps legacy JSON and multi-page JSON compatible',()=>{
+ const chart=newSongChart();chart.review=newChartReview(chart);chart.review.bars[0].additionalPages=[2,999];expect(isSongChart(chart)).toBe(true);expect(parseSongChart(JSON.stringify({app:'DrumMaster AI Chart',schema:1,chart})).review?.bars[0].additionalPages).toEqual([2,999])
+ for(const pages of [[0],[1000],[1.5],Array(999).fill(2),'2'])expect(isSongChart({...chart,review:{...chart.review,bars:[{...chart.review.bars[0],additionalPages:pages}]}})).toBe(false)
+})

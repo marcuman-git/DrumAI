@@ -1,4 +1,4 @@
-import { sourceReferencePage, type SourceReferenceRequest } from './sourceReferenceNavigation'
+import { sourceReferencePage, sourceComparisonPage, type SourceReferenceRequest } from './sourceReferenceNavigation'
 import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useRef, useState } from 'react'
 import { PdfRegionSelector } from './PdfRegionSelector'
@@ -17,6 +17,7 @@ export async function validatePdfReference(file: File) {
 
 export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (draft: RecognitionDraft) => void; sourceReference?: SourceReferenceRequest | null } = {}) {
   const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
+  const [comparePage,setComparePage] = useState<number | null>(null)
   const [page, setPage] = useState<number | null>(null)
   const previewRef = useRef<HTMLIFrameElement | null>(null)
   const [error, setError] = useState(false)
@@ -32,7 +33,7 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
     if (!sourceReference) return
     const target = reference ? sourceReferencePage(sourceReference, reference.name) : null
     if (target === null) { setError(false); setMessage('Choose the matching local PDF: ' + sourceReference.source + '. Source navigation has not changed the viewer.'); return }
-    setPage(target); setError(false); setMessage('Source reference: ' + reference!.name + ', page ' + target + '.');
+    setPage(target); setComparePage(sourceComparisonPage(sourceReference,reference!.name)); setError(false); setMessage('Source reference: ' + reference!.name + ', page ' + target + '.');
     previewRef.current?.scrollIntoView?.({block:'center',behavior:'smooth'})
   }, [sourceReference, reference])
 
@@ -42,6 +43,7 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
     urlRef.current = null
     setReference(null)
     setPage(null)
+    setComparePage(null)
     setError(false)
     setMessage('PDF removed. Your editable chart is unchanged.')
   }
@@ -78,7 +80,8 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
       </div>
       <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} onDraft={onDraft} />
       <PdfInspectionPanel key={reference.url} file={reference.file} />
-      <iframe ref={previewRef} title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" />
+      <div className={comparePage?"grid gap-3 lg:grid-cols-2":""}><div>{comparePage&&<p className="text-sm">Source page {page}</p>}<iframe ref={previewRef} title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></div>
+      {comparePage&&<section aria-label="Comparison source page"><p className="text-sm">Comparison page {comparePage}</p><a href={`${reference.url}#page=${comparePage}`} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-100">Open comparison page locally</a><iframe title="Local PDF comparison preview" src={`${reference.url}#page=${comparePage}`} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></section>}</div>
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
     </>}
   </GlassCard>

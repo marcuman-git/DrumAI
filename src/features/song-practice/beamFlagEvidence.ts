@@ -25,8 +25,9 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
     if(onStaff(row)||row<0||row>=height||column<0||column>=width)continue
     total++;dark+=at(column,row);if(dx<=gap*0.85){shortTotal++;shortDark+=at(column,row)}
    }
-   const supported=total>=Math.max(4,gap*0.65)&&dark/total>=0.7
-   shortRows.push(shortTotal<3?null:shortDark/shortTotal>=0.7);
+   const attached=!!at(stem.x+side*2,y)&&!!at(stem.x+side*3,y);
+   const supported=attached&&total>=Math.max(4,gap*0.65)&&dark/total>=0.7
+   shortRows.push(shortTotal<3?null:shortDark/shortTotal>=0.7&&attached);
    rows.push(total<4?null:supported);if(supported)support+=dark/total
   }
   const count=runs(rows)

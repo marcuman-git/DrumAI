@@ -1,12 +1,13 @@
 import { inspectNoteValue } from './noteValueHints'
 import { hasCircledCymbalHead } from './circledCymbalHint'
 import type { RecognitionImage,StaffCandidate } from './notationRecognition'
-export interface ScaleSource {source:string;dpi:number;width:number;height:number;ink:readonly number[];staff:StaffCandidate;cases:readonly {x:number;y:number;value:string;symbol:string;identity:string;shape?:'cross'|'oval';evidence?:'beam'|'flag'|'none'}[]}
+export interface ScaleSource {source:string;dpi:number;width:number;height:number;ink:readonly number[];stemInk?:readonly number[];staff:StaffCandidate;cases:readonly {x:number;y:number;value:string;symbol:string;identity:string;shape?:'cross'|'oval';evidence?:'beam'|'flag'|'none'}[]}
 /** Benchmark known head coordinates; identity and automatic head detection are separate claims. */
 export function benchmarkSourceScales(fixtures:readonly ScaleSource[]) {
  return fixtures.map(fixture=>{
   const ink=new Uint8Array(fixture.width*fixture.height);for(const index of fixture.ink)ink[index]=1
-  const image:RecognitionImage={width:fixture.width,height:fixture.height,ink,angle:0,staffs:[fixture.staff]}
+  const stemInk=fixture.stemInk?new Uint8Array(fixture.width*fixture.height):undefined;if(stemInk)for(const index of fixture.stemInk!)stemInk[index]=1
+  const image:RecognitionImage={width:fixture.width,height:fixture.height,ink,stemInk,angle:0,staffs:[fixture.staff]}
   const cases=fixture.cases.map((reference,id)=>{
    const hint=inspectNoteValue(image,fixture.staff,{id,x:reference.x,y:reference.y,instrument:reference.shape==='oval'?'Snare':'Hi-hat',shape:reference.shape??'cross',strength:1,stemHint:true,flagHint:false})
    const circled=hasCircledCymbalHead(image,fixture.staff,reference.x,reference.y)
