@@ -35,12 +35,19 @@ for(const [file,references,toleranceX,toleranceY] of [['feedback012Fixture',REAL
  }
 }
 const symbols=[]
-for(const [file,x,y,identity] of [['realCircledCymbalFixture',128,70,'China: distinct playback voice unsupported'],['feedback012Fixture',21,54,'Source-specific circled cymbal: identity unverified']]) {
+for(const [file,x,y,identity] of [['realCircledCymbalFixture',128,70,'China: supported manual voice, identity not inferred'],['feedback012Fixture',21,54,'Source-specific circled cymbal: identity unverified']]) {
  const f=load('src/features/song-practice/'+file+'.ts').default;const {notes}=detect(f)
  const nearby=notes.filter(n=>Math.abs(n.x-x)<=5&&Math.abs(n.y-y)<=5)
  symbols.push({source:f.source??'Original third feedback score bar',reference:{x,y,symbol:'circled-cross',identity},flagged:nearby.some(n=>n.symbolHint==='circled-cross'),openHiHatNotInferred:nearby.every(n=>n.articulationHint!=='open')})
 }
-const report={version:'v0.10.25',scope:'Twelve checked real-source supported cymbal heads, seventeen duration cases, and two circled-symbol references requiring manual identity review. Partial local source coverage, not general recognition accuracy. Unmatched suggestions are not automatically false; unsupported voices, ties, tuplets and full-song transcription remain excluded.',cymbals,durations,symbols,summary:{cymbalReferences:cymbals.reduce((n,c)=>n+c.referenceHeads,0),cymbalsRecovered:cymbals.reduce((n,c)=>n+c.recovered,0),durationCases:durations.length,correctDurationCases:durations.filter(d=>d.correct).length,circledSymbolReferences:symbols.length,circledSymbolsFlagged:symbols.filter(s=>s.flagged&&s.openHiHatNotInferred).length}}
+const {hasCircledCymbalHead}=load('src/features/song-practice/circledCymbalHint.ts')
+const lower=load('src/features/song-practice/realLowerScoreFixture.ts').default
+const lowerInk=new Uint8Array(lower.width*lower.height);for(const i of lower.ink)lowerInk[i]=1
+const lowerImage={width:lower.width,height:lower.height,ink:lowerInk,angle:0,staffs:[lower.staff]}
+const focusedSourceEvidence={source:lower.source,symbols:lower.symbols.map(reference=>({reference,correct:hasCircledCymbalHead(lowerImage,lower.staff,reference.x,reference.y)===(reference.symbol==='circled-cross')})),durations:lower.durations.map(reference=>({reference,correct:inspectNoteValue(lowerImage,lower.staff,{...reference,id:0,shape:'oval',instrument:'Snare'}).value===reference.value}))}
+const manualIdentityCases=load('src/features/song-practice/realExtraCymbalFixture.ts').default.map(({source,instrument,symbol,x,y})=>({source,instrument,symbol,x,y,basis:'Visually read key label. Dedicated voice round-trip and verification policies tested; no automatic identity accuracy claimed.'}))
+const report={version:'v0.10.26',scope:'Twelve checked real-source supported cymbal heads, seventeen duration cases, and two circled-symbol references requiring manual identity review. Partial local source coverage, not general recognition accuracy. Unmatched suggestions are not automatically false; New China/Splash/Ride-bell key cases validate manual identity review separately. Within-bar ties and dotted durations are manually supported; automatic recognition and full-song transcription remain limited.',cymbals,durations,symbols,manualIdentityCases,focusedSourceEvidence,summary:{cymbalReferences:cymbals.reduce((n,c)=>n+c.referenceHeads,0),cymbalsRecovered:cymbals.reduce((n,c)=>n+c.recovered,0),durationCases:durations.length,correctDurationCases:durations.filter(d=>d.correct).length,circledSymbolReferences:symbols.length,circledSymbolsFlagged:symbols.filter(s=>s.flagged&&s.openHiHatNotInferred).length}}
 if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify(report,null,2)+'\n')
 console.log(JSON.stringify(report.summary))
+if([...focusedSourceEvidence.symbols,...focusedSourceEvidence.durations].some(reference=>!reference.correct))process.exitCode=1
 if(report.summary.cymbalsRecovered!==report.summary.cymbalReferences||report.summary.correctDurationCases!==report.summary.durationCases||report.summary.circledSymbolsFlagged!==report.summary.circledSymbolReferences)process.exitCode=1
