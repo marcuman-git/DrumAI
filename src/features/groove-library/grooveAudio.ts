@@ -10,7 +10,7 @@ export function createGroovePlayer(context: AudioContext) {
     const gain = context.createGain()
     const tom = TOM_PITCH[instrument as ChartInstrument]
     const bass = instrument === 'Kick' || instrument === 'Kick 2'
-    const duration = tom ? 0.24 : instrument === 'Open hi-hat' ? 0.35 : instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : bass ? 0.16 : instrument === 'Pedal hi-hat' ? 0.035 : instrument === 'Snare' ? 0.12 : 0.055
+    const duration = tom ? 0.24 : instrument === 'Open hi-hat' ? 0.35 : instrument === 'China' ? 0.45 : instrument === 'Splash' ? 0.2 : instrument === 'Ride bell' ? 0.18 : instrument === 'Crash' ? 0.55 : instrument === 'Ride' ? 0.09 : bass ? 0.16 : instrument === 'Pedal hi-hat' ? 0.035 : instrument === 'Snare' ? 0.12 : 0.055
     const strength = volume * (soft ? 0.22 : 0.8)
     gain.gain.setValueAtTime(Math.max(0.0001, strength * (bass ? 1 : 0.5)), time)
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration)
@@ -26,11 +26,11 @@ export function createGroovePlayer(context: AudioContext) {
       const source = context.createBufferSource(); source.buffer = noise
       const filter = context.createBiquadFilter()
       filter.type = instrument === 'Snare' ? 'bandpass' : 'highpass'
-      filter.frequency.value = instrument === 'Snare' ? 1800 : instrument === 'Crash' ? 2200 : instrument === 'Ride' ? 9500 : 6500
+      filter.frequency.value = instrument === 'Snare' ? 1800 : instrument === 'China' ? 1600 : instrument === 'Splash' ? 4500 : instrument === 'Ride bell' ? 10500 : instrument === 'Crash' ? 2200 : instrument === 'Ride' ? 9500 : 6500
       filter.Q.value = 0.7
       source.connect(filter); filter.connect(gain); source.start(time); source.stop(time + duration)
       // Ride: a short stick attack plus inharmonic metal partials, rather than crash-like wash.
-      if (instrument === 'Ride') for (const frequency of [2800, 4100]) {
+      if (instrument === 'Ride' || instrument === 'Ride bell') for (const frequency of (instrument === 'Ride bell' ? [4200, 6300] : [2800, 4100])) {
         const partial = context.createOscillator(); const metalGain = context.createGain()
         partial.type = 'sine'; partial.frequency.value = frequency
         metalGain.gain.setValueAtTime(Math.max(0.0001, strength * 0.16), time)
