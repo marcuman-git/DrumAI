@@ -51,3 +51,14 @@ it('filters by instrument without clearing hidden checked rows', () => {
   expect(screen.getByRole('checkbox', { name: /Floor tom 1, x=20/ })).toBeChecked()
   expect(onAccept).not.toHaveBeenCalled()
 })
+it('filters cymbals and maps a circled candidate without checking it or changing duration',()=>{
+ const onMap=vi.fn();const onAccept=vi.fn()
+ const list:NoteCandidate[]=[{...notes[0],shape:'cross',instrument:'Crash',symbolHint:'circled-cross'},notes[1]]
+ render(<CandidateNavigator notes={list} accepted={[9]} hints={{}} focusedId={null} onFocus={vi.fn()} onAccept={onAccept} onMap={onMap}/>)
+ fireEvent.change(screen.getByLabelText('Candidate filter'),{target:{value:'cymbal'}})
+ expect(screen.getByTestId('candidate-row-3')).toBeVisible();expect(screen.queryByTestId('candidate-row-9')).toBeNull()
+ fireEvent.click(screen.getByRole('button',{name:'Use Ride for candidate 4'}))
+ expect(onMap).toHaveBeenCalledWith(3,'Ride');expect(onAccept).not.toHaveBeenCalled()
+ fireEvent.change(screen.getByLabelText('Candidate filter'),{target:{value:'all'}})
+ expect(screen.getByRole('checkbox',{name:/Snare, x=20/})).toBeChecked()
+})

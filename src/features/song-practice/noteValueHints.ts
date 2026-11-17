@@ -1,7 +1,7 @@
 import { possibleNoteDot } from './dotEvidence'
 import { inspectBeamFlags } from './beamFlagEvidence'
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
-export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; flagBands?: number; evidence?: 'beam' | 'flag' | 'none'; clippedStem?: boolean; possibleDot?: boolean; manualReviewed?: boolean; left: number; top: number; width: number; height: number }
+export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; flagBands?: number; evidence?: 'beam' | 'flag' | 'none'; clippedStem?: boolean; stemX?: number; stemEnd?: number; possibleDot?: boolean; manualReviewed?: boolean; left: number; top: number; width: number; height: number }
 /** Local stem/beam evidence only. Missing flags, ties and adjacent voices can mislead it. */
 export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate, note: NoteCandidate): NoteValueHint {
   const { width, height, ink } = image; const gap = staff.gap
@@ -29,5 +29,5 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   const left = Math.max(0, Math.floor(note.x - gap * 2)); const right = Math.min(width, Math.ceil(note.x + gap * 2))
   const top = Math.max(0, Math.floor(Math.min(note.y - gap * 0.6, best.end) - 3))
   const bottom = Math.min(height, Math.ceil(Math.max(note.y + gap * 0.6, best.end) + 3))
-  return { value: evidence.clipped || possibleDot || best.length < gap * 1.6 || bands > 2 ? 'unknown' : bands === 2 ? 'sixteenth' : bands === 1 ? 'eighth' : 'quarter', stemDirection: best.length < gap * 1.6 ? 'unknown' : best.direction === -1 ? 'up' : 'down', beamBands: evidence.beamBands, flagBands: evidence.flagBands, evidence: evidence.evidence, clippedStem: evidence.clipped, possibleDot, left, top, width: right - left, height: bottom - top }
+  return { value: evidence.clipped || possibleDot || best.length < gap * 1.6 || bands > 2 ? 'unknown' : bands === 2 ? 'sixteenth' : bands === 1 ? 'eighth' : 'quarter', stemDirection: best.length < gap * 1.6 ? 'unknown' : best.direction === -1 ? 'up' : 'down', beamBands: evidence.beamBands, flagBands: evidence.flagBands, evidence: evidence.evidence, clippedStem: evidence.clipped, stemX: best.x, stemEnd: best.end, possibleDot, left, top, width: right - left, height: bottom - top }
 }

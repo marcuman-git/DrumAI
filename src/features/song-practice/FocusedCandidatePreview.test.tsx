@@ -41,3 +41,16 @@ it('expands context while keeping an edge crop inside original pixels', () => {
  expect(edge.left + edge.width).toBeLessThanOrEqual(source.width)
  expect(edge.top + edge.height).toBeLessThanOrEqual(source.height)
 })
+it('shows beam context and hides every overlay in clean view without rewriting reviewed evidence',()=>{
+ const stroke=vi.fn();const strokeRect=vi.fn()
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:(w:number,h:number)=>({data:new Uint8ClampedArray(w*h*4)}),putImageData:vi.fn(),drawImage:vi.fn(),strokeRect,beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),closePath:vi.fn(),stroke,setLineDash:vi.fn()} as unknown as CanvasRenderingContext2D)
+ const source={pixels:new Uint8ClampedArray(400*200*4).fill(255),width:400,height:200,angle:3,staff:{top:60,gap:12}}
+ const hint={value:'sixteenth' as const,stemDirection:'down' as const,beamBands:2,flagBands:0,left:80,top:40,width:50,height:70,stemX:94,stemEnd:105}
+ render(<FocusedCandidatePreview note={note} source={source} hint={hint}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Beam context'}))
+ expect(screen.getByText(/2 beam band\(s\), 0 short flag/)).toBeVisible()
+ expect(stroke).toHaveBeenCalledTimes(2)
+ fireEvent.click(screen.getByRole('button',{name:'Clean source view'}))
+ expect(stroke).toHaveBeenCalledTimes(2);expect(screen.getByText(/All overlays are hidden/)).toBeVisible()
+ expect(source.pixels.every(p=>p===255)).toBe(true);expect(hint.value).toBe('sixteenth')
+})

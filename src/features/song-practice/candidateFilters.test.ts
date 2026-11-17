@@ -16,3 +16,10 @@ it('combines instrument and checked filters without changing selection', () => {
   expect(filterCandidates(kitNotes, [0, 1], {}, 'checked', 'Floor tom 1').map((note) => note.id)).toEqual([0])
   expect(filterCandidates(kitNotes, [0], {}, 'checked', 'Open hi-hat')).toEqual([])
 })
+it('keeps cymbal inspection independent of mapped voice and preserves hidden selections',()=>{
+ const cross:NoteCandidate={...notes[0],shape:'cross',symbolHint:'circled-cross',instrument:'Crash'}
+ const list=[cross,notes[1]];const accepted=[0,1]
+ expect(filterCandidates(list,accepted,{},'cymbal')).toEqual([cross])
+ expect(filterCandidates(list,accepted,{0:{value:'quarter'} as NoteValueHint},'review')).toContain(cross)
+ expect(accepted).toEqual([0,1])
+})
