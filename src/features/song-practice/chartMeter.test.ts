@@ -19,12 +19,12 @@ it('persists 2/4 while old saves remain 4/4', () => {
  parsed.bars[0].Kick[12] = 2
  expect(isSongChart(parsed)).toBe(false)
 })
-it('preserves reviewed durations and rejects unsupported boundary ties', () => {
+it('preserves reviewed durations and creates ties at a crossing split', () => {
  const chart = newSongChart()
  chart.bars = [reviewedBar(fillReviewedRests([{ instrument: 'Snare', step: 0, duration: 4, kind: 'note', dynamic: 2 }], 'Snare'))]
  expect(isSongChart(changeChartMeter(chart, '2/4'))).toBe(true)
  chart.bars = [reviewedBar(fillReviewedRests([{ instrument: 'Snare', step: 6, duration: 4, kind: 'note', dynamic: 2 }], 'Snare'))]
- expect(() => changeChartMeter(chart, '2/4')).toThrow(/crosses beat 3/)
+ const split=changeChartMeter(chart, '2/4');expect(isSongChart(split)).toBe(true);expect(split.bars[1].Snare![0]).toBe(0);expect(split.bars[1].rhythmEvents!.some(event=>event.step===0&&event.tieFromPrevious)).toBe(true)
 })
 it('refuses oversized splits and incomplete joins rather than dropping notes', () => {
  const chart = newSongChart(); chart.bars = Array.from({ length: 9 }, () => structuredClone(chart.bars[0]))

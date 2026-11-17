@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { sourceFingerprint } from './sourceReviewSession'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
 const scanOptions = vi.hoisted(() => ({ multiBar: false, multipleStaffs: false, singleBoundary: false, circled: false, eightHits: false }))
@@ -244,4 +245,23 @@ it('sends eight eighth-guide source hits to even grid positions in the draft',()
  const onDraft=vi.fn();render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} onDraft={onDraft}/>)
  fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}));fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}));fireEvent.click(screen.getByLabelText(/I checked the candidates/));fireEvent.click(screen.getByRole('button',{name:'Build draft preview'}));fireEvent.click(screen.getByRole('button',{name:'Send draft to chart editor'}))
  expect(onDraft.mock.calls[0][0].bar.Snare).toEqual([2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0])
+})
+
+it('applies saved settings, rescans and restores duration edits with fresh confirmation required',async()=>{
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+ const pixels=new Uint8ClampedArray(80000);render(<NotationRecognitionPanel pixels={pixels} width={200} height={100} source="fixture.pdf" page={1}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}))
+ fireEvent.change(screen.getByLabelText('Recognition threshold'),{target:{value:'170'}})
+ const notes=[{id:0,x:20,y:55,instrument:'Snare',shape:'oval',strength:.9,stemHint:false,flagHint:false},{id:1,x:190,y:85,instrument:'Kick',shape:'oval',strength:.9,stemHint:false,flagHint:false}]
+ const events=[{instrument:'Snare',step:0,duration:2,kind:'note',dynamic:2},...Array.from({length:14},(_,index)=>({instrument:'Snare',step:index+2,duration:1,kind:'rest',dynamic:2}))]
+ const session=JSON.stringify({version:1,sourceKey:sourceFingerprint(pixels,200,100,'fixture.pdf',1),scanKey:JSON.stringify([160,'',{top:40,gap:10},'generic',true,true,false,4.5,1.5,false,2.5,3,1,2,10,95,'4/4','eighth']),legend:'Verified source reference',notes,accepted:[0],hints:{},events})
+ fireEvent.change(screen.getByLabelText('Restore source review session'),{target:{files:[{size:session.length,text:async()=>session}]}})
+ await waitFor(()=>expect(screen.getByRole('button',{name:'Apply saved settings, rescan and restore'})).toBeVisible())
+ fireEvent.click(screen.getByRole('button',{name:'Apply saved settings, rescan and restore'}))
+ await waitFor(()=>expect(screen.getByText(/Review restored. Recheck cymbal identities/)).toBeVisible())
+ expect(screen.getByLabelText('Recognition threshold')).toHaveValue('160')
+ expect(screen.getByLabelText('Source legend reference notes')).toHaveValue('Verified source reference')
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('2')
+ expect(screen.getByLabelText(/I checked the candidates/)).not.toBeChecked()
+ expect(screen.getByRole('button',{name:'Confirm reviewed bar'})).toBeDisabled()
 })

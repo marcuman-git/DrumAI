@@ -4,7 +4,7 @@ import { validChartReview } from './chartReviewLogic'
 import type { ChartReview } from './chartReviewLogic'
 import { validMix, validTraining } from './chartPracticeSettings'
 import type { ChartMix, ChartTraining } from './chartPracticeSettings'
-import { CHART_INSTRUMENTS, completeBar, notesFor, isCoreInstrument } from './chartKit'
+import { CHART_INSTRUMENTS, completeBar, notesFor, isCoreInstrument, withoutReviewedDurations } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 export { CHART_INSTRUMENTS, notesFor } from './chartKit'
 export type { ChartBar, ChartInstrument } from './chartKit'
@@ -24,7 +24,7 @@ export function isSongChart(value: unknown): value is SongChart {
   const chart = value as SongChart
   return typeof chart.id === 'string' && chart.id.length > 0 && chart.id.length <= 120 && typeof chart.title === 'string' && chart.title.trim().length > 0 && chart.title.length <= 80
     && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 16
-    && chart.bars.every((bar) => bar && (bar.beats === undefined || [2, 4].includes(bar.beats)) && (bar.beats === 2 ? 8 : 16) === chartSlots(chart) && validReviewedBar(bar) && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note, step) => Number.isInteger(note) && note >= 0 && note <= 3 && (step < chartSlots(chart) || note === 0)))))
+    && chart.bars.every((bar, index) => bar && (bar.beats === undefined || [2, 4].includes(bar.beats)) && (bar.beats === 2 ? 8 : 16) === chartSlots(chart) && validReviewedBar(bar, chart.bars[index - 1]) && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note, step) => Number.isInteger(note) && note >= 0 && note <= 3 && (step < chartSlots(chart) || note === 0)))))
     && (chart.meter === undefined || ['2/4', '4/4'].includes(chart.meter))
     && (chart.review === undefined || validChartReview(chart.review, chart.bars.length))
     && (chart.mix === undefined || validMix(chart.mix))
@@ -38,7 +38,7 @@ export function isSongChart(value: unknown): value is SongChart {
 export function cycleChartNote(chart: SongChart, bar: number, instrument: ChartInstrument, step: number): SongChart {
   if (!Number.isInteger(step) || step < 0 || step >= chartSlots(chart)) return chart
   const cycle = [0, 2, 1, 3]
-  return { ...chart, bars: chart.bars.map((row, index) => index === bar ? { ...row, rhythmEvents: undefined, [instrument]: notesFor(row, instrument).map((note, position) => position === step ? cycle[(cycle.indexOf(note) + 1) % cycle.length] : note) } : row) }
+  return { ...chart, bars: chart.bars.map((row, index) => index === bar ? { ...withoutReviewedDurations(row), [instrument]: notesFor(withoutReviewedDurations(row), instrument).map((note, position) => position === step ? cycle[(cycle.indexOf(note) + 1) % cycle.length] : note) } : row) }
 }
 export function loadSongCharts(): SongChart[] {
   try { const parsed: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]'); return Array.isArray(parsed) ? parsed.filter(isSongChart) : [] } catch { return [] }

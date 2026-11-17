@@ -3,7 +3,8 @@ import type { RecognitionImage, StaffCandidate } from './notationRecognition'
 export function hasCircledCymbalHead(image: RecognitionImage, staff: StaffCandidate, x: number, y: number): boolean {
  const {width,height,ink}=image; const gap=staff.gap
  const at=(px:number,py:number)=>px>=0&&py>=0&&px<width&&py<height?ink[Math.round(py)*width+Math.round(px)]??0:0
- for(let radius=Math.max(4,Math.round(gap*0.5));radius<=gap*0.95;radius++)for(const shift of [-1,0,1]) {
+ // Require a ring wider than a typical cross footprint; staff/stem junctions can mimic smaller rings.
+ for(let radius=Math.max(4,Math.round(gap*0.6));radius<=gap*0.95;radius++)for(const shift of [-1,0,1]) {
   const cy=y+shift
   if(x-radius<0||x+radius>=width||cy-radius<0||cy+radius>=height)continue
   const quadrants=[0,0,0,0]

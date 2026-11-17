@@ -1,3 +1,4 @@
+import { detachOrphanBoundaryTies } from './chartTieReview'
 import { useCallback, useReducer } from 'react'
 import type { SetStateAction } from 'react'
 import type { SongChart } from './songChartLogic'
@@ -14,7 +15,7 @@ export function chartHistoryReducer(state: History, action: Action): History {
     if (!state.future.length) return state
     return { past: [...state.past, state.present].slice(-50), present: state.future[0], future: state.future.slice(1) }
   }
-  const next = typeof action.update === 'function' ? action.update(state.present) : action.update
+  const next = detachOrphanBoundaryTies(typeof action.update === 'function' ? action.update(state.present) : action.update,state.present)
   if (JSON.stringify(next) === JSON.stringify(state.present)) return state
   return { past: [...state.past, state.present].slice(-50), present: next, future: [] }
 }

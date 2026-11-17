@@ -6,7 +6,7 @@ const escape = (value:string) => value.replace(/[<>&"']/g, character => ({'<':'&
 /** Only explicitly reviewed complete bars are exportable; grid durations are never guessed. */
 export function exportReviewedMusicXml(bars:ChartBar[], title='Reviewed percussion', bpm=60):string {
  if(!Number.isInteger(bpm)||bpm<40||bpm>240)throw new Error('Tempo must be 40–240 BPM.')
- if (!bars.length || bars.length>16 || bars.some(bar=>!bar.rhythmEvents || !validReviewedBar(bar)) || bars.some(bar=>(bar.beats??4)!==(bars[0].beats??4))) throw new Error('Export requires complete reviewed bars in a single meter.')
+ if (!bars.length || bars.length>16 || bars.some((bar,index)=>!bar.rhythmEvents || !validReviewedBar(bar,bars[index-1])) || bars.some(bar=>(bar.beats??4)!==(bars[0].beats??4))) throw new Error('Export requires complete reviewed bars in a single meter.')
  const voices=CHART_INSTRUMENTS.filter(name=>bars.some(bar=>bar.rhythmEvents!.some(event=>event.instrument===name)))
  const ids=new Map(voices.map((name,index)=>[name,`I${index+1}`]))
  const measures=bars.map((bar,index)=>{
@@ -14,7 +14,7 @@ export function exportReviewedMusicXml(bars:ChartBar[], title='Reviewed percussi
   return `<measure number="${index+1}">${index===0?`<attributes><divisions>4</divisions><time><beats>${slots/4}</beats><beat-type>4</beat-type></time><clef><sign>percussion</sign></clef></attributes><direction><sound tempo="${bpm}"/></direction>`:''}${voices.map((name,voice)=>{
    const events=bar.rhythmEvents!.filter(event=>event.instrument===name).sort((a,b)=>a.step-b.step)
    const content=events.length?events.map(event=>{
-    const next=events.find(item=>item.step===event.step+event.duration)
+    const next=events.find(item=>item.step===event.step+event.duration) ?? (event.step+event.duration===slots?bars[index+1]?.rhythmEvents?.find(item=>item.instrument===name&&item.step===0):undefined)
     const start=!!next?.tieFromPrevious; const stop=!!event.tieFromPrevious
     return `<note>${event.kind==='rest'?'<rest/>':`<unpitched><display-step>C</display-step><display-octave>5</display-octave></unpitched><instrument id="${ids.get(name)}"/>`}<duration>${event.duration}</duration>${stop?'<tie type="stop"/>':''}${start?'<tie type="start"/>':''}<voice>${voice+1}</voice><type>${event.duration>=4?'quarter':event.duration>=2?'eighth':'16th'}</type>${[3,6].includes(event.duration)?'<dot/>':''}${start||stop||event.dynamic!==2?`<notations>${stop?'<tied type="stop"/>':''}${start?'<tied type="start"/>':''}${event.dynamic===3?'<articulations><accent/></articulations>':''}</notations>`:''}${event.kind==='note'?`<notehead${event.dynamic===1?' parentheses="yes"':''}>${['Snare','Kick','Kick 2','Floor tom 1','Floor tom 2','Tom 1','Tom 2','Tom 3'].includes(name)?'normal':name==='Ride bell'?'diamond':'x'}</notehead>`:''}</note>`
    }).join(''):`<forward><duration>${slots}</duration></forward>`

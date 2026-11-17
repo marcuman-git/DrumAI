@@ -8,7 +8,7 @@ import type { ChartBar } from './songChartLogic'
 const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50, China: 30, Splash: 40, 'Ride bell': 45 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
-export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'eighth', countMode: controlledCountMode, onCountModeChange, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; countMode?: StaffCountMode; onCountModeChange?: (mode: StaffCountMode) => void; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
+export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'eighth', countMode: controlledCountMode, onCountModeChange, instruments = CHART_INSTRUMENTS, nextBar }: { nextBar?:ChartBar; bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; countMode?: StaffCountMode; onCountModeChange?: (mode: StaffCountMode) => void; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
   const [localCountMode, setCountMode] = useState<StaffCountMode>(initialCountMode)
   const countMode = controlledCountMode ?? localCountMode
   const [crashStyle, setCrashStyle] = useState<'ledger' | 'circle'>('ledger')
@@ -54,7 +54,8 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
                 {displayBar.rhythmEvents && event?.kind === 'note' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${event.duration <= 3 ? ` M ${x + 5} ${y - 32} q 15 8 8 18` : ''}${event.duration === 1 ? ` M ${x + 5} ${y - 25} q 15 8 8 18` : ''}`} fill="none" strokeWidth={1.5} />}
                 {note > 0 && headOffsets.get(instrument) === -11 && <path d={`M ${x - 5} ${y} H ${x + 5}`} fill="none" strokeWidth={1} />}
                 {event && [3,6].includes(event.duration) && <circle cx={x+13} cy={y-2} r={2} />}
-                {event?.tieFromPrevious && <path aria-label="Tied continuation" d={`M ${x-spacing+7} ${y+9} Q ${x-spacing/2} ${y+25} ${x-7} ${y+9}`} fill="none" />}
+                {event?.kind==='note' && event.step+event.duration===slots && nextBar?.rhythmEvents?.some(item=>item.instrument===instrument&&item.step===0&&item.tieFromPrevious) && <path aria-label="Tie to next bar" d={`M ${x+7} ${y+9} Q ${width-50} ${y+25} ${width-12} ${y+9}`} fill="none" />}
+                {event?.tieFromPrevious && <path aria-label={step===0?"Tie from previous bar":"Tied continuation"} d={`M ${step===0?108:x-spacing+7} ${y+9} Q ${step===0?120:x-spacing/2} ${y+25} ${x-7} ${y+9}`} fill="none" />}
                 {(note > 0 || event?.kind === 'note') && <g transform={`translate(${headOffsets.get(instrument) ?? 0},0)`}>
                   {instrument === 'Ride bell' ? <path d={`M ${x} ${y-6} l 6 6 -6 6 -6 -6 Z`} /> : ['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat', 'China', 'Splash', 'Ride bell'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'China' && <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} />}{instrument === 'Splash' && <path d={`M ${x-10} ${y} H ${x+10} M ${x-10} ${y+10} H ${x+10}`} fill="none" strokeWidth={1}/>} {instrument === 'Crash' && (crashStyle === 'circle' ? <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} /> : <path data-testid={`crash-ledger-${step}`} d={`M ${x - 12} ${y} H ${x + 12}`} strokeWidth={1.2} fill="none" />)}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
                   {note === 1 && <><text x={x - 13} y={y + 5} fontSize={18} stroke="none">(</text><text x={x + 8} y={y + 5} fontSize={18} stroke="none">)</text></>}
@@ -70,6 +71,6 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
         })}
       </svg>
     </div>
-    <p className="text-xs text-zinc-400">Reviewed rests are shown per instrument; continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards reviewed durations for that bar and returns it to grid notation using the selected count mode.</p>
+    <p className="text-xs text-zinc-400">Reviewed rests are shown per instrument; continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards duration review and turns tied heads into separate grid strikes. Recheck ties before confirming again.</p>
   </section>
 }
