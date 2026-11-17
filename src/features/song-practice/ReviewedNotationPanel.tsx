@@ -10,7 +10,7 @@ import type { RhythmEvent } from './reviewedRhythm'
 import { detectRestHints } from './restRecognition'
 import { ChartStaffNotation } from './ChartStaffNotation'
 
-export function ReviewedNotationPanel({ notes, hints, first, last, image, staff, onConfirm, onInvalidate, onInspectCandidate, slots = 16, lastGuideStep = slots - 1 }: { slots?: number; lastGuideStep?: number; notes: NoteCandidate[]; hints: Record<number, NoteValueHint>; first: number; last: number; image: RecognitionImage | null; staff: StaffCandidate | null; onConfirm: (bar: ChartBar) => void; onInvalidate?: () => void; onInspectCandidate?: (id: number) => void }) {
+export function ReviewedNotationPanel({ notes, hints, first, last, image, staff, onConfirm, onInvalidate, onInspectCandidate, slots = 16, lastGuideStep = slots - 1, identityIssues = [], identityReviewKey = '' }: { identityReviewKey?:string; identityIssues?: readonly string[]; slots?: number; lastGuideStep?: number; notes: NoteCandidate[]; hints: Record<number, NoteValueHint>; first: number; last: number; image: RecognitionImage | null; staff: StaffCandidate | null; onConfirm: (bar: ChartBar) => void; onInvalidate?: () => void; onInspectCandidate?: (id: number) => void }) {
   const [history, dispatchHistory] = useReducer(reviewHistoryReducer, undefined, createReviewHistory)
   const events = history.present
   const [instrument, setInstrument] = useState<ChartInstrument>('Snare')
@@ -18,6 +18,7 @@ export function ReviewedNotationPanel({ notes, hints, first, last, image, staff,
   const [defaultDuration, setDefaultDuration] = useState<1 | 2 | 4>(2)
   const [rests, setRests] = useState<ReturnType<typeof detectRestHints>>([])
   const [confirmed, setConfirmed] = useState(false)
+  useEffect(()=>setConfirmed(false),[identityReviewKey])
   const [message, setMessage] = useState('Initialize from accepted heads or add events manually. Verify all positions and durations against the PDF.')
   const [focusedEvent, setFocusedEvent] = useState<number | null>(null)
   const [selectedOnly, setSelectedOnly] = useState(false)
@@ -52,7 +53,8 @@ export function ReviewedNotationPanel({ notes, hints, first, last, image, staff,
     <p role="status">Voices: {check.voices}. Missing slots: {check.missing}. Overlapping slots: {check.overlaps}. {check.valid ? 'Supported rhythm is complete; verify source before confirming.' : 'Resolve gaps, overlaps and durations crossing the bar end.'}</p>
     {check.valid && <ChartStaffNotation bar={reviewedBar(events, slots)} barNumber={1} activeStep={-1} initialCountMode="eighth" instruments={CHART_INSTRUMENTS.filter((name) => events.some((event) => event.instrument === name))} />}
     <label className="block text-sm"><input type="checkbox" checked={confirmed} disabled={!check.valid} onChange={(event) => setConfirmed(event.target.checked)} /> I verified every onset, duration, rest and instrument against the source.</label>
-    <button disabled={!confirmed || !check.valid} onClick={() => { onConfirm(reviewedBar(events, slots)); setMessage('Reviewed bar sent to draft preview. Send it to the chart editor to append explicitly.') }} className="rounded bg-cyan-800 p-2 disabled:opacity-40">Confirm reviewed bar</button>
+    {identityIssues.length>0&&<p role="alert">Resolve cymbal identity review before confirming: {identityIssues.join(' ')}</p>}
+    <button disabled={!confirmed || !check.valid || identityIssues.length>0} onClick={() => { onConfirm(reviewedBar(events, slots)); setMessage('Reviewed bar sent to draft preview. Send it to the chart editor to append explicitly.') }} className="rounded bg-cyan-800 p-2 disabled:opacity-40">Confirm reviewed bar</button>
     <p className="text-xs text-cyan-100">{message}</p>
   </section>
 }

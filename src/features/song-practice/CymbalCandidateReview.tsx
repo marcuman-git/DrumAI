@@ -1,12 +1,16 @@
+import { identityStatus } from './cymbalIdentityReview'
+import type { CymbalIdentityStatus } from './cymbalIdentityReview'
 import type { NoteCandidate } from './notationRecognition'
-export function CymbalCandidateReview({note,onMap,onFocus}:{note:NoteCandidate;onMap:(id:number,instrument:NoteCandidate['instrument'])=>void;onFocus:(id:number)=>void}) {
- if(note.shape!=='cross'||!note.symbolHint&&note.positionHint!=='ambiguous'&&note.cymbalHint!=='ledger-cross')return null
+export function CymbalCandidateReview({note,onMap,onFocus,onReviewIdentity}:{note:NoteCandidate;onMap:(id:number,instrument:NoteCandidate['instrument'])=>void;onFocus:(id:number)=>void;onReviewIdentity?:(id:number,status:CymbalIdentityStatus|'unreviewed')=>void}) {
+ if(note.shape!=='cross')return null
  return <section aria-label={`Cymbal review candidate ${note.id+1}`} className="my-2 space-y-2 rounded border border-amber-300/40 p-2">
+  <p>Identity review: {identityStatus(note)}{identityStatus(note)==='verified'?` as ${note.instrument}`:''}.</p>
   <strong>Verify cymbal against source legend</strong>
   {note.symbolHint==='circled-cross'&&<p>Ring surrounds the head. This can mean China or another source-specific cymbal; it does not confirm Crash, Ride or open Hi-hat. Unsupported voices have no faithful playback mapping. Leave unchecked if no supported voice matches.</p>}
   {note.positionHint==='ambiguous'&&<p>The cross center lies near the top line. Compare Hi-hat and Ride positions in this source; choose a voice only after checking the legend.</p>}
   <button onClick={()=>onFocus(note.id)} className="rounded border border-white/25 p-1">Inspect cymbal {note.id+1}</button>
   <div className="flex flex-wrap gap-2">{(['Hi-hat','Ride','Crash','Open hi-hat','Pedal hi-hat'] as const).map(instrument=><button key={instrument} aria-label={`Use ${instrument} for candidate ${note.id+1}`} onClick={()=>onMap(note.id,instrument)} className="rounded border border-white/25 p-1">Use {instrument}</button>)}</div>
+  {onReviewIdentity&&<div className="flex flex-wrap gap-2"><button aria-label={`Verify identity for candidate ${note.id+1}`} onClick={()=>onReviewIdentity(note.id,'verified')} className="rounded border border-emerald-300/40 p-1">I verified {note.instrument} against the source legend</button><button aria-label={`Unsupported identity for candidate ${note.id+1}`} onClick={()=>onReviewIdentity(note.id,'unsupported')} className="rounded border border-amber-300/40 p-1">Unsupported / exclude</button><button aria-label={`Clear identity review for candidate ${note.id+1}`} onClick={()=>onReviewIdentity(note.id,'unreviewed')} className="rounded border border-white/25 p-1">Clear identity review</button></div>}
   <p>Mapping changes the suggested voice only. It does not check this candidate or confirm its duration.</p>
  </section>
 }

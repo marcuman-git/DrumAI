@@ -3,9 +3,12 @@ import type { NoteCandidate } from './notationRecognition'
 import type { NoteValueHint } from './noteValueHints'
 import { previewBounds, sourcePoint } from './candidatePreviewBounds'
 import type { CandidatePreviewSource } from './candidatePreviewBounds'
-export function FocusedCandidatePreview({ note, source, hint }: { note: NoteCandidate; source: CandidatePreviewSource; hint?: NoteValueHint }) {
- const [outline,setOutline]=useState(true)
- const [context,setContext]=useState(1)
+export interface CandidatePreviewView {context:number;outline:boolean}
+export function FocusedCandidatePreview({ note, source, hint, view, onViewChange }: { note: NoteCandidate; source: CandidatePreviewSource; hint?: NoteValueHint;view?:CandidatePreviewView;onViewChange?:(view:CandidatePreviewView)=>void }) {
+ const [localOutline,setOutline]=useState(true)
+ const [localContext,setContext]=useState(1)
+ const outline=view?.outline??localOutline;const context=view?.context??localContext
+ const changeView=(next:CandidatePreviewView)=>{setOutline(next.outline);setContext(next.context);onViewChange?.(next)}
  const canvas=useRef<HTMLCanvasElement>(null)
  const bounds=previewBounds(note,source,hint,context)
  useEffect(()=>{
@@ -42,9 +45,9 @@ export function FocusedCandidatePreview({ note, source, hint }: { note: NoteCand
  return <section aria-label="Focused symbol inspection" className="rounded border border-cyan-300/40 p-3">
   <h5 className="text-sm font-semibold">Inspect candidate #{note.id+1}: {note.instrument}</h5>
   <div className="mt-2 flex flex-wrap gap-2">
-   <button aria-pressed={!outline} onClick={()=>setOutline(value=>!value)} className="rounded border border-white/30 px-3 py-2 text-sm">Clean source view</button>
-   <button aria-pressed={context===2} onClick={()=>setContext(value=>value===2?1:2)} className="rounded border border-white/30 px-3 py-2 text-sm">Wider context</button>
-   <button aria-pressed={context===3} onClick={()=>setContext(value=>value===3?1:3)} className="rounded border border-white/30 px-3 py-2 text-sm">Beam context</button>
+   <button aria-pressed={!outline} onClick={()=>changeView({context,outline:!outline})} className="rounded border border-white/30 px-3 py-2 text-sm">Clean source view</button>
+   <button aria-pressed={context===2} onClick={()=>changeView({outline,context:context===2?1:2})} className="rounded border border-white/30 px-3 py-2 text-sm">Wider context</button>
+   <button aria-pressed={context===3} onClick={()=>changeView({outline,context:context===3?1:3})} className="rounded border border-white/30 px-3 py-2 text-sm">Beam context</button>
   </div>
   <canvas ref={canvas} aria-label={`Magnified candidate ${note.id+1}`} className="mt-2 block h-auto max-h-80 max-w-full rounded bg-white" />
   <p className="mt-2 text-xs text-zinc-300">Original crop pixels, magnified for manual inspection. {outline?'Cyan marks the candidate head.':'Outline hidden: original source pixels only.'} Compare heads, stems, beams and the source legend. Nearby symbols can belong to separate voices. Suggested duration: {hint?.value??'unknown'}. Magnification does not improve recognition confidence or modify notes.</p>

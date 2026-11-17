@@ -11,10 +11,10 @@ it('requires deliberate mapping or inspection while warning about unsupported ci
  fireEvent.click(screen.getByRole('button',{name:'Inspect cymbal 5'}));expect(onFocus).toHaveBeenCalledWith(4)
  fireEvent.click(screen.getByRole('button',{name:'Use Ride for candidate 5'}));expect(onMap).toHaveBeenCalledWith(4,'Ride')
 })
-it('offers comparison for ambiguous positions and hides the panel for ordinary unambiguous heads',()=>{
+it('offers comparison for ambiguous positions and hides the panel for oval heads',()=>{
  const props={onMap:vi.fn(),onFocus:vi.fn()}
  const view=render(<CymbalCandidateReview note={{...note,symbolHint:undefined,positionHint:'ambiguous'}} {...props}/>)
  expect(screen.getByText(/Compare Hi-hat and Ride/)).toBeVisible()
- view.rerender(<CymbalCandidateReview note={{...note,symbolHint:undefined,positionHint:'on-line'}} {...props}/>)
+ view.rerender(<CymbalCandidateReview note={{...note,symbolHint:undefined,positionHint:'on-line',shape:'oval'}} {...props}/>)
  expect(screen.queryByLabelText('Cymbal review candidate 5')).toBeNull()
 })

@@ -33,3 +33,9 @@ it('checks another original score bar with ledger heads and dotted/beamed/quarte
   expect(inspectNoteValue(image,f.staff,note!).value).toBe(reference.value)
  }
 })
+it('validates a fourth original score bar with two Crash heads and three duration cases',async()=>{
+ const {default:f}=await import('./realFourthBarFixture')
+ const image=imageFor(f);const notes=findNoteCandidates(image,f.staff,'master-key',{cleanHeads:true,tolerance:2,kick:4.5})
+ expect(benchmarkHeads(notes,f.heads,5,5).missed).toEqual([])
+ for(const reference of f.durations){const note=notes.find(n=>n.instrument===reference.instrument&&Math.abs(n.x-reference.x)<=6&&Math.abs(n.y-reference.y)<=4);expect(note).toBeDefined();expect(inspectNoteValue(image,f.staff,note!).value).toBe(reference.value)}
+})

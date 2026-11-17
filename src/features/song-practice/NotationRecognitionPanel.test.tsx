@@ -1,12 +1,12 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
-const scanOptions = vi.hoisted(() => ({ multiBar: false, multipleStaffs: false, singleBoundary: false }))
+const scanOptions = vi.hoisted(() => ({ multiBar: false, multipleStaffs: false, singleBoundary: false, circled: false, eightHits: false }))
 vi.mock('./notationRecognition', async (original) => {
   const actual = await original<typeof import('./notationRecognition')>()
-  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: (() => { const ink = new Uint8Array(20000); if (scanOptions.multiBar || scanOptions.singleBoundary) for (const x of scanOptions.singleBoundary ? [65] : [65, 130]) for (let y = 40; y <= 80; y++) ink[y * 200 + x] = 1; return ink })(), angle: 0, staffs: scanOptions.multipleStaffs ? [{ top: 10, gap: 10 }, { top: 50, gap: 10 }] : [{ top: 40, gap: 10 }] }), findNoteCandidates: () => [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
+  return { ...actual, analyzeStaffs: () => ({ width: 200, height: 100, ink: (() => { const ink = new Uint8Array(20000); if (scanOptions.multiBar || scanOptions.singleBoundary) for (const x of scanOptions.singleBoundary ? [65] : [65, 130]) for (let y = 40; y <= 80; y++) ink[y * 200 + x] = 1; return ink })(), angle: 0, staffs: scanOptions.multipleStaffs ? [{ top: 10, gap: 10 }, { top: 50, gap: 10 }] : [{ top: 40, gap: 10 }] }), findNoteCandidates: () => scanOptions.eightHits ? Array.from({length:8},(_,id)=>({id,x:20+id*170/7,y:55,instrument:'Snare',shape:'oval',strength:1,stemHint:false,flagHint:false})) : scanOptions.circled ? [{id:0,x:20,y:35,instrument:'Crash',shape:'cross',symbolHint:'circled-cross',strength:1,stemHint:false,flagHint:false}] : [{ id: 0, x: 20, y: 55, instrument: 'Snare', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }, { id: 1, x: 190, y: 85, instrument: 'Kick', shape: 'oval', strength: 0.9, stemHint: false, flagHint: false }], findBarlineHints: () => [] }
 })
-afterEach(() => { cleanup(); scanOptions.multiBar = false; scanOptions.multipleStaffs = false; scanOptions.singleBoundary = false; vi.restoreAllMocks() })
+afterEach(() => { cleanup(); scanOptions.multiBar = false; scanOptions.multipleStaffs = false; scanOptions.singleBoundary = false; scanOptions.circled=false; scanOptions.eightHits=false; vi.restoreAllMocks() })
 it('requires accepted candidates and acknowledgement before sending an editable draft', () => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
   const onDraft = vi.fn()
@@ -69,7 +69,7 @@ it('selects all, excludes unchecked heads from drafts, and invalidates stale pre
   fireEvent.click(screen.getByRole('button', { name: 'Build draft preview' }))
   fireEvent.click(screen.getByRole('button', { name: 'Send draft to chart editor' }))
   expect(onDraft.mock.calls[0][0].bar.Snare.every((value: number) => value === 0)).toBe(true)
-  expect(onDraft.mock.calls[0][0].bar.Kick[15]).toBe(2)
+  expect(onDraft.mock.calls[0][0].bar.Kick[14]).toBe(2)
   fireEvent.click(screen.getByRole('button', { name: 'Clear candidate selection' }))
   expect(screen.getByText(/Selected 0.*2/)).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Send draft to chart editor' })).toBeNull()
@@ -103,7 +103,7 @@ it('includes checked candidates hidden by a review filter in the draft', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Build draft preview' }))
   fireEvent.click(screen.getByRole('button', { name: 'Send draft to chart editor' }))
   expect(onDraft.mock.calls[0][0].bar.Snare[0]).toBe(2)
-  expect(onDraft.mock.calls[0][0].bar.Kick[15]).toBe(2)
+  expect(onDraft.mock.calls[0][0].bar.Kick[14]).toBe(2)
 })
 it('invalidates drafts after floor calibration controls change', () => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ createImageData: () => ({ data: new Uint8ClampedArray(80000) }), putImageData: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), strokeRect: vi.fn() } as unknown as CanvasRenderingContext2D)
@@ -196,4 +196,52 @@ it('previews checked voices only with eighth counts and resets draft when source
  fireEvent.click(screen.getByRole('button', { name: 'Send draft to chart editor' }))
  expect(onDraft.mock.calls[0][0].bar.beats).toBe(2)
  expect(onDraft.mock.calls[0][0].bar.Kick.every((hit: number) => hit === 0)).toBe(true)
+})
+it('requires flagged cymbal verification, clears it on mapping/rescan and excludes unsupported identities',()=>{
+ scanOptions.circled=true
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+ render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}))
+ fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}))
+ fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+ expect(screen.getByRole('button',{name:'Build draft preview'})).toBeDisabled()
+ fireEvent.click(screen.getByRole('button',{name:'Verify identity for candidate 1'}))
+ fireEvent.click(screen.getByLabelText(/I checked the candidates/))
+ expect(screen.getByRole('button',{name:'Build draft preview'})).toBeEnabled()
+ fireEvent.click(screen.getByRole('button',{name:'Build draft preview'}))
+ fireEvent.click(screen.getByRole('button',{name:'Use Ride for candidate 1'}))
+ expect(screen.queryByLabelText('Drum staff notation')).toBeNull()
+ expect(screen.getByText('Identity review: unreviewed.')).toBeVisible()
+ fireEvent.click(screen.getByRole('button',{name:'Unsupported identity for candidate 1'}))
+ expect(screen.getByRole('checkbox',{name:/Ride manually mapped/})).not.toBeChecked()
+ expect(screen.getByRole('checkbox',{name:/Ride manually mapped/})).toBeDisabled()
+ fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}))
+ expect(screen.getByRole('checkbox',{name:/Ride manually mapped/})).not.toBeChecked()
+ fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}))
+ expect(screen.getByText('Identity review: unreviewed.')).toBeVisible()
+ expect(screen.getByRole('checkbox',{name:/Crash, x=20/})).toBeEnabled()
+})
+it('preserves duration events when identity review changes while clearing duration confirmation',()=>{
+ scanOptions.circled=true
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+ render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}));fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}))
+ fireEvent.click(screen.getByRole('button',{name:'Initialize accepted notes'}))
+ fireEvent.change(screen.getByLabelText('Event 1 duration'),{target:{value:'4'}})
+ fireEvent.change(screen.getByLabelText('Review instrument'),{target:{value:'Crash'}})
+ fireEvent.click(screen.getByRole('button',{name:'Fill gaps with manual rests'}))
+ fireEvent.click(screen.getByLabelText(/I verified every onset/))
+ expect(screen.getByRole('button',{name:'Confirm reviewed bar'})).toBeDisabled()
+ fireEvent.click(screen.getByRole('button',{name:'Verify identity for candidate 1'}))
+ expect(screen.getByLabelText('Event 1 duration')).toHaveValue('4')
+ expect(screen.getByLabelText(/I verified every onset/)).not.toBeChecked()
+ fireEvent.click(screen.getByLabelText(/I verified every onset/))
+ expect(screen.getByRole('button',{name:'Confirm reviewed bar'})).toBeEnabled()
+})
+it('sends eight eighth-guide source hits to even grid positions in the draft',()=>{
+ scanOptions.eightHits=true
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+ const onDraft=vi.fn();render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="fixture.pdf" page={1} onDraft={onDraft}/>)
+ fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}));fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}));fireEvent.click(screen.getByLabelText(/I checked the candidates/));fireEvent.click(screen.getByRole('button',{name:'Build draft preview'}));fireEvent.click(screen.getByRole('button',{name:'Send draft to chart editor'}))
+ expect(onDraft.mock.calls[0][0].bar.Snare).toEqual([2,0,2,0,2,0,2,0,2,0,2,0,2,0,2,0])
 })
