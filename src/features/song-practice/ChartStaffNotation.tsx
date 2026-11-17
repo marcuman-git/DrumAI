@@ -5,7 +5,7 @@ import { staffCountLabel } from './staffCountLabels'
 import type { StaffCountMode } from './staffCountLabels'
 import { CHART_INSTRUMENTS, notesFor } from './songChartLogic'
 import type { ChartBar } from './songChartLogic'
-const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50 }
+const HEAD_Y = { 'Hi-hat': 50, Snare: 70, Kick: 90, Crash: 35, Ride: 45, 'Kick 2': 95, 'Floor tom 2': 85, 'Floor tom 1': 80, 'Tom 3': 75, 'Tom 2': 65, 'Tom 1': 60, 'Pedal hi-hat': 100, 'Open hi-hat': 50, China: 30, Splash: 40, 'Ride bell': 45 }
 
 /** Simultaneous sixteenth-note strikes share one stem on a percussion staff. */
 export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMode = 'eighth', countMode: controlledCountMode, onCountModeChange, instruments = CHART_INSTRUMENTS }: { bar: ChartBar; barNumber: number; activeStep: number; initialCountMode?: StaffCountMode; countMode?: StaffCountMode; onCountModeChange?: (mode: StaffCountMode) => void; instruments?: readonly typeof CHART_INSTRUMENTS[number][] }) {
@@ -17,7 +17,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
   const width = 1080; const start = 140; const spacing = 896 / slots
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
     <h4 className="font-semibold">Musical Staff - Bar {barNumber}</h4>
-    <p className="text-xs text-zinc-400">One {slots / 4}/4 percussion staff. Reviewed bars show quarter/eighth/sixteenth durations and rests; grid symbols follow the selected count mode where onsets allow grouping. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
+    <p className="text-xs text-zinc-400">One {slots / 4}/4 percussion staff. Reviewed bars show straight/dotted durations, within-bar ties and rests; grid symbols follow the selected count mode where onsets allow grouping. Source PDFs may use different positions. Parentheses mean ghost notes.</p>
     <div className="flex flex-wrap gap-3"><label className="text-sm">Count labels<select aria-label="Staff count labels" value={countMode} onChange={(event) => { const mode = event.target.value as StaffCountMode; setCountMode(mode); onCountModeChange?.(mode) }} className="ml-2 rounded bg-zinc-900 p-2"><option value="quarter">Quarter: 1 2 3 4</option><option value="eighth">Eighth: 1 & 2 &</option><option value="sixteenth">Sixteenth: 1 e & a</option></select></label><label className="text-sm">Crash head style<select aria-label="Crash head style" value={crashStyle} onChange={(event) => setCrashStyle(event.target.value as 'ledger' | 'circle')} className="ml-2 rounded bg-zinc-900 p-2"><option value="ledger">Cross with ledger line</option><option value="circle">Circled cross</option></select></label></div>
     <p className="text-xs text-zinc-400">Count mode also groups grid symbols where no stroke is lost. This is a display assumption, not PDF rhythm recognition. Reviewed durations remain authoritative. Playback onsets are unchanged. Cymbal legends vary by publisher.</p>
     <div className="overflow-hidden rounded-lg border border-white/20 bg-zinc-100 p-2">
@@ -45,16 +45,18 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
             {instruments.map((instrument) => {
               const note = notesFor(bar, instrument)[step]; const y = HEAD_Y[instrument]
               const event = displayBar.rhythmEvents?.find((item) => item.instrument === instrument && item.step === step)
-              const value = event?.duration === 4 ? 'quarter' : event?.duration === 2 ? 'eighth' : 'sixteenth'
+              const value = event?.duration === 6 ? 'dotted quarter' : event?.duration === 3 ? 'dotted eighth' : event?.duration === 4 ? 'quarter' : event?.duration === 2 ? 'eighth' : 'sixteenth'
               return <g key={instrument} data-testid={`staff-${instrument}-${step}`} data-active={activeStep === step} aria-label={`${instrument} slot ${step + 1}: ${event ? value + ' ' + event.kind : displayBar.rhythmEvents ? 'continuation or inactive voice' : ['sixteenth rest', 'ghost sixteenth note', 'sixteenth note', 'accented sixteenth note'][note]}`} stroke={color} fill={color}>
-                <title>{instrument} slot {step + 1}: {['rest', 'ghost', 'note', 'accent'][note]}</title>
+                <title>{instrument} slot {step + 1}: {event ? (event.tieFromPrevious ? 'tied continuation' : event.kind) : ['rest', 'ghost', 'note', 'accent'][note]}</title>
                 {event?.kind === 'rest' && <g data-testid={`review-rest-${instrument}-${step}`}>
-                  {event.duration === 4 ? <path d={`M ${x} ${y - 12} l -5 7 8 7 -6 7 5 7`} fill="none" strokeWidth={2} /> : <><path d={`M ${x + 4} ${y - 10} l -8 24`} fill="none" strokeWidth={2} /><circle cx={x} cy={y - 8} r={3} />{event.duration === 1 && <circle cx={x - 3} cy={y + 1} r={3} />}</>}
+                  {event.duration >= 4 ? <path d={`M ${x} ${y - 12} l -5 7 8 7 -6 7 5 7`} fill="none" strokeWidth={2} /> : <><path d={`M ${x + 4} ${y - 10} l -8 24`} fill="none" strokeWidth={2} /><circle cx={x} cy={y - 8} r={3} />{event.duration === 1 && <circle cx={x - 3} cy={y + 1} r={3} />}</>}
                 </g>}
-                {displayBar.rhythmEvents && note > 0 && event?.kind === 'note' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${event.duration <= 2 ? ` M ${x + 5} ${y - 32} q 15 8 8 18` : ''}${event.duration === 1 ? ` M ${x + 5} ${y - 25} q 15 8 8 18` : ''}`} fill="none" strokeWidth={1.5} />}
+                {displayBar.rhythmEvents && event?.kind === 'note' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${event.duration <= 3 ? ` M ${x + 5} ${y - 32} q 15 8 8 18` : ''}${event.duration === 1 ? ` M ${x + 5} ${y - 25} q 15 8 8 18` : ''}`} fill="none" strokeWidth={1.5} />}
                 {note > 0 && headOffsets.get(instrument) === -11 && <path d={`M ${x - 5} ${y} H ${x + 5}`} fill="none" strokeWidth={1} />}
-                {note > 0 && <g transform={`translate(${headOffsets.get(instrument) ?? 0},0)`}>
-                  {['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'Crash' && (crashStyle === 'circle' ? <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} /> : <path data-testid={`crash-ledger-${step}`} d={`M ${x - 12} ${y} H ${x + 12}`} strokeWidth={1.2} fill="none" />)}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
+                {event && [3,6].includes(event.duration) && <circle cx={x+13} cy={y-2} r={2} />}
+                {event?.tieFromPrevious && <path aria-label="Tied continuation" d={`M ${x-spacing+7} ${y+9} Q ${x-spacing/2} ${y+25} ${x-7} ${y+9}`} fill="none" />}
+                {(note > 0 || event?.kind === 'note') && <g transform={`translate(${headOffsets.get(instrument) ?? 0},0)`}>
+                  {instrument === 'Ride bell' ? <path d={`M ${x} ${y-6} l 6 6 -6 6 -6 -6 Z`} /> : ['Hi-hat', 'Crash', 'Ride', 'Pedal hi-hat', 'Open hi-hat', 'China', 'Splash', 'Ride bell'].includes(instrument) ? <><path d={`M ${x - 5} ${y - 4} l 10 8 M ${x - 5} ${y + 4} l 10 -8`} strokeWidth={2} fill="none" />{instrument === 'Open hi-hat' && <circle cx={x} cy={y - 13} r={4} fill="none" strokeWidth={1.2} />}{instrument === 'China' && <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} />}{instrument === 'Splash' && <path d={`M ${x-10} ${y} H ${x+10} M ${x-10} ${y+10} H ${x+10}`} fill="none" strokeWidth={1}/>} {instrument === 'Crash' && (crashStyle === 'circle' ? <circle cx={x} cy={y} r={8} fill="none" strokeWidth={1} /> : <path data-testid={`crash-ledger-${step}`} d={`M ${x - 12} ${y} H ${x + 12}`} strokeWidth={1.2} fill="none" />)}</> : <ellipse cx={x} cy={y} rx={6} ry={4} transform={`rotate(-18 ${x} ${y})`} />}
                   {note === 1 && <><text x={x - 13} y={y + 5} fontSize={18} stroke="none">(</text><text x={x + 8} y={y + 5} fontSize={18} stroke="none">)</text></>}
                 </g>}
               </g>

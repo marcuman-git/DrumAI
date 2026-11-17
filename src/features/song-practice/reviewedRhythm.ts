@@ -3,11 +3,12 @@ import type { ChartBar, ChartInstrument } from './chartKit'
 import type { RhythmEvent } from './rhythmTypes'
 export type { RhythmEvent } from './rhythmTypes'
 export function validRhythmEvents(value: unknown, slots = 16): value is RhythmEvent[] {
-  return Array.isArray(value) && value.length <= 192 && value.every((event) => event && CHART_INSTRUMENTS.includes(event.instrument) && Number.isInteger(event.step) && event.step >= 0 && event.step < slots && [1, 2, 4].includes(event.duration) && event.step + event.duration <= slots && ['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
+  return Array.isArray(value) && value.length <= 192 && value.every((event) => event && CHART_INSTRUMENTS.includes(event.instrument) && Number.isInteger(event.step) && event.step >= 0 && event.step < slots && [1, 2, 3, 4, 6].includes(event.duration) && event.step + event.duration <= slots && ['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
 }
 export function checkReviewedRhythm(events: RhythmEvent[], slots = 16) {
   let overlaps = 0; let missing = 0
   if (!validRhythmEvents(events, slots)) return { valid: false, overlaps: 0, missing: slots, voices: 0 }
+  if (events.some(event => event.tieFromPrevious !== undefined && typeof event.tieFromPrevious !== 'boolean' || event.tieFromPrevious && (event.kind !== 'note' || !events.some(previous => previous.instrument === event.instrument && previous.kind === 'note' && previous.step + previous.duration === event.step)))) return { valid: false, overlaps: 0, missing: slots, voices: 0 }
   const used = [...new Set(events.map((event) => event.instrument))]
   for (const instrument of used) {
     const coverage = Array<number>(slots).fill(0)
@@ -20,8 +21,8 @@ export function checkReviewedRhythm(events: RhythmEvent[], slots = 16) {
 export function reviewedBar(events: RhythmEvent[], slots = 16): ChartBar {
   if (!checkReviewedRhythm(events, slots).valid) throw new Error('Resolve missing time and overlaps before confirming.')
   const bar: ChartBar = { ...completeBar(), ...(slots === 8 ? { beats: 2 as const } : {}) }
-  for (const event of events) if (event.kind === 'note') bar[event.instrument]![event.step] = event.dynamic
-  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic }) => ({ instrument, step, duration, kind, dynamic }))
+  for (const event of events) if (event.kind === 'note' && !event.tieFromPrevious) bar[event.instrument]![event.step] = event.dynamic
+  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic, tieFromPrevious }) => ({ instrument, step, duration, kind, dynamic, ...(tieFromPrevious ? { tieFromPrevious } : {}) }))
   return bar
 }
 export function validReviewedBar(bar: ChartBar): boolean {

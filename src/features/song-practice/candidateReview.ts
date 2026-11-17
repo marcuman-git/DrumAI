@@ -6,7 +6,7 @@ export function candidateReviewReasons(note: NoteCandidate, notes: readonly Note
   const hint = hints[note.id]
   const reasons: string[] = []
   if (!hint || hint.value === 'unknown') reasons.push('Duration uncertain')
-  if (hint?.possibleDot) reasons.push('Possible dot: dotted duration unsupported')
+  if (hint?.possibleDot) reasons.push('Possible dot: verify dotted duration in notation review')
   if (hint?.clippedStem) reasons.push('Stem reaches crop edge: expand the scan before reviewing duration')
   if ((hint?.flagBands ?? 0) > 2) reasons.push('More than two flags: shorter durations unsupported')
   if ((hint?.beamBands ?? 0) > 2) reasons.push('More than two beams: shorter durations unsupported')

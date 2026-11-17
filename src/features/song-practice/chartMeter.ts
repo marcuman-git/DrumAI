@@ -11,6 +11,7 @@ export function changeChartMeter(chart: SongChart, meter: ChartMeter): SongChart
  if (meter === '2/4') {
   if (chart.bars.length > 8) throw new Error('Splitting would exceed 16 bars. Use a shorter chart first.')
   chart.bars.forEach((bar, index) => {
+   if(bar.rhythmEvents?.some(event=>event.step===8&&event.tieFromPrevious))throw new Error('A tie crosses the split boundary. Review as separate untied bars before conversion.')
    if (bar.rhythmEvents?.some((event) => event.step < 8 && event.step + event.duration > 8)) throw new Error('A reviewed duration crosses beat 3. Split/correct that duration before meter conversion; ties are unsupported.')
    for (const offset of [0, 8]) {
     const half: ChartBar = { ...completeBar(), beats: 2 }
