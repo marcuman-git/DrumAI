@@ -6,6 +6,8 @@ export function candidateReviewReasons(note: NoteCandidate, notes: readonly Note
   const reasons: string[] = []
   if (!hint || hint.value === 'unknown') reasons.push('Duration uncertain')
   if (hint?.possibleDot) reasons.push('Possible dot: dotted duration unsupported')
+  if (hint?.clippedStem) reasons.push('Stem reaches crop edge: expand the scan before reviewing duration')
+  if ((hint?.flagBands ?? 0) > 2) reasons.push('More than two flags: shorter durations unsupported')
   if ((hint?.beamBands ?? 0) > 2) reasons.push('More than two beams: shorter durations unsupported')
   if (notes.some((other) => other.id !== note.id && other.instrument !== note.instrument && Math.abs(other.x - note.x) <= 4 && Math.abs(other.y - note.y) <= 4)) reasons.push('Nearby competing instrument suggestion: compare with source legend')
   if (note.positionHint === 'ambiguous') reasons.push('Cross center near top line: Hi-hat/Ride position ambiguous; verify manually')

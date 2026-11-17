@@ -1,3 +1,4 @@
+import { crossHeadCenter } from './crossCenter'
 import { hasIsolatedCymbalLedger } from './cymbalLedgerHint'
 import { inspectHatMark } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
@@ -148,16 +149,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   // Equally strong adjacent heads remain available for simultaneous voices.
   const centeredNotes = notes.map((note) => {
     if (profile === 'generic' || note.shape !== 'cross' || !['Hi-hat', 'Ride'].includes(note.instrument)) return note
-    // Ignore staff ink and the outer stem column when measuring cross-head mass.
-    let mass = 0; let moment = 0
-    for (let dy = -halfY - tolerance; dy <= halfY + tolerance; dy++) {
-      const row = note.y + dy
-      if (staffLines.some((line) => Math.abs(line - row) <= 1)) continue
-      for (let dx = -halfX + 1; dx < halfX; dx++) { const value = at(note.x + dx, row); mass += value; moment += value * row }
-    }
-    const center = mass ? moment / mass : note.y
+    const center = crossHeadCenter(image, staff, note.x, note.y)
     const distance = (center - staff.top) / staff.gap
-    const positionHint = distance < -0.22 ? 'above-line' as const : Math.abs(distance) <= 0.12 ? 'on-line' as const : 'ambiguous' as const
+    const positionHint = distance < -0.16 ? 'above-line' as const : Math.abs(distance) <= 0.12 ? 'on-line' as const : 'ambiguous' as const
     // Named key profiles distinguish hats above the line from rides centered on it.
     const instrument = distance >= -0.8 && distance <= 0.25 && positionHint !== 'ambiguous' ? positionHint === 'above-line' ? 'Hi-hat' as const : 'Ride' as const : note.instrument
     return { ...note, instrument, y: Math.round(center), positionHint, sourceLabel: instrument + ' position suggestion (' + positionHint + '; verify source legend)' }

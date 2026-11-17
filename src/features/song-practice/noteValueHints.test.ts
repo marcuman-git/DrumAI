@@ -46,3 +46,32 @@ it('marks possible dotted notes unknown instead of straight quarter notes', () =
  expect(hint.possibleDot).toBe(true)
  expect(hint.value).toBe('unknown')
 })
+it('counts sloped double beams in either stem direction without splitting thick bands', () => {
+ for (const direction of [-1,1]) for(const slope of [-0.3,0.3]) {
+  const {image,note}=sample(0,direction);const stemX=direction===-1?76:64;const end=note.y+direction*36
+  for(let beam=0;beam<2;beam++)for(let dx=0;dx<=30;dx++)for(let thickness=0;thickness<2;thickness++) {
+   const row=Math.round(end-direction*beam*7+slope*dx)+thickness
+   image.ink[row*image.width+stemX+dx]=1
+  }
+  const hint=inspectNoteValue(image,{top:60,gap:12},note)
+  expect(hint.value).toBe('sixteenth');expect(hint.evidence).toBe('beam');expect(hint.beamBands).toBe(2)
+ }
+})
+it('separates two short flags for upward and downward stems', () => {
+ for(const direction of [-1,1]) {
+  const {image,note}=sample(0,direction);const stemX=direction===-1?76:64;const end=note.y+direction*36
+  for(const offset of [2,10])for(let dy=0;dy<4;dy++)for(let dx=3;dx<=8;dx++)image.ink[(end-direction*(offset+dy))*image.width+stemX+dx]=1
+  const hint=inspectNoteValue(image,{top:60,gap:12},note)
+  expect(hint.value).toBe('sixteenth');expect(hint.flagBands).toBe(2);expect(hint.evidence).toBe('flag')
+ }
+})
+it('returns unknown for a stem clipped at the edge rather than inferring a quarter', () => {
+ const {image,note}=sample(0);image.ink.fill(0);note.y=42;for(let y=0;y<=note.y;y++)image.ink[y*image.width+76]=1
+ const hint=inspectNoteValue(image,{top:60,gap:12},note)
+ expect(hint.clippedStem).toBe(true);expect(hint.value).toBe('unknown')
+})
+it('finds a larger isolated dot without treating staff ink as a dot', () => {
+ const {image,note}=sample(0)
+ for(let y=76;y<=80;y++)for(let x=82;x<=85;x++)image.ink[y*image.width+x]=1
+ expect(inspectNoteValue(image,{top:60,gap:12},note).value).toBe('unknown')
+})
