@@ -71,4 +71,4 @@ if(firstGrooveHeads.some(r=>r.summary.recovered!==r.summary.references||r.summar
 
 if(publisherScales.some(r=>r.summary.durationsCorrect!==r.summary.references||r.summary.evidenceCorrect!==r.summary.references||r.summary.symbolsCorrect!==r.summary.references))process.exitCode=1
 
-if(report.summary.smallScaleDurationsCorrect<35||smallScales.filter(r=>r.dpi>=90).some(r=>r.summary.durationsCorrect!==r.summary.references||r.summary.evidenceCorrect!==r.summary.references))process.exitCode=1
+if(report.summary.smallScaleDurationsCorrect!==report.summary.smallScaleReferences||smallScales.some(r=>r.summary.durationsCorrect!==r.summary.references||r.summary.evidenceCorrect!==r.summary.references))process.exitCode=1
