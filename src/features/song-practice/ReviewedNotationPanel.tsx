@@ -2,7 +2,7 @@ import { exportReviewedMusicXml } from './musicXmlExport'
 import { downloadText } from './sourceReviewSession'
 import { createReviewHistory, reviewHistoryReducer } from './reviewEventHistory'
 import { diagnoseReviewedRhythm, fillNextReviewedGap, formatSlotRanges } from './reviewedRhythmDiagnostics'
-import { useEffect, useRef, useState, useReducer } from 'react'
+import { useEffect, useRef, useState, useReducer,useEffectEvent } from 'react'
 import { CHART_INSTRUMENTS } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
@@ -16,7 +16,8 @@ export function ReviewedNotationPanel({ notes, hints, first, last, image, staff,
   const [history, dispatchHistory] = useReducer(reviewHistoryReducer, undefined, createReviewHistory)
   useEffect(()=>{ if(initialEvents.length) dispatchHistory({type:'edit',events:initialEvents}) },[initialEvents])
   const events = history.present
-  useEffect(()=>onEventsChange?.(events),[events,onEventsChange])
+  const notifyEvents=useEffectEvent(()=>onEventsChange?.(events))
+  useEffect(()=>notifyEvents(),[events])
   const [instrument, setInstrument] = useState<ChartInstrument>('Snare')
   const [useDurationHints, setUseDurationHints] = useState(false)
   const [defaultDuration, setDefaultDuration] = useState<1 | 2 | 4>(2)

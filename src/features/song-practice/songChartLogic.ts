@@ -48,7 +48,7 @@ export function saveSongCharts(charts: SongChart[]): void {
   localStorage.setItem(KEY, JSON.stringify(charts))
 }
 export function parseSongChart(raw: string): SongChart {
-  if (new Blob([raw]).size > 512 * 1024) throw new Error('Chart file exceeds 512 KB.')
+  if (new Blob([raw]).size > 2 * 1024 * 1024) throw new Error('Chart file exceeds 2 MB.')
   const value = JSON.parse(raw) as { app?: unknown; schema?: unknown; chart?: unknown }
   if (!value || value.app !== 'DrumMaster AI Chart' || value.schema !== 1 || !isSongChart(value.chart)) throw new Error('Invalid drum chart file.')
   return { ...value.chart, id: crypto.randomUUID() }

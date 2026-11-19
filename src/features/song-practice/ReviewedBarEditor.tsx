@@ -1,3 +1,5 @@
+import {cropContainingAnchor} from './sourceTrace'
+import type {SourceReferenceRequest} from './sourceReferenceNavigation'
 import { useState } from 'react'
 import type { SongChart } from './songChartLogic'
 import { CHART_INSTRUMENTS } from './chartKit'
@@ -9,7 +11,7 @@ import { diagnoseReviewedRhythm, fillNextReviewedGap, formatSlotRanges } from '.
 import { reviewedEditTieIssues, applyReviewedBarEdit } from './reviewedBarEditing'
 import { ChartStaffNotation } from './ChartStaffNotation'
 import { reviewHistoryReducer, type ReviewHistoryAction, type ReviewEventHistory } from './reviewEventHistory'
-export function ReviewedBarEditor({chart,index,disabled,onApply}:{chart:SongChart;index:number;disabled:boolean;onApply:(chart:SongChart)=>void}) {
+export function ReviewedBarEditor({chart,index,disabled,onApply,onSourceReference}:{chart:SongChart;index:number;disabled:boolean;onApply:(chart:SongChart)=>void;onSourceReference?:(request:SourceReferenceRequest)=>void}) {
  const [history,setHistory]=useState<ReviewEventHistory>(()=>({past:[],present:structuredClone(chart.bars[index].rhythmEvents??[]),future:[]}))
  const events=history.present
  const [verified,setVerified]=useState(false),[detach,setDetach]=useState(false)
@@ -30,7 +32,7 @@ export function ReviewedBarEditor({chart,index,disabled,onApply}:{chart:SongChar
  <div className="flex gap-2"><button disabled={!history.past.length} onClick={()=>historyAction({type:'undo'})} className="rounded border p-2">Undo draft edit</button><button disabled={!history.future.length} onClick={()=>historyAction({type:'redo'})} className="rounded border p-2">Redo draft edit</button><span className="text-xs">{history.past.length} / 50 draft undo steps; history resets on Apply, Discard or chart navigation.</span></div>
  <label>New event voice<select aria-label="Reviewed edit new voice" value={instrument} onChange={event=>setInstrument(event.target.value as ChartInstrument)} className="rounded bg-zinc-900 p-1">{CHART_INSTRUMENTS.map(name=><option key={name}>{name}</option>)}</select></label>
  <button disabled={events.length>=192} onClick={()=>edit([...events,{instrument,step:0,duration:2,kind:'note',dynamic:2}])} className="m-1 rounded border p-1">Add duration-reviewed note</button><button onClick={()=>edit(fillNextReviewedGap(events,instrument,slots))} className="m-1 rounded border p-1">Fill next reviewed gap with rests</button>
- <div className="max-h-80 space-y-2 overflow-y-auto">{events.map((event,position)=><div key={position} id={`reviewed-edit-event-${position}`} className="flex flex-wrap gap-2 rounded border border-white/20 p-2 text-xs"><span>Event {position+1}</span>
+ <div className="max-h-80 space-y-2 overflow-y-auto">{events.map((event,position)=><div key={position} id={`reviewed-edit-event-${position}`} className="flex flex-wrap gap-2 rounded border border-white/20 p-2 text-xs"><span>Event {position+1}</span><button disabled={!chart.review?.source||!onSourceReference} onClick={()=>{const crop=cropContainingAnchor(chart.review?.bars[index]?.crops??[],event.sourceAnchor);onSourceReference?.({source:chart.review!.source,page:event.sourceAnchor?.page??crop?.page??chart.review!.bars[index].page,crop,point:event.sourceAnchor})}} className="rounded border p-1">View source for event {position+1}</button>
  <select aria-label={`Reviewed event ${position+1} voice`} value={event.instrument} onChange={input=>edit(events.map((item,i)=>i===position?{...item,instrument:input.target.value as ChartInstrument}:item))} className="rounded bg-zinc-900 p-1">{CHART_INSTRUMENTS.map(name=><option key={name}>{name}</option>)}</select>
  <label>Slot<input aria-label={`Reviewed event ${position+1} slot`} type="number" min={1} max={slots} value={event.step+1} onChange={input=>{const step=Number(input.target.value)-1;if(Number.isInteger(step)&&step>=0&&step<slots)edit(events.map((item,i)=>i===position?{...item,step}:item))}} className="w-14 rounded bg-zinc-900 p-1"/></label>
  <select aria-label={`Reviewed event ${position+1} duration`} value={event.duration} onChange={input=>edit(events.map((item,i)=>i===position?{...item,duration:Number(input.target.value) as RhythmEvent['duration']}:item))} className="rounded bg-zinc-900 p-1">{([[1,'Sixteenth'],[2,'Eighth'],[3,'Dotted eighth'],[4,'Quarter'],[6,'Dotted quarter']] as const).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>

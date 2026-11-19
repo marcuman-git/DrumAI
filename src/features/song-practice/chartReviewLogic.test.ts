@@ -32,3 +32,5 @@ it('validates additional pages and keeps legacy JSON and multi-page JSON compati
  const chart=newSongChart();chart.review=newChartReview(chart);chart.review.bars[0].additionalPages=[2,999];expect(isSongChart(chart)).toBe(true);expect(parseSongChart(JSON.stringify({app:'DrumMaster AI Chart',schema:1,chart})).review?.bars[0].additionalPages).toEqual([2,999])
  for(const pages of [[0],[1000],[1.5],Array(999).fill(2),'2'])expect(isSongChart({...chart,review:{...chart.review,bars:[{...chart.review.bars[0],additionalPages:pages}]}})).toBe(false)
 })
+
+it('preserves source crop references through structural mapping and validates their bounds',()=>{const chart=newSongChart();chart.review=newChartReview(chart);chart.review.source='study.pdf';chart.review.bars[0].crops=[{page:2,region:{x:.1,y:.2,width:.4,height:.2}}];expect(isSongChart(chart)).toBe(true);expect(restructureReview(chart,[[0],[0]])?.bars[1].crops).toEqual(chart.review.bars[0].crops);expect(isSongChart({...chart,review:{...chart.review,bars:[{...chart.review.bars[0],crops:[{page:2,region:{x:.9,y:0,width:.2,height:1}}]}]}})).toBe(false)})

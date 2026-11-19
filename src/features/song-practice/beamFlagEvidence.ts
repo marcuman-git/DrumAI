@@ -27,12 +27,12 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
    }
    const attached=!!at(stem.x+side*2,y)&&!!at(stem.x+side*3,y);
    const supported=attached&&total>=Math.max(4,gap*0.65)&&dark/total>=0.7
-   shortRows.push(shortTotal<3?null:shortDark/shortTotal>=0.7&&attached);
+   shortRows.push(shortTotal<(gap<7?2:3)?null:shortDark/shortTotal>=0.7&&attached);
    rows.push(total<4?null:supported);if(supported)support+=dark/total
   }
   const count=runs(rows)
   if(support>bestSupport){bestSupport=support;beamBands=count}
-  shortBands=Math.max(shortBands,runs(shortRows,2))
+  shortBands=Math.max(shortBands,runs(shortRows,gap<7?1:2))
  }
  if(beamBands)beamBands=Math.max(beamBands,shortBands)
  let flagBands=0

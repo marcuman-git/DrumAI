@@ -1,0 +1,3 @@
+import {expect,it} from 'vitest'
+import {findNoteCandidates} from './notationRecognition'
+it('retains separate close small heads while suppressing shoulders of one small head',()=>{function scan(xs:number[]){const width=100,height=100,ink=new Uint8Array(width*height);for(const x of xs){for(let dx=-3;dx<=3;dx++)for(let dy=-2;dy<=2;dy++)if((dx/3)**2+(dy/2)**2<=1)ink[(55+dy)*width+x+dx]=1;for(let y=25;y<=55;y++)ink[y*width+x+3]=1}return findNoteCandidates({width,height,ink,angle:0,staffs:[]},{top:40,gap:10},'generic',{headScale:.7,cleanHeads:true,tolerance:0}).filter(n=>n.shape==='oval'&&n.instrument==='Snare')};expect(scan([30,39])).toHaveLength(2);expect(scan([30])).toHaveLength(1)})

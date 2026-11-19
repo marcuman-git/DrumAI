@@ -69,3 +69,8 @@ it('clears analysis and allows another bar selection without rerendering the PDF
  expect(screen.queryByText('Region analysis active')).toBeNull()
  expect(screen.getByRole('button', { name: 'Export region JSON' })).toBeDisabled()
 })
+
+import {savePassageSnapshot} from './passageRecovery'
+import {sourceFingerprint} from './sourceReviewSession'
+import {newSongChart} from './songChartLogic'
+it('reconstructs a saved source crop on its original page without another pointer selection',async()=>{draw.mockImplementation(async(_file,_page,canvas)=>{canvas.width=400;canvas.height=400;return {pageCount:3,width:400,height:400,rotation:0}});vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({drawImage:vi.fn(),getImageData:(_x:number,_y:number,w:number,h:number)=>({data:new Uint8ClampedArray(w*h*4)}),createImageData:(w:number,h:number)=>({data:new Uint8ClampedArray(w*h*4)}),putImageData:vi.fn()} as unknown as CanvasRenderingContext2D);const pixels=new Uint8ClampedArray(200*100*4),d={bar:newSongChart().bars[0],source:'study.pdf',page:2},crop={page:2,region:{x:.1,y:.2,width:.5,height:.25}},snapshot=savePassageSnapshot(sourceFingerprint(pixels,200,100,'study.pdf',2),[0,50,100],[d,d],[null,null],crop);render(<PdfRegionSelector file={{name:'study.pdf'} as File} recoveryRequest={{source:'study.pdf',page:2,passageSnapshot:snapshot,crop}}/>);await screen.findByLabelText('Recovered bar preview');expect(draw).toHaveBeenCalled();expect(draw.mock.calls.at(-1)?.[1]).toBe(2);expect(screen.getByLabelText('Verify passage boundaries')).not.toBeChecked()})

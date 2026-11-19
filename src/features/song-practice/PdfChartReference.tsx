@@ -3,6 +3,9 @@ import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useRef, useState } from 'react'
 import { PdfRegionSelector } from './PdfRegionSelector'
 import { PdfInspectionPanel } from './PdfInspectionPanel'
+import {SourceCollection} from './SourceCollection'
+import {SourceCropInspection} from './SourceCropInspection'
+import type {SourceReferenceRequest as InspectionRequest} from './sourceReferenceNavigation'
 import { RenderedPdfPage } from './RenderedPdfPage'
 import { GlassCard } from '../../shared/components/GlassCard'
 
@@ -17,6 +20,7 @@ export async function validatePdfReference(file: File) {
 }
 
 export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (draft: RecognitionDraft) => void; sourceReference?: SourceReferenceRequest | null } = {}) {
+  const [collectionMode,setCollectionMode]=useState(false),[incoming,setIncoming]=useState<RecognitionDraft|null>(null),[inspection,setInspection]=useState<InspectionRequest|null>(null)
   const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
   const [comparePage,setComparePage] = useState<number | null>(null)
   const [page, setPage] = useState<number | null>(null)
@@ -34,7 +38,7 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
     if (!sourceReference) return
     const target = reference ? sourceReferencePage(sourceReference, reference.name) : null
     if (target === null) { setError(false); setMessage('Choose the matching local PDF: ' + sourceReference.source + '. Source navigation has not changed the viewer.'); return }
-    setPage(target); setComparePage(sourceComparisonPage(sourceReference,reference!.name)); setError(false); setMessage('Source reference: ' + reference!.name + ', page ' + target + '.');
+    setInspection(sourceReference);setPage(target); setComparePage(sourceComparisonPage(sourceReference,reference!.name)); setError(false); setMessage('Source reference: ' + reference!.name + ', page ' + target + '.');
     previewRef.current?.scrollIntoView?.({block:'center',behavior:'smooth'})
   }, [sourceReference, reference])
 
@@ -42,7 +46,7 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
     generation.current += 1
     if (urlRef.current) URL.revokeObjectURL(urlRef.current)
     urlRef.current = null
-    setReference(null)
+    setIncoming(null);setInspection(null);setReference(null)
     setPage(null)
     setComparePage(null)
     setError(false)
@@ -58,7 +62,8 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
       if (urlRef.current) URL.revokeObjectURL(urlRef.current)
       urlRef.current = url
       setPage(null)
-      setReference({ url, name: file.name, file })
+      setComparePage(null)
+      setIncoming(null);setInspection(null);setReference({ url, name: file.name, file })
       setError(false)
       setMessage('Reference loaded. Enter notes manually in the chart editor. PDF viewing does not create practice events.')
     } catch (error) {
@@ -79,7 +84,10 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
         <a href={page ? `${reference.url}#page=${page}` : reference.url} target="_blank" rel="noopener noreferrer" className="rounded border border-cyan-200/50 px-3 py-2 text-sm text-cyan-100">Open PDF locally</a>
         <button onClick={clear} className="rounded border border-white/25 px-3 py-2 text-sm">Remove PDF</button>
       </div>
-      <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} onDraft={onDraft} />
+      <label className="block"><input aria-label="Collect multiple staffs and pages" type="checkbox" checked={collectionMode} onChange={e=>setCollectionMode(e.target.checked)}/>Collect reviewed sections across staffs and pages before sending.</label>
+      <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} recoveryRequest={inspection} onDraft={draft=>{if(collectionMode)setIncoming(draft);else onDraft?.(draft)}} />
+      <div hidden={!collectionMode}><SourceCollection key={reference.url} file={reference.file} incoming={incoming} onSend={onDraft} onInspect={request=>{setInspection(request);setPage(request.page);setComparePage(request.comparePage??null)}}/></div>
+      {inspection?.crop&&<div className={inspection.compareCrop?'grid gap-3 lg:grid-cols-2':''}><SourceCropInspection file={reference.file} crop={inspection.crop} point={inspection.point}/>{inspection.compareCrop&&<SourceCropInspection file={reference.file} crop={inspection.compareCrop}/>}</div>}
       <PdfInspectionPanel key={reference.url} file={reference.file} />
       <div ref={previewRef} className={comparePage?"grid gap-3 lg:grid-cols-2":""}><div><RenderedPdfPage key={`${reference.url}-${page}-${sourceReference?.requestId}`} file={reference.file} initialPage={page??1} title="Rendered source PDF page"/><details><summary>Browser PDF fallback</summary>{comparePage&&<p className="text-sm">Source page {page}</p>}<iframe title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></details></div>
       {comparePage&&<section aria-label="Comparison source page"><RenderedPdfPage key={`${reference.url}-${comparePage}-${sourceReference?.requestId}`} file={reference.file} initialPage={comparePage} title="Rendered comparison PDF page"/><details><summary>Browser comparison fallback</summary><p className="text-sm">Comparison page {comparePage}</p><a href={`${reference.url}#page=${comparePage}`} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-100">Open comparison page locally</a><iframe title="Local PDF comparison preview" src={`${reference.url}#page=${comparePage}`} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></details></section>}</div>

@@ -1,3 +1,4 @@
+import type {SourceCrop} from './sourceTrace'
 import type { CymbalIdentityReview } from './cymbalIdentityReview'
 import { hasCircledCymbalHead } from './circledCymbalHint'
 import { crossHeadCenter } from './crossCenter'
@@ -10,7 +11,7 @@ export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?:
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; identityReview?: CymbalIdentityReview; symbolHint?: 'circled-cross'; positionHint?: 'above-line' | 'on-line' | 'ambiguous'; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; stemInk?: Uint8Array; angle: number; staffs: StaffCandidate[] }
-export interface RecognitionDraft { bar: ChartBar; bars?: ChartBar[]; source: string; page: number }
+export interface RecognitionDraft { bar: ChartBar; bars?: ChartBar[];references?:SourceCrop[][];pages?:number[];recovery?:string;reviewSession?:string; source: string; page: number }
 const candidateCache = new WeakMap<RecognitionImage, Map<string, NoteCandidate[]>>()
 function rowBands(rows: number[], width: number, ratio = 0.28) {
   const bands: number[] = []
@@ -144,7 +145,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
       if (bestScore >= (crossHead ? 0.78 : 0.58)) peaks.push({ x, score: bestScore, y: bestY })
     }
     for (const peak of peaks.sort((a, b) => b.score - a.score)) {
-      if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * 1.1)) continue
+      if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * Math.max(0.7,1.1*headScale))) continue
       const headY = peak.y
       let stem = 0; for (let dy = 4; dy < staff.gap * 3; dy++) stem += at(peak.x + halfX, headY - dy)
       let flags = 0; for (let dx = 3; dx < staff.gap; dx++) flags += at(peak.x + halfX + dx, headY - staff.gap * 2)
@@ -162,9 +163,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
     // Named key profiles distinguish hats above the line from rides centered on it.
     const instrument = distance >= -0.8 && distance <= 0.25 && positionHint !== 'ambiguous' ? positionHint === 'above-line' ? 'Hi-hat' as const : 'Ride' as const : note.instrument
     return { ...note, instrument, y: Math.round(center), positionHint, sourceLabel: instrument + ' position suggestion (' + positionHint + '; verify source legend)' }
-  }).sort((a,b)=>b.strength-a.strength).filter((note, index, all) => !all.some((other, otherIndex) => otherIndex < index && note.shape === 'cross' && other.shape === 'cross' && other.instrument === note.instrument && Math.abs(other.x - note.x) < staff.gap * 1.1 && Math.abs(other.y - note.y) < staff.gap * 0.8))
+  }).sort((a,b)=>b.strength-a.strength).filter((note, index, all) => !all.some((other, otherIndex) => otherIndex < index && note.shape === 'cross' && other.shape === 'cross' && other.instrument === note.instrument && Math.abs(other.x - note.x) < staff.gap * Math.max(0.7,1.1*headScale) && Math.abs(other.y - note.y) < staff.gap * 0.8))
   const symbolNotes = centeredNotes.map(note => note.shape === 'cross' && hasCircledCymbalHead(image, staff, note.x, note.y) ? { ...note, symbolHint: 'circled-cross' as const } : note)
-  const result = symbolNotes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.symbolHint === 'circled-cross' || note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !centeredNotes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * 0.9 && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
+  const result = symbolNotes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.symbolHint === 'circled-cross' || note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !centeredNotes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * Math.max(0.6,0.9*headScale) && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, result); candidateCache.set(image, entries)

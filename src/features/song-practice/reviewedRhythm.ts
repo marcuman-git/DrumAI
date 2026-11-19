@@ -1,9 +1,10 @@
+import {validSourceAnchor} from './sourceTrace'
 import { CHART_INSTRUMENTS, completeBar } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
 import type { RhythmEvent } from './rhythmTypes'
 export type { RhythmEvent } from './rhythmTypes'
 export function validRhythmEvents(value: unknown, slots = 16): value is RhythmEvent[] {
-  return Array.isArray(value) && value.length <= 192 && value.every((event) => event && CHART_INSTRUMENTS.includes(event.instrument) && Number.isInteger(event.step) && event.step >= 0 && event.step < slots && [1, 2, 3, 4, 6].includes(event.duration) && event.step + event.duration <= slots && ['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
+  return Array.isArray(value) && value.length <= 192 && value.every((event) => event && (event.sourceAnchor===undefined||validSourceAnchor(event.sourceAnchor)) && CHART_INSTRUMENTS.includes(event.instrument) && Number.isInteger(event.step) && event.step >= 0 && event.step < slots && [1, 2, 3, 4, 6].includes(event.duration) && event.step + event.duration <= slots && ['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
 }
 export function checkReviewedRhythm(events: RhythmEvent[], slots = 16, previousBar?: ChartBar) {
   let overlaps = 0; let missing = 0
@@ -22,7 +23,7 @@ export function reviewedBar(events: RhythmEvent[], slots = 16, previousBar?: Cha
   if (!checkReviewedRhythm(events, slots, previousBar).valid) throw new Error('Resolve missing time and overlaps before confirming.')
   const bar: ChartBar = { ...completeBar(), ...(slots === 8 ? { beats: 2 as const } : {}) }
   for (const event of events) if (event.kind === 'note' && !event.tieFromPrevious) bar[event.instrument]![event.step] = event.dynamic
-  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic, tieFromPrevious }) => ({ instrument, step, duration, kind, dynamic, ...(tieFromPrevious ? { tieFromPrevious } : {}) }))
+  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic, tieFromPrevious,sourceAnchor }) => ({ instrument, step, duration, kind, dynamic, ...(tieFromPrevious ? { tieFromPrevious } : {}),...(sourceAnchor?{sourceAnchor:{...sourceAnchor}}:{}) }))
   return bar
 }
 export function validReviewedBar(bar: ChartBar, previousBar?: ChartBar): boolean {

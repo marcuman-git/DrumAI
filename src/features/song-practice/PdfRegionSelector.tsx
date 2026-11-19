@@ -1,16 +1,22 @@
+import {validSourceCrop,type SourceCrop} from './sourceTrace'
+import type {SourceReferenceRequest} from './sourceReferenceNavigation'
+import {sourceFingerprint} from './sourceReviewSession'
 import { PassageReview } from './PassageReview'
 import { NotationRecognitionPanel } from './NotationRecognitionPanel'
 import type { RecognitionDraft } from './notationRecognition'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState,useMemo,useEffectEvent } from 'react'
 import type { PointerEvent } from 'react'
 import { analysisRegion, selectRegion, usableRegion } from './pdfRegionLogic'
 import type { PdfRegion } from './pdfRegionLogic'
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = filename; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
-export function PdfRegionSelector({ file, onDraft }: { file: File; onDraft?: (draft: RecognitionDraft) => void }) {
+export function PdfRegionSelector({ file, onDraft, recoveryRequest }: { file: File; onDraft?: (draft: RecognitionDraft) => void;recoveryRequest?:SourceReferenceRequest|null }) {
+  const [pendingSingle,setPendingSingle]=useState<{session:string;crop:SourceCrop}|null>(null),[singleSession,setSingleSession]=useState<string|null>(null)
+  const [pendingSnapshot,setPendingSnapshot]=useState<string|null>(null),[recoverySnapshot,setRecoverySnapshot]=useState<string|null>(null)
+  const recoveryGeneration=useRef(0)
   const [passageMode,setPassageMode]=useState(false)
-  const [recognition, setRecognition] = useState<{ pixels: Uint8ClampedArray; width: number; height: number } | null>(null)
+  const [recognition, setRecognition] = useState<{ pixels: Uint8ClampedArray; width: number; height: number;sourceCrop:SourceCrop } | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const controller = useRef<AbortController | null>(null)
   const origin = useRef<{ x: number; y: number; pointer: number } | null>(null)
@@ -43,23 +49,30 @@ export function PdfRegionSelector({ file, onDraft }: { file: File; onDraft?: (dr
     })()
     return () => { controller.current = null; request.abort(); window.clearTimeout(timeout) }
   }, [file, opened, page, renderRevision])
-  function prepare() { controller.current?.abort(); controller.current = null; setRecognition(null); setBusy(true); setReady(false); setRegion(null); setGeometry(null); origin.current = null; setMessage('Rendering PDF page locally...') }
+  useEffect(()=>()=>{recoveryGeneration.current++},[])
+  function prepare() { recoveryGeneration.current++;setSingleSession(null);setPendingSingle(null);setPendingSnapshot(null);setRecoverySnapshot(null); controller.current?.abort(); controller.current = null; setRecognition(null); setBusy(true); setReady(false); setRegion(null); setGeometry(null); origin.current = null; setMessage('Rendering PDF page locally...') }
   function selectAnotherRegion() { origin.current = null; setRecognition(null); setRegion(null); setSelecting(true); setMessage('Select another bar by dragging on the rendered page. Previous analysis cleared; chart notes unchanged.') }
   function point(event: PointerEvent<HTMLDivElement>) {
     const box = event.currentTarget.getBoundingClientRect()
     return { x: (event.clientX - box.left) / box.width, y: (event.clientY - box.top) / box.height }
   }
-  function startRecognition() {
-    if (!usableRegion(region) || !canvasRef.current) return
+  function readScan(scan:PdfRegion) {
+    if (!canvasRef.current) return false
     try {
-      const source = canvasRef.current; const scan = analysisRegion(region, source.width, source.height); const sw = scan.width * source.width; const sh = scan.height * source.height
+      const source = canvasRef.current; const sw = scan.width * source.width; const sh = scan.height * source.height
       const scale = Math.min(1, 900 / sw, 900 / sh); const crop = document.createElement('canvas')
       crop.width = Math.max(20, Math.floor(sw * scale)); crop.height = Math.max(20, Math.floor(sh * scale))
       const context = crop.getContext('2d'); if (!context) throw new Error('Canvas unavailable')
       context.drawImage(source, scan.x * source.width, scan.y * source.height, sw, sh, 0, 0, crop.width, crop.height)
-      setPassageMode(false);setRecognition({ pixels: context.getImageData(0, 0, crop.width, crop.height).data, width: crop.width, height: crop.height }); setSelecting(false)
-    } catch { setMessage('Region pixels could not be read. Render the page again and select a clearer region.') }
+      setPassageMode(false);setRecognition({ pixels: context.getImageData(0, 0, crop.width, crop.height).data, width: crop.width, height: crop.height,sourceCrop:{page,region:scan} }); setSelecting(false);return true
+    } catch { setMessage('Region pixels could not be read. Render the page again and select a clearer region.');return false }
   }
+  const recoverScan=useEffectEvent((scan:PdfRegion)=>readScan(scan))
+  function startRecognition(){if(!usableRegion(region)||!canvasRef.current)return;setRecoverySnapshot(null);readScan(analysisRegion(region,canvasRef.current.width,canvasRef.current.height))}
+  useEffect(()=>{if(!ready||!pendingSnapshot)return;try{const saved=JSON.parse(pendingSnapshot);if(!validSourceCrop(saved.sourceCrop)||saved.sourceCrop.page!==page)throw new Error('Snapshot source page differs.');if(!recoverScan(saved.sourceCrop.region))throw new Error('Saved source pixels could not be reconstructed.');setRecoverySnapshot(pendingSnapshot);setPassageMode(true);setPendingSnapshot(null);setMessage('Saved crop reconstructed. Passage recovery will check the original pixels before restoring previews.')}catch(error){setPendingSnapshot(null);setMessage(error instanceof Error?error.message:'Snapshot could not restore.')}},[ready,pendingSnapshot,page])
+  useEffect(()=>{if(!ready||!pendingSingle)return;recoverScan(pendingSingle.crop.region);setSingleSession(pendingSingle.session);setPassageMode(false);setPendingSingle(null)},[ready,pendingSingle])
+  useEffect(()=>{if(!recoveryRequest?.passageSnapshot&&!recoveryRequest?.reviewSession)return;try{if(recoveryRequest.source!==file.name)throw new Error('Select the matching local PDF for this review.');let crop=recoveryRequest.crop;if(recoveryRequest.passageSnapshot){const saved=JSON.parse(recoveryRequest.passageSnapshot);crop=saved.sourceCrop}if(!validSourceCrop(crop))throw new Error('This saved review has no valid original crop.');prepare();setOpened(true);setPage(crop.page);setRenderRevision(v=>v+1);if(recoveryRequest.passageSnapshot)setPendingSnapshot(recoveryRequest.passageSnapshot);else setPendingSingle({session:recoveryRequest.reviewSession!,crop})}catch(error){setMessage(error instanceof Error?error.message:'Review could not restore.')}},[recoveryRequest,file])
+  const recognitionKey=useMemo(()=>recognition?sourceFingerprint(recognition.pixels,recognition.width,recognition.height,file.name,page)+JSON.stringify(recognition.sourceCrop):'', [recognition,file.name,page])
   function exportCrop() {
     if (!usableRegion(region) || !canvasRef.current) return
     const source = canvasRef.current; const crop = document.createElement('canvas')
@@ -79,10 +92,11 @@ export function PdfRegionSelector({ file, onDraft }: { file: File; onDraft?: (dr
       </div>
       <div className="flex flex-wrap gap-2"><button disabled={!usableRegion(region)} onClick={selectAnotherRegion} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Clear region</button><button disabled={!ready || !usableRegion(region)} onClick={exportCrop} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Download region PNG</button><button disabled={!ready || !usableRegion(region)} onClick={() => download(new Blob([JSON.stringify({ app: 'DrumMaster AI PDF Region', schema: 1, source: file.name, page, coordinates: 'normalized displayed-page coordinates, origin top-left', region, pageGeometry: geometry, recognition: 'not performed' }, null, 2)], { type: 'application/json' }), 'drummaster-pdf-region.json')} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Export region JSON</button></div>
     </>}
+    {opened&&ready&&<label className="block">Recover passage from saved crop<input aria-label="Recover saved passage crop" type="file" accept=".json" onChange={async event=>{const savedFile=event.target.files?.[0];event.target.value='';if(!savedFile)return;const request=++recoveryGeneration.current;if(savedFile.size>8_000_000){setMessage('Passage snapshot is too large.');return}try{const text=await savedFile.text();if(request!==recoveryGeneration.current)return;const saved=JSON.parse(text),key=JSON.parse(saved.sourceKey);if(saved.version!==1||!Array.isArray(key)||key[0]!==file.name||!validSourceCrop(saved.sourceCrop)||saved.sourceCrop.page>pageCount)throw new Error('Choose the matching PDF and a snapshot with a valid source page.');prepare();setPendingSnapshot(text);if(saved.sourceCrop.page!==page)setPage(saved.sourceCrop.page);else setRenderRevision(v=>v+1)}catch(error){setMessage(error instanceof Error?error.message:'Snapshot could not read.')}}}/></label>}
     {opened && ready && <button disabled={!usableRegion(region)} onClick={startRecognition} className="rounded border border-amber-200/40 px-3 py-2 disabled:opacity-40">Analyze selected notation region (Experimental)</button>}
     {recognition&&opened&&ready&&<label className="block"><input aria-label="Review selected region as multiple bars" type="checkbox" checked={passageMode} onChange={event=>setPassageMode(event.target.checked)}/>This selected region is a passage: set explicit bar boundaries and review separately.</label>}
-    {recognition&&opened&&ready&&passageMode&&<PassageReview key={recognition.width+'-'+recognition.height+'-'+page} {...recognition} source={file.name} page={page} onDraft={onDraft}/>}
-    {recognition && opened && ready && !passageMode && <NotationRecognitionPanel key={recognition.width + '-' + recognition.height + '-' + page} {...recognition} source={file.name} page={page} onDraft={onDraft} />}
+    {recognition&&opened&&ready&&passageMode&&<PassageReview key={recognitionKey} recoverySnapshot={recoverySnapshot} {...recognition} source={file.name} page={page} onDraft={onDraft}/>}
+    {recognition && opened && ready && !passageMode && <NotationRecognitionPanel recoverySession={singleSession} key={recognitionKey} {...recognition} source={file.name} page={page} onDraft={onDraft} />}
     <p role="status" className="text-sm text-cyan-100">{message}</p>
   </section>
 }
