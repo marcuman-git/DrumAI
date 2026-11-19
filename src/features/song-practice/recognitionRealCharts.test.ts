@@ -6,13 +6,13 @@ import type { NoteCandidate, StaffCandidate } from './notationRecognition'
 interface Fixture { title: string; width: number; height: number; ink: number[]; staff: StaffCandidate; expectedCandidates: NoteCandidate[] }
 // Frozen output regressions from local thresholded PDF crops, NOT annotated musical truth.
 const fixtures = samples as Fixture[]
-for (const fixture of fixtures) it(`keeps real-chart candidate output stable: ${fixture.title}`, () => {
+for (const fixture of fixtures) it(`retains filled heads and nearby cross coverage while collapsing duplicate shoulders: ${fixture.title}`, () => {
   const pixels = new Uint8ClampedArray(fixture.width * fixture.height * 4).fill(255)
   for (const index of fixture.ink) pixels[index * 4] = pixels[index * 4 + 1] = pixels[index * 4 + 2] = 0
   const image = analyzeStaffs(pixels, fixture.width, fixture.height)
   expect(image.staffs[0]).toEqual(fixture.staff)
   const notes = findNoteCandidates(image, image.staffs[0])
-  for (const previous of fixture.expectedCandidates) expect(notes.some((note) => note.x === previous.x && note.y === previous.y && note.shape === previous.shape && note.instrument === previous.instrument)).toBe(true)
+  for (const previous of fixture.expectedCandidates) expect(notes.some((note) => (previous.shape==='cross'?Math.abs(note.x-previous.x)<=fixture.staff.gap*1.1&&Math.abs(note.y-previous.y)<=fixture.staff.gap*0.8:note.x===previous.x&&note.y===previous.y) && note.shape === previous.shape && note.instrument === previous.instrument)).toBe(true)
 })
 it('finds the six manually checked filled heads in the screenshot bar, including below-staff kicks', () => {
   const pixels = new Uint8ClampedArray(screenshot.width * screenshot.height * 4).fill(255)

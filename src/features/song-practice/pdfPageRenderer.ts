@@ -1,5 +1,7 @@
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-export async function renderLocalPdfPage(file: File, pageNumber: number, canvas: HTMLCanvasElement, signal: AbortSignal) {
+export class PdfPageRangeError extends Error { pageCount:number; constructor(pageCount:number){super('Page out of range.');this.name='PdfPageRangeError';this.pageCount=pageCount} }
+export async function renderLocalPdfPage(file: File, pageNumber: number, canvas: HTMLCanvasElement, signal: AbortSignal, zoom = 1) {
+  if(!Number.isFinite(zoom)||zoom<0.5||zoom>2)throw new Error('Unsupported PDF zoom.')
   if (file.size > 20 * 1024 * 1024) throw new Error('PDF exceeds 20 MB.')
   signal.throwIfAborted()
   const pdfjs = await import('pdfjs-dist')
@@ -14,11 +16,11 @@ export async function renderLocalPdfPage(file: File, pageNumber: number, canvas:
   try {
     const document = await task.promise
     signal.throwIfAborted()
-    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > document.numPages) throw new Error('Page out of range.')
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > document.numPages) throw new PdfPageRangeError(document.numPages)
     const page = await document.getPage(pageNumber)
     signal.throwIfAborted()
     const base = page.getViewport({ scale: 1 })
-    const scale = Math.min(1400 / base.width, Math.sqrt(4_000_000 / (base.width * base.height)), 3)
+    const scale = Math.min(1400 * zoom / base.width, Math.sqrt(4_000_000 / (base.width * base.height)), 3)
     const viewport = page.getViewport({ scale })
     canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height)
     const context = canvas.getContext('2d')

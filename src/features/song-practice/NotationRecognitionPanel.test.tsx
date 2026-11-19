@@ -64,7 +64,7 @@ it('selects all, excludes unchecked heads from drafts, and invalidates stale pre
   fireEvent.click(screen.getByRole('button', { name: 'Detect staffs and note candidates' }))
   fireEvent.click(screen.getByRole('button', { name: 'Select all candidates' }))
   expect(screen.getByText(/Selected 2.*2/)).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Build draft preview' })).toBeEnabled()
   fireEvent.click(screen.getByLabelText(/Snare, x=20/))
   fireEvent.click(screen.getByLabelText(/I checked the candidates/))
   fireEvent.click(screen.getByRole('button', { name: 'Build draft preview' }))
@@ -264,4 +264,9 @@ it('applies saved settings, rescans and restores duration edits with fresh confi
  expect(screen.getByLabelText('Event 1 duration')).toHaveValue('2')
  expect(screen.getByLabelText(/I checked the candidates/)).not.toBeChecked()
  expect(screen.getByRole('button',{name:'Confirm reviewed bar'})).toBeDisabled()
+})
+
+it('allows provisional preview before verification but blocks sending until the source is checked',()=>{
+ vi.spyOn(HTMLCanvasElement.prototype,'getContext').mockReturnValue({createImageData:()=>({data:new Uint8ClampedArray(80000)}),putImageData:vi.fn(),beginPath:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn(),stroke:vi.fn(),strokeRect:vi.fn()} as unknown as CanvasRenderingContext2D)
+ const onDraft=vi.fn();render(<NotationRecognitionPanel pixels={new Uint8ClampedArray(80000)} width={200} height={100} source="back-in-black.pdf" page={1} onDraft={onDraft}/>);fireEvent.click(screen.getByRole('button',{name:'Detect staffs and note candidates'}));fireEvent.click(screen.getByRole('button',{name:'Select all candidates'}));fireEvent.click(screen.getByRole('button',{name:'Build draft preview'}));expect(screen.getByRole('button',{name:'Send draft to chart editor'})).toBeDisabled();expect(onDraft).not.toHaveBeenCalled();fireEvent.click(screen.getByLabelText(/I checked the candidates/));expect(screen.getByRole('button',{name:'Send draft to chart editor'})).toBeEnabled()
 })

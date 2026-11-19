@@ -3,6 +3,7 @@ import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useRef, useState } from 'react'
 import { PdfRegionSelector } from './PdfRegionSelector'
 import { PdfInspectionPanel } from './PdfInspectionPanel'
+import { RenderedPdfPage } from './RenderedPdfPage'
 import { GlassCard } from '../../shared/components/GlassCard'
 
 export const MAX_REFERENCE_BYTES = 20 * 1024 * 1024
@@ -19,7 +20,7 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
   const [reference, setReference] = useState<{ url: string; name: string; file: File } | null>(null)
   const [comparePage,setComparePage] = useState<number | null>(null)
   const [page, setPage] = useState<number | null>(null)
-  const previewRef = useRef<HTMLIFrameElement | null>(null)
+  const previewRef = useRef<HTMLDivElement | null>(null)
   const [error, setError] = useState(false)
   const [message, setMessage] = useState('Choose a local PDF to read beside the editable drum chart.')
   const generation = useRef(0)
@@ -80,8 +81,8 @@ export function PdfChartReference({ onDraft, sourceReference }: { onDraft?: (dra
       </div>
       <PdfRegionSelector key={`region-${reference.url}`} file={reference.file} onDraft={onDraft} />
       <PdfInspectionPanel key={reference.url} file={reference.file} />
-      <div className={comparePage?"grid gap-3 lg:grid-cols-2":""}><div>{comparePage&&<p className="text-sm">Source page {page}</p>}<iframe ref={previewRef} title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></div>
-      {comparePage&&<section aria-label="Comparison source page"><p className="text-sm">Comparison page {comparePage}</p><a href={`${reference.url}#page=${comparePage}`} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-100">Open comparison page locally</a><iframe title="Local PDF comparison preview" src={`${reference.url}#page=${comparePage}`} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></section>}</div>
+      <div ref={previewRef} className={comparePage?"grid gap-3 lg:grid-cols-2":""}><div><RenderedPdfPage key={`${reference.url}-${page}-${sourceReference?.requestId}`} file={reference.file} initialPage={page??1} title="Rendered source PDF page"/><details><summary>Browser PDF fallback</summary>{comparePage&&<p className="text-sm">Source page {page}</p>}<iframe title="Local PDF chart preview" src={page ? `${reference.url}#page=${page}` : reference.url} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></details></div>
+      {comparePage&&<section aria-label="Comparison source page"><RenderedPdfPage key={`${reference.url}-${comparePage}-${sourceReference?.requestId}`} file={reference.file} initialPage={comparePage} title="Rendered comparison PDF page"/><details><summary>Browser comparison fallback</summary><p className="text-sm">Comparison page {comparePage}</p><a href={`${reference.url}#page=${comparePage}`} target="_blank" rel="noopener noreferrer" className="text-sm text-cyan-100">Open comparison page locally</a><iframe title="Local PDF comparison preview" src={`${reference.url}#page=${comparePage}`} className="h-[65vh] min-h-80 w-full rounded-lg border border-white/20 bg-zinc-100" /></details></section>}</div>
       <p className="text-xs text-zinc-400">Use your browser viewer for page navigation and zoom. If the preview is blank or unsupported on mobile, use Open PDF locally. Damaged or password-protected PDFs may require your device's PDF reader.</p>
     </>}
   </GlassCard>
