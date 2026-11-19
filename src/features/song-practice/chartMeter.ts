@@ -15,6 +15,7 @@ function fragments(event:RhythmEvent,start:number,length:number,continuation:boo
 }
 export function changeChartMeter(chart: SongChart, meter: ChartMeter): SongChart {
  if ((chart.meter ?? '4/4') === meter) return chart
+ if(chart.pickupOffset!==undefined)throw new Error('Turn off pickup timing before converting meter; recheck the pickup after conversion.')
  if(!chart.bars.every((bar,index)=>validReviewedBar(bar,chart.bars[index-1])))throw new Error('Resolve invalid reviewed rhythm before meter conversion.')
  const bars: ChartBar[] = []; const labels: string[] = []
  if (meter === '2/4') {

@@ -16,7 +16,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   for (const direction of [-1, 1]) for (let shift = -stemTolerance; shift <= stemTolerance; shift++) {
     const x = Math.round(note.x + (direction === -1 ? radius : -radius) + shift)
     let missing = 0; let end = note.y; let support = 0
-    for (let distance = 1; distance <= gap * 7; distance++) {
+    for (let distance = 1; distance <= gap * 9; distance++) {
       const y = Math.round(note.y + distance * direction)
       if (y < 0 || y >= height) break
       if (stemAt(x, y) || stemAt(x - 1, y) || stemAt(x + 1, y)) { missing = 0; end = y; support += stemAt(x,y) }

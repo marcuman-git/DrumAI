@@ -1,3 +1,4 @@
+import { validPickup } from './chartPickup'
 import { chartSlots } from './chartMeter'
 import { validReviewedBar } from './reviewedRhythm'
 import { validChartReview } from './chartReviewLogic'
@@ -8,7 +9,7 @@ import { CHART_INSTRUMENTS, completeBar, notesFor, isCoreInstrument, withoutRevi
 import type { ChartBar, ChartInstrument } from './chartKit'
 export { CHART_INSTRUMENTS, notesFor } from './chartKit'
 export type { ChartBar, ChartInstrument } from './chartKit'
-export interface SongChart { meter?: '2/4' | '4/4'; id: string; title: string; bpm: number; bars: ChartBar[]; review?: ChartReview; mix?: ChartMix; training?: ChartTraining; style?: string; difficulty?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'; countIn?: number; barLabels?: string[]; section?: { start: number; end: number } }
+export interface SongChart { pickupOffset?: number; meter?: '2/4' | '4/4'; id: string; title: string; bpm: number; bars: ChartBar[]; review?: ChartReview; mix?: ChartMix; training?: ChartTraining; style?: string; difficulty?: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert'; countIn?: number; barLabels?: string[]; section?: { start: number; end: number } }
 export function chartSection(chart: SongChart) { return chart.section ?? { start: 0, end: chart.bars.length - 1 } }
 const KEY = 'drummaster-song-charts-v1'
 export function blankBar() { return completeBar() }
@@ -25,6 +26,7 @@ export function isSongChart(value: unknown): value is SongChart {
   return typeof chart.id === 'string' && chart.id.length > 0 && chart.id.length <= 120 && typeof chart.title === 'string' && chart.title.trim().length > 0 && chart.title.length <= 80
     && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 16
     && chart.bars.every((bar, index) => bar && (bar.beats === undefined || [2, 4].includes(bar.beats)) && (bar.beats === 2 ? 8 : 16) === chartSlots(chart) && validReviewedBar(bar, chart.bars[index - 1]) && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note, step) => Number.isInteger(note) && note >= 0 && note <= 3 && (step < chartSlots(chart) || note === 0)))))
+    && validPickup(chart)
     && (chart.meter === undefined || ['2/4', '4/4'].includes(chart.meter))
     && (chart.review === undefined || validChartReview(chart.review, chart.bars.length))
     && (chart.mix === undefined || validMix(chart.mix))

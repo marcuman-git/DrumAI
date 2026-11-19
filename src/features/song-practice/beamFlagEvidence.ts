@@ -20,10 +20,10 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
   const rows:(boolean|null)[]=[]; const shortRows:(boolean|null)[]=[]; let support=0
   for(let index=-2;index<=distance;index++) {
    const y=stem.end-stem.direction*index; let dark=0;let total=0;let shortDark=0;let shortTotal=0
-   for(let dx=3;dx<=gap*1.8;dx++) {
+   for(let dx=gap<7?2:3;dx<=gap*1.8;dx++) {
     const row=y+slope*dx*side; const column=stem.x+side*dx
     if(onStaff(row)||row<0||row>=height||column<0||column>=width)continue
-    total++;dark+=at(column,row);if(dx<=gap*0.85){shortTotal++;shortDark+=at(column,row)}
+    total++;dark+=at(column,row);if(dx<=gap*(gap<7?0.65:0.85)){shortTotal++;shortDark+=at(column,row)}
    }
    const attached=!!at(stem.x+side*2,y)&&!!at(stem.x+side*3,y);
    const supported=attached&&total>=Math.max(4,gap*0.65)&&dark/total>=0.7
