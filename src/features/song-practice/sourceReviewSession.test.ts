@@ -14,3 +14,7 @@ it('rejects unrelated source pixels and malformed scan settings before applying 
  expect(()=>sourceSessionSettings(JSON.stringify({version:1,sourceKey:key,scanKey:JSON.stringify(values)}),key)).toThrow('Invalid saved')
  expect(()=>sourceSessionSettings('null',key)).toThrow('matching original')
 })
+
+import {restoreSourceReview} from './sourceReviewSession'
+import type {NoteCandidate} from './notationRecognition'
+it('restores bounded correction history while continuing to clear source-derived identity confirmation',()=>{const note:NoteCandidate={id:0,x:20,y:30,instrument:'Hi-hat',shape:'cross',strength:1,stemHint:false,flagHint:false};const session={version:1,sourceKey:'source',scanKey,legend:'source key',notes:[note],accepted:[0],hints:{},events:[],corrections:['Candidate #1: Hi-hat → Ride']};expect(restoreSourceReview(JSON.stringify(session),'source',scanKey,[note],16).corrections).toEqual(session.corrections);for(const corrections of [Array(51).fill('map'),['x'.repeat(201)],[123]])expect(()=>restoreSourceReview(JSON.stringify({...session,corrections}),'source',scanKey,[note],16)).toThrow('correction history')})

@@ -1,0 +1,9 @@
+import {useEffect,useRef,useState} from 'react'
+import type {ChartBar} from './chartKit'
+import {CHART_INSTRUMENTS,notesFor} from './chartKit'
+import {ChartStaffNotation} from './ChartStaffNotation'
+export function SourceCropComparison({pixels,width,height,draft}:{pixels:Uint8ClampedArray;width:number;height:number;draft:ChartBar|null}){
+ const canvas=useRef<HTMLCanvasElement|null>(null),[zoom,setZoom]=useState(1)
+ useEffect(()=>{const target=canvas.current,context=target?.getContext('2d');if(!target||!context)return;target.width=width;target.height=height;const raster=context.createImageData(width,height);raster.data.set(pixels);context.putImageData(raster,0,0)},[pixels,width,height])
+ return <details className="rounded border border-cyan-300/40 p-3" open><summary className="cursor-pointer font-semibold">Original crop and draft comparison</summary><div className="grid gap-3 lg:grid-cols-2"><section><label>Source zoom<select aria-label="Original crop zoom" value={zoom} onChange={event=>setZoom(Number(event.target.value))} className="m-2 rounded bg-zinc-900 p-1">{[0.5,1,2,3].map(v=><option key={v} value={v}>{v*100}%</option>)}</select></label><div className="max-h-96 overflow-auto rounded bg-white"><canvas ref={canvas} aria-label="Original unannotated notation crop" style={{width:`${zoom*100}%`,maxWidth:'none'}}/></div></section><section><p className="text-xs">Compare head positions, beams, flags, dots and rests. Original pixels stay unannotated; candidate overlays appear below.</p>{draft?<ChartStaffNotation bar={draft} barNumber={1} activeStep={-1} initialCountMode="eighth" instruments={CHART_INSTRUMENTS.filter(name=>notesFor(draft,name).some(Boolean)||draft.rhythmEvents?.some(e=>e.instrument===name))}/>:<p className="text-sm">Build a provisional preview or confirm reviewed durations to compare the staff here.</p>}</section></div></details>
+}

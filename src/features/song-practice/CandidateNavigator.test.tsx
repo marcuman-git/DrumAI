@@ -79,3 +79,5 @@ it('pins a source comparison, shares preview controls and clears the pin when so
  expect(screen.getByLabelText('Comparison candidate')).toHaveValue('')
  expect(screen.queryByLabelText('Source candidate comparison')).toBeNull()
 })
+
+it('lets the user compare overlapping heads and explicitly keep one without copying instrument or duration review',()=>{const onFocus=vi.fn(),onAccept=vi.fn(),onMap=vi.fn();render(<CandidateNavigator notes={notes} accepted={[3,9]} hints={{}} focusedId={3} staff={{top:40,gap:10}} onFocus={onFocus} onAccept={onAccept} onMap={onMap}/>);fireEvent.change(screen.getByLabelText('Candidate filter'),{target:{value:'duplicates'}});fireEvent.click(screen.getByRole('button',{name:'Compare heads 4 and 10'}));expect(onFocus).toHaveBeenLastCalledWith(9);fireEvent.click(screen.getByRole('button',{name:'Keep #4, exclude #10'}));expect(onAccept.mock.calls).toEqual([[3,true],[9,false]]);expect(onMap).not.toHaveBeenCalled()})

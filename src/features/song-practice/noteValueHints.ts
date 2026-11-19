@@ -1,7 +1,7 @@
 import { possibleNoteDot } from './dotEvidence'
 import { inspectBeamFlags } from './beamFlagEvidence'
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
-export interface NoteValueHint { value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; flagBands?: number; evidence?: 'beam' | 'flag' | 'none'; clippedStem?: boolean; stemX?: number; stemEnd?: number; possibleDot?: boolean; manualReviewed?: boolean; left: number; top: number; width: number; height: number }
+export interface NoteValueHint { contextNeighbours?:number[]; contextEvidence?:'shared-beam'|'isolated-flag';contextMessage?:string;value: 'quarter' | 'eighth' | 'sixteenth' | 'unknown'; stemDirection: 'up' | 'down' | 'unknown'; beamBands: number; flagBands?: number; evidence?: 'beam' | 'flag' | 'none'; clippedStem?: boolean; stemX?: number; stemEnd?: number; possibleDot?: boolean; manualReviewed?: boolean; left: number; top: number; width: number; height: number }
 /** Local stem/beam evidence only. Missing flags, ties and adjacent voices can mislead it. */
 export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate, note: NoteCandidate): NoteValueHint {
   const { width, height, ink } = image; const gap = staff.gap

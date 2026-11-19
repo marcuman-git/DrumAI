@@ -10,7 +10,7 @@ export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?:
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; identityReview?: CymbalIdentityReview; symbolHint?: 'circled-cross'; positionHint?: 'above-line' | 'on-line' | 'ambiguous'; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; stemInk?: Uint8Array; angle: number; staffs: StaffCandidate[] }
-export interface RecognitionDraft { bar: ChartBar; source: string; page: number }
+export interface RecognitionDraft { bar: ChartBar; bars?: ChartBar[]; source: string; page: number }
 const candidateCache = new WeakMap<RecognitionImage, Map<string, NoteCandidate[]>>()
 function rowBands(rows: number[], width: number, ratio = 0.28) {
   const bands: number[] = []

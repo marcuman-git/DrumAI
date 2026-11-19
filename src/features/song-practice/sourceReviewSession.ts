@@ -9,12 +9,13 @@ export function sourceFingerprint(pixels:Uint8ClampedArray,width:number,height:n
  let hash=2166136261; for(const byte of pixels) hash=Math.imul(hash^byte,16777619)>>>0
  return JSON.stringify([source,page,width,height,hash])
 }
-export interface SourceReviewSession {version:1; sourceKey:string; scanKey:string; legend:string; notes:NoteCandidate[]; accepted:number[]; hints:Record<number,NoteValueHint>; events:RhythmEvent[]}
+export interface SourceReviewSession {version:1; sourceKey:string; scanKey:string; legend:string; corrections?:string[]; notes:NoteCandidate[]; accepted:number[]; hints:Record<number,NoteValueHint>; events:RhythmEvent[]}
 export function restoreSourceReview(text:string,sourceKey:string,scanKey:string,current:NoteCandidate[],slots:number):SourceReviewSession {
  if(text.length>1000000)throw new Error('Review session is too large.')
  const value=JSON.parse(text) as SourceReviewSession
  if(value.version!==1||value.sourceKey!==sourceKey||value.scanKey!==scanKey)throw new Error('Session source, crop or scan settings differ. Use the matching source and settings first.')
  if(typeof value.legend!=='string'||value.legend.length>4000||!Array.isArray(value.notes)||value.notes.length!==current.length||!Array.isArray(value.accepted)||!value.hints||typeof value.hints!=='object'||!validRhythmEvents(value.events,slots+6)||value.events.some(event=>event.step>=slots))throw new Error('Invalid review session.')
+ if(value.corrections!==undefined&&(!Array.isArray(value.corrections)||value.corrections.length>50||value.corrections.some(item=>typeof item!=='string'||item.length>200)))throw new Error('Invalid correction history.')
  for(let index=0;index<current.length;index++){
   const note=value.notes[index],original=current[index]
   if(!note||note.id!==original.id||note.x!==original.x||note.y!==original.y||note.shape!==original.shape||!CHART_INSTRUMENTS.includes(note.instrument))throw new Error('Session candidates do not match this scan.')
