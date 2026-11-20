@@ -1,7 +1,7 @@
-import {connectedFlagBands} from './curvedFlagEvidence'
+import {inspectConnectedFlags} from './curvedFlagEvidence'
 import type { RecognitionImage, StaffCandidate } from './notationRecognition'
 export interface StemGeometry { x: number; end: number; length: number; direction: number }
-export interface BeamFlagEvidence { beamBands: number; flagBands: number; evidence: 'beam' | 'flag' | 'none'; clipped: boolean; alternateFlagBands?:number; recoveredFlag?:boolean }
+export interface BeamFlagEvidence { beamBands: number; flagBands: number; evidence: 'beam' | 'flag' | 'none'; clipped: boolean; alternateFlagBands?:number; recoveredFlag?:boolean;comparison?:{beamBands:number;shortFlagBands:number;curveFlagBands:number;corroboratedFlagBands:number} }
 /** Count separated bands along local slopes; staff-line ink never supplies support. */
 export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate, stem: StemGeometry): BeamFlagEvidence {
  const {width,height,ink}=image; const gap=staff.gap
@@ -57,8 +57,11 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
   }
   flagBands=runs(rows,Math.max(2,Math.round(gap*0.18)))
  }
- const connected=beamBands?0:connectedFlagBands(image,staff,stem)
+ const localBeamBands=beamBands,localFlagBands=flagBands
+ const curve=inspectConnectedFlags(image,staff,stem)
+ if(curve.corroboratedBands===2&&beamBands<2){beamBands=0;flagBands=2}
+ const connected=beamBands?0:curve.bands
  const recoveredFlag=!beamBands&&!flagBands&&connected>0&&connected<=2
  if(!beamBands&&!flagBands&&connected>0&&connected<=2){flagBands=connected;beamBands=0}
- return {beamBands,flagBands,recoveredFlag,alternateFlagBands:!beamBands&&connected!==flagBands?connected:undefined,evidence:beamBands?'beam':flagBands?'flag':'none',clipped}
+ return {beamBands,flagBands,comparison:{beamBands:localBeamBands,shortFlagBands:localFlagBands,curveFlagBands:curve.bands,corroboratedFlagBands:curve.corroboratedBands},recoveredFlag,alternateFlagBands:!beamBands&&connected!==flagBands?connected:undefined,evidence:beamBands?'beam':flagBands?'flag':'none',clipped}
 }

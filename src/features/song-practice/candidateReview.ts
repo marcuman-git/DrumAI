@@ -16,6 +16,9 @@ export function candidateReviewReasons(note: NoteCandidate, notes: readonly Note
   if (identityStatus(note)!=='verified' && note.positionHint === 'ambiguous') reasons.push('Cross center near top line: Hi-hat/Ride position ambiguous; verify manually')
   if (note.articulationHint === 'half-open') reasons.push('Half-open articulation unsupported in playback')
   if (identityStatus(note)!=='verified' && note.cymbalHint === 'ledger-cross') reasons.push('Crossed ledger-line cymbal: verify Crash against source legend')
+  const checks=hint?.evidenceComparison
+  if(checks&&checks.beamBands>0&&checks.curveFlagBands>0)reasons.push('Beam and connected-curve checks overlap: compare straight beam links with curved flags in the source')
+  if(checks&&checks.shortFlagBands>0&&checks.curveFlagBands>0&&checks.shortFlagBands!==checks.curveFlagBands)reasons.push('Short and connected-curve flag counts differ: review the visible branches before accepting the duration')
   reasons.push(...(hint?.recognitionWarnings??[]))
   if(hint?.interruptedBeamNeighbours?.length)reasons.push('Interrupted beam path: compare source groups before treating these heads as connected')
   const conflicts=(hint?.sharedStemNeighbours??[]).filter(id=>hints[id]&&hints[id].value!=='unknown'&&hint?.value!=='unknown'&&hints[id].value!==hint?.value)
