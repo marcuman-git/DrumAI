@@ -346,3 +346,4 @@ it('repeats the shortened pickup bar once per second',async()=>{
  expect(screen.getByText(/Completed cycles: 2/)).toBeInTheDocument()
  fireEvent.click(screen.getByRole('button',{name:'Stop chart'}))
 })
+it('uses the selected count mode for grid labels without dropping underlying notes',()=>{render(<SongChartEditor/>);expect(screen.getByTestId('grid-count-2')).toHaveTextContent('&');fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'quarter'}});expect(screen.getByTestId('grid-count-2')).toBeEmptyDOMElement();expect(screen.getByRole('button',{name:'Hi-hat step 3: note'})).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'sixteenth'}});expect(screen.getByTestId('grid-count-1')).toHaveTextContent('e')})

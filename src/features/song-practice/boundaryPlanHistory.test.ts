@@ -1,0 +1,3 @@
+import {expect,it} from 'vitest'
+import {boundaryHistoryReducer} from './boundaryPlanHistory'
+it('restores uneven plans through undo/redo and discards future plans after a new edit',()=>{let state={past:[] as number[][],present:[0,50,100],future:[] as number[][]};state=boundaryHistoryReducer(state,{type:'edit',cuts:[0,30,100]});state=boundaryHistoryReducer(state,{type:'undo'});expect(state.present).toEqual([0,50,100]);state=boundaryHistoryReducer(state,{type:'redo'});expect(state.present).toEqual([0,30,100]);state=boundaryHistoryReducer(state,{type:'undo'});state=boundaryHistoryReducer(state,{type:'edit',cuts:[0,40,70,100]});expect(state.future).toEqual([])})

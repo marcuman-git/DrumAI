@@ -1,3 +1,4 @@
+import {PickupTimingComparison} from './PickupTimingComparison'
 import {useState} from 'react'
 import {CHART_INSTRUMENTS,notesFor} from './chartKit'
 import type {SourceCrop} from './sourceTrace'
@@ -8,15 +9,16 @@ import {ReviewedBarEditor} from './ReviewedBarEditor'
 import {newSongChart} from './songChartLogic'
 import {boundaryTieVoices,setBoundaryTie,detachOrphanBoundaryTies} from './chartTieReview'
 import {barSlots} from './chartMeter'
-export function PassageContinuityReview({bars,onChange,source,references,pages,onInspectSource}:{bars:ChartBar[];onChange:(bars:ChartBar[])=>void;source?:string;references?:SourceCrop[][];pages?:number[];onInspectSource?:(request:SourceReferenceRequest)=>void}){
+export function PassageContinuityReview({bars,onChange,source,references,pages,onInspectSource,onPickupChange}:{onPickupChange?:(pickup:import('./chartPickup').ReviewedPickup|null)=>void;bars:ChartBar[];onChange:(bars:ChartBar[])=>void;source?:string;references?:SourceCrop[][];pages?:number[];onInspectSource?:(request:SourceReferenceRequest)=>void}){
  const [boundary,setBoundary]=useState(1),[verified,setVerified]=useState(false),[message,setMessage]=useState('')
- if(bars.length<2)return null
+ if(!bars.length)return null
+ if(bars.length===1)return <PickupTimingComparison bar={bars[0]} source={source} page={pages?.[0]} crop={references?.[0]?.[0]} onInspectSource={onInspectSource} onPickupChange={onPickupChange}/>
  const index=Math.min(boundary,bars.length-1),chart={...newSongChart(),bars,meter:bars[0].beats===2?'2/4' as const:'4/4' as const}
  const orphanCount=bars.reduce((count,bar,i)=>count+(bar.rhythmEvents?.filter(e=>e.step===0&&e.tieFromPrevious&&!bars[i-1]?.rhythmEvents?.some(p=>p.instrument===e.instrument&&p.kind==='note'&&p.step+p.duration===barSlots(bars[i-1]))).length??0),0)
- const firstOnset=Math.min(...(bars[0].rhythmEvents?.filter(e=>e.kind==='note').map(e=>e.step)??Array.from({length:barSlots(bars[0])},(_,i)=>i).filter(step=>CHART_INSTRUMENTS.some(name=>notesFor(bars[0],name)[step]>0))))
+
  return <details aria-label="Adjacent-bar continuity review" className="rounded border p-3"><summary>Compare adjacent bars, pickups and ties</summary>
  <label>Boundary<select aria-label="Continuity boundary" value={index} onChange={event=>{setBoundary(Number(event.target.value));setVerified(false)}} className="m-2 rounded bg-zinc-900 p-1">{bars.slice(1).map((_,i)=><option key={i} value={i+1}>Bars {i+1} → {i+2}</option>)}</select></label>
- {firstOnset>0&&Number.isFinite(firstOnset)&&<p className="text-amber-100">First bar starts with {firstOnset} silent timing slots. Compare pickup notation with the source: these are explicit rests in the selected 2/4 or 4/4 bar, not automatically shortened pickup timing.</p>}
+ <PickupTimingComparison bar={bars[0]} source={source} page={pages?.[0]} crop={references?.[0]?.[0]} onInspectSource={onInspectSource}/>
  {source&&onInspectSource&&<div className="flex gap-2">{[index-1,index].map(i=>(references?.[i]?.[0]||pages?.[i])&&<button key={i} onClick={()=>onInspectSource({source,page:references?.[i]?.[0]?.page??pages![i],crop:references?.[i]?.[0]})} className="rounded border p-1">Inspect source for bar {i+1}</button>)}{(references?.[index-1]?.[0]||pages?.[index-1])&&(references?.[index]?.[0]||pages?.[index])&&<button onClick={()=>onInspectSource({source,page:references?.[index-1]?.[0]?.page??pages![index-1],crop:references?.[index-1]?.[0],comparePage:references?.[index]?.[0]?.page??pages![index],compareCrop:references?.[index]?.[0]})} className="rounded border p-1">Compare boundary source pages</button>}</div>}
  <div className="grid gap-2 lg:grid-cols-2"><ChartStaffNotation instruments={CHART_INSTRUMENTS.filter(name=>[bars[index-1],bars[index]].some(b=>notesFor(b,name).some(Boolean)||b.rhythmEvents?.some(e=>e.instrument===name)))} bar={bars[index-1]} nextBar={bars[index]} barNumber={index} activeStep={-1}/><ChartStaffNotation instruments={CHART_INSTRUMENTS.filter(name=>[bars[index-1],bars[index]].some(b=>notesFor(b,name).some(Boolean)||b.rhythmEvents?.some(e=>e.instrument===name)))} bar={bars[index]} nextBar={bars[index+1]} barNumber={index+1} activeStep={-1}/></div>
  <label className="block"><input aria-label="Verify continuity source" type="checkbox" checked={verified} onChange={e=>setVerified(e.target.checked)}/>I compared these barlines, duration fragments and fresh strikes against the source.</label>
