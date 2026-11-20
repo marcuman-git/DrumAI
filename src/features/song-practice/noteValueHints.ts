@@ -21,7 +21,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
       if (y < 0 || y >= height) break
       if (stemAt(x, y) || stemAt(x - 1, y) || stemAt(x + 1, y)) { missing = 0; end = y; support += stemAt(x,y) }
       // Allow a scaled attachment gap only inside the head footprint; stem continuity stays strict.
-      else if (++missing > (distance <= radius ? Math.max(2, Math.round(gap * 0.25)) : 2)) break
+      else if (++missing > (distance <= radius ? Math.max(2, Math.round(gap * 0.25)) : note.shape==='oval'?1:2)) break
     }
     const length = Math.abs(end - note.y)
     if (length > best.length || length === best.length && support > best.support) best = { length, x, end, direction, support }

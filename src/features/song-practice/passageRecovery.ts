@@ -34,3 +34,14 @@ export function restoreCollection(text:string,fileKey:string):CollectionSnapshot
  const validStates=(states:unknown)=>Array.isArray(states)&&states.length<=20&&states.every(sections=>Array.isArray(sections)&&sections.length<=16&&sections.every(d=>validRecoveredDraft(d,true))&&sections.reduce((n,d)=>n+(d.bars?.length??1),0)<=16)
  if(value.history&&(!validStates(value.history.past)||!validStates(value.history.future)))throw new Error('Invalid saved collection history.')
  return {...value,sections:clearPickupReviews(value.sections),history:value.history?{past:value.history.past.map(clearPickupReviews),future:value.history.future.map(clearPickupReviews)}:undefined}}
+/** Bound the actual UTF-8 file size, preserving the current collection before old history. */
+export function serializeCollection(fileKey:string,sections:RecognitionDraft[],history?:{past:RecognitionDraft[][];future:RecognitionDraft[][]}):string {
+ let saved={past:history?.past??[],future:history?.future??[]}
+ let text=JSON.stringify({version:1,fileKey,sections,history:saved})
+ while(new Blob([text]).size>8_000_000&&(saved.past.length||saved.future.length)){
+  saved={past:saved.past.length?saved.past.slice(1):saved.past,future:saved.past.length?saved.future:saved.future.slice(0,-1)}
+  text=JSON.stringify({version:1,fileKey,sections,history:saved})
+ }
+ if(new Blob([text]).size>8_000_000)throw new Error('Collection export exceeds the recovery limit.')
+ return text
+}

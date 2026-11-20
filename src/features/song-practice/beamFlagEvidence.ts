@@ -36,6 +36,14 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
   shortBands=Math.max(shortBands,runs(shortRows,gap<7?1:2))
  }
  if(beamBands)beamBands=Math.max(beamBands,shortBands)
+ // At very small spacing a thick secondary beam can overlap the excluded staff row.
+ // Require two separated multi-row attached bands, and an already established primary beam.
+ if(gap<7&&beamBands===1){
+  for(const side of [-1,1]){const rows:boolean[]=[];let overlapsStaff=false
+   for(let index=-2;index<=distance;index++){const y=stem.end-stem.direction*index;const supported=!!at(stem.x+side*2,y)&&!!at(stem.x+side*3,y)&&!!at(stem.x+side*4,y);rows.push(supported);if(supported&&onStaff(y))overlapsStaff=true}
+   if(overlapsStaff&&runs(rows,2)===2)beamBands=2
+  }
+ }
  let flagBands=0
  if(!beamBands&&stem.length>=gap*2) {
   // Flags curve to the right for both stem directions. Count separated short clusters.
