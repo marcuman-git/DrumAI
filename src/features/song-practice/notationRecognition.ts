@@ -7,7 +7,7 @@ import { inspectHatMark } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
 import { completeBar } from './chartKit'
 export type RecognitionProfile = 'generic' | 'master-key' | 'guide-kit'
-export interface RecognitionOptions { kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
+export interface RecognitionOptions { denseHeads?:boolean; kick?: number; snare?: number; floorTom1?: number; floorTom2?: number; tolerance?: number; headScale?: number; cleanHeads?: boolean }
 export interface StaffCandidate { top: number; gap: number }
 export interface NoteCandidate { id: number; x: number; y: number; instrument: ChartInstrument; sourceLabel?: string; shape: 'oval' | 'cross'; strength: number; stemHint: boolean; flagHint: boolean; cymbalHint?: 'ledger-cross'; identityReview?: CymbalIdentityReview; symbolHint?: 'circled-cross'; positionHint?: 'above-line' | 'on-line' | 'ambiguous'; articulationHint?: 'open' | 'half-open' }
 export interface RecognitionImage { width: number; height: number; ink: Uint8Array; stemInk?: Uint8Array; angle: number; staffs: StaffCandidate[] }
@@ -66,7 +66,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   if (!Number.isFinite(headScale) || headScale < 0.6 || headScale > 1.4) throw new Error('Invalid notehead scale.')
   const tolerance = options.tolerance ?? 0
   if (!Number.isInteger(tolerance) || tolerance < 0 || tolerance > 4 || [options.floorTom1, options.floorTom2, options.kick, options.snare].some((offset) => offset !== undefined && (!Number.isFinite(offset) || offset < -1 || offset > 6))) throw new Error('Invalid recognition calibration.')
-  const key = `${staff.top}:${staff.gap}:${profile}:${tolerance}:${options.floorTom1}:${options.floorTom2}:${options.kick}:${options.snare}:${headScale}:${!!options.cleanHeads}`; const cache = candidateCache.get(image)
+  const key = `${staff.top}:${staff.gap}:${profile}:${tolerance}:${options.floorTom1}:${options.floorTom2}:${options.kick}:${options.snare}:${headScale}:${!!options.cleanHeads}:${!!options.denseHeads}`; const cache = candidateCache.get(image)
   const existing = cache?.get(key)
   if (existing) return existing.map((note) => ({ ...note }))
   const { width, height, ink } = image; const notes: NoteCandidate[] = []
@@ -107,12 +107,12 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
             const line = staffLines.some((line) => Math.abs(line - rowY) <= 1)
             let extended = 0; let total = 0
             for (let dx = halfX + 3; dx <= halfX + 8; dx++) { extended += at(x - dx, rowY) + at(x + dx, rowY); total += 2 }
-            if (line || extended / total > 0.35) { area -= radius * 2 + 1; continue }
+            if (line || extended / total > 0.35 && (!options.denseHeads || at(x-halfX-1,rowY) && at(x+halfX+1,rowY))) { area -= radius * 2 + 1; continue }
           }
           if (sums) { dark += sums[x + radius + 1] - sums[x - radius]; usefulRows++ }
         } }
         let score = dark / (crossHead ? cross.length : area)
-        if (options.cleanHeads && !crossHead && (usefulRows < 3 || area < ovalArea * 0.3)) score = 0
+        if (options.cleanHeads && !crossHead && (usefulRows < (options.denseHeads&&staff.gap<7?2:3) || area < ovalArea * 0.3)) score = 0
         if (options.cleanHeads && crossHead) {
           const isolatedLedger = score >= 0.7 && hasIsolatedCymbalLedger(image, staff, x, centerY)
           // A beam can match the diagonal template. Reject long horizontal
@@ -142,7 +142,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
         }
         if (score > bestScore || (score === bestScore && Math.abs(shift) < Math.abs(bestY - y))) { bestScore = score; bestY = centerY }
       }
-      if (bestScore >= (crossHead ? 0.78 : 0.58)) peaks.push({ x, score: bestScore, y: bestY })
+      if (bestScore >= (crossHead ? 0.78 : options.denseHeads?0.72:0.58)) peaks.push({ x, score: bestScore, y: bestY })
     }
     for (const peak of peaks.sort((a, b) => b.score - a.score)) {
       if (notes.some((note) => note.instrument === instrument && Math.abs(note.y - y) < staff.gap * 0.4 && Math.abs(note.x - peak.x) < staff.gap * Math.max(0.7,1.1*headScale))) continue
@@ -166,10 +166,11 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }).sort((a,b)=>b.strength-a.strength).filter((note, index, all) => !all.some((other, otherIndex) => otherIndex < index && note.shape === 'cross' && other.shape === 'cross' && other.instrument === note.instrument && Math.abs(other.x - note.x) < staff.gap * Math.max(0.7,1.1*headScale) && Math.abs(other.y - note.y) < staff.gap * 0.8))
   const symbolNotes = centeredNotes.map(note => note.shape === 'cross' && hasCircledCymbalHead(image, staff, note.x, note.y) ? { ...note, symbolHint: 'circled-cross' as const } : note)
   const result = symbolNotes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.symbolHint === 'circled-cross' || note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !centeredNotes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * Math.max(0.6,0.9*headScale) && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
+  const filtered=options.denseHeads?result.filter((note,index,all)=>!all.some((other,j)=>j<index&&note.shape==='oval'&&other.shape==='oval'&&Math.abs(note.x-other.x)<staff.gap*.65&&Math.abs(note.y-other.y)<Math.min(staff.gap*.45,halfY)&&other.strength>=note.strength)):result
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
-  entries.set(key, result); candidateCache.set(image, entries)
-  return result.map((note) => ({ ...note }))
+  entries.set(key, filtered); candidateCache.set(image, entries)
+  return filtered.map((note) => ({ ...note }))
 }
 export function findBarlineHints(image: RecognitionImage, staff: StaffCandidate): number[] {
   const hints: number[] = []

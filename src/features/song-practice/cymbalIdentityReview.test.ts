@@ -25,3 +25,4 @@ it('keeps temporary identity records out of chart data',()=>{
  const bar=candidatesToBar([verified],20,190,16,14)
  expect(bar.Crash?.[0]).toBe(2);expect(JSON.stringify(bar)).not.toContain('identityReview')
 })
+it('retains the user-recorded source-key reference on verification',()=>{const [verified]=setIdentityReview([note],3,'verified','Drum Key types.pdf, page 1');expect(verified.identityReview?.legendReference).toBe('Drum Key types.pdf, page 1');expect(identityStatus({...verified,instrument:'China'})).toBe('unreviewed')})

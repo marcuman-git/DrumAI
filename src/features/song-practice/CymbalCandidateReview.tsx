@@ -1,12 +1,16 @@
+import {CymbalKeyReference} from './CymbalKeyReference'
 import {cymbalSourceGuidance} from './cymbalSourceGuidance'
 import { identityStatus } from './cymbalIdentityReview'
 import type { CymbalIdentityStatus } from './cymbalIdentityReview'
 import type { NoteCandidate } from './notationRecognition'
-export function CymbalCandidateReview({note,onMap,onFocus,onReviewIdentity}:{note:NoteCandidate;onMap:(id:number,instrument:NoteCandidate['instrument'])=>void;onFocus:(id:number)=>void;onReviewIdentity?:(id:number,status:CymbalIdentityStatus|'unreviewed')=>void}) {
+export function CymbalCandidateReview({note,onMap,onFocus,onReviewIdentity,sourceLegendReference}:{sourceLegendReference?:string;note:NoteCandidate;onMap:(id:number,instrument:NoteCandidate['instrument'])=>void;onFocus:(id:number)=>void;onReviewIdentity?:(id:number,status:CymbalIdentityStatus|'unreviewed')=>void}) {
  if(note.shape!=='cross'&&!['China','Splash','Ride bell'].includes(note.instrument))return null
  return <section aria-label={`Cymbal review candidate ${note.id+1}`} className="my-2 space-y-2 rounded border border-amber-300/40 p-2">
   <p>Identity review: {identityStatus(note)}{identityStatus(note)==='verified'?` as ${note.instrument}`:''}.</p>
   <strong>Verify cymbal against source legend</strong>
+  <CymbalKeyReference/>
+  {sourceLegendReference&&<p>Current source reference: {sourceLegendReference}</p>}
+  {note.identityReview?.legendReference&&<p>Verification reference: {note.identityReview.legendReference}</p>}
   {note.symbolHint==='circled-cross'&&<p>Ring surrounds the head. This can mean China or another source-specific cymbal; it does not confirm Crash, Ride or open Hi-hat. China, Splash and Ride bell have separate editable voices. Map manually using the source legend. Leave unchecked if none matches.</p>}
   {note.positionHint==='ambiguous'&&<p>The cross center lies near the top line. Compare Hi-hat and Ride positions in this source; choose a voice only after checking the legend.</p>}
   <details aria-label={`Source legend guidance ${note.id+1}`}><summary>Compare symbol, position and articulation with the source key</summary>{cymbalSourceGuidance(note).map(text=><p key={text}>{text}</p>)}</details>

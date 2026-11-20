@@ -36,6 +36,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   const bottom = Math.min(height, Math.ceil(Math.max(note.y + gap * 0.6, best.end) + 3))
   const recognitionWarnings:string[]=[]
   if(gap<7)recognitionWarnings.push('Low-resolution staff: thin stems and separated bands can merge or disappear. Compare a higher-resolution crop.')
+  if(gap<7&&evidence.flagBands===1)recognitionWarnings.push('Only one curved flag band is resolved at this small spacing. Compare a larger source render to check whether a second branch has merged.')
   if(evidence.alternateFlagBands!==undefined)recognitionWarnings.push(evidence.alternateFlagBands?'Flag checks disagree on band count. Compare both branches against the source; the existing value remains tentative.':'Short flag ink has no confirmed attached curve. Check nearby accents, rests and ledger lines.')
   if(evidence.recoveredFlag)recognitionWarnings.push('Flag recovered from a longer connected curve. Verify its count against the source.')
   return { evidenceComparison:evidence.comparison, recognitionWarnings, value: evidence.clipped || possibleDot || best.length < gap * 1.6 || bands > 2 ? 'unknown' : bands === 2 ? 'sixteenth' : bands === 1 ? 'eighth' : 'quarter', stemDirection: best.length < gap * 1.6 ? 'unknown' : best.direction === -1 ? 'up' : 'down', beamBands: evidence.beamBands, flagBands: evidence.flagBands, evidence: evidence.evidence, clippedStem: evidence.clipped, stemX: best.x, stemEnd: best.end, possibleDot, left, top, width: right - left, height: bottom - top }

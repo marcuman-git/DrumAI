@@ -1,5 +1,5 @@
 import { afterEach,expect,it,vi } from 'vitest'
-import { cleanup,fireEvent,render,screen } from '@testing-library/react'
+import { cleanup,fireEvent,render,screen,within } from '@testing-library/react'
 import { ReviewedBarEditor } from './ReviewedBarEditor'
 import { reviewedBar } from './reviewedRhythm'
 import { newSongChart } from './songChartLogic'
@@ -49,3 +49,5 @@ it('undoes and redoes invalid drafts, clears verification, drops redo branches a
 })
 
 it('navigates a reviewed event to its original crop and head location without changing the draft',()=>{const chart=fixture();chart.review={source:'study.pdf',bars:[{status:'Pending',page:2,notes:'',signature:'',crops:[{page:2,region:{x:.1,y:.2,width:.4,height:.2}}]}]};chart.bars[0].rhythmEvents![0].sourceAnchor={page:2,x:.3,y:.3};const onSourceReference=vi.fn(),onApply=vi.fn();render(<ReviewedBarEditor chart={chart} index={0} disabled={false} onApply={onApply} onSourceReference={onSourceReference}/>);fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/));fireEvent.click(screen.getByRole('button',{name:'View source for event 1'}));expect(onSourceReference).toHaveBeenCalledWith({source:'study.pdf',page:2,crop:chart.review.bars[0].crops![0],point:{page:2,x:.3,y:.3}});expect(onApply).not.toHaveBeenCalled()})
+
+it('focuses diagnostics in the correct editor when two reviewed bars are shown',()=>{const chart=fixture();chart.bars.push(structuredClone(chart.bars[0]));render(<><ReviewedBarEditor chart={chart} index={0} disabled={false} onApply={vi.fn()}/><ReviewedBarEditor chart={chart} index={1} disabled={false} onApply={vi.fn()}/></>);const editors=screen.getAllByLabelText('Edit reviewed bar durations');fireEvent.click(within(editors[1]).getByText(/Edit reviewed durations — Bar 2/));fireEvent.change(within(editors[1]).getByLabelText('Reviewed event 1 duration'),{target:{value:'6'}});fireEvent.click(within(editors[1]).getByRole('button',{name:'Inspect event 1'}));expect(within(editors[1]).getByLabelText('Reviewed event 1 slot')).toHaveFocus();expect(within(editors[0]).getByLabelText('Reviewed event 1 slot')).not.toHaveFocus()})
