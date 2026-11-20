@@ -1,3 +1,4 @@
+import {CandidateEvidenceSummary} from './CandidateEvidenceSummary'
 import {possibleDuplicateHeads} from './candidateDuplicates'
 import { identityStatus } from './cymbalIdentityReview'
 import type { CymbalIdentityStatus } from './cymbalIdentityReview'
@@ -28,6 +29,7 @@ export function CandidateNavigator({ notes, accepted, hints, focusedId, onFocus,
   return <section aria-label="Candidate navigation" className="space-y-2">
     <p className="text-xs text-zinc-300">Shape strength measures template overlap, not the probability of a correct instrument. Position evidence and duration evidence are separate; manual corrections still require source verification.</p>
     <p className="text-xs text-amber-100">To review duration, choose Quarter, Eighth or Sixteenth below each candidate. Instrument mapping only changes the drum voice. For rests and onset slots, use Duration-aware notation review. Use duration-aware review for dotted durations and ties; tuplets remain unsupported.</p>
+    <CandidateEvidenceSummary notes={notes} accepted={accepted} hints={hints} onFocus={onFocus}/>
     <button onClick={() => setFilter('review')} className="rounded border border-amber-300/40 px-3 py-2 text-sm">Review uncertain candidates</button>
     <label className="block text-sm">Candidate filter<select aria-label="Candidate filter" value={filter} onChange={(event) => setFilter(event.target.value as CandidateFilter)} className="ml-2 rounded bg-zinc-900 p-2"><option value="all">All candidates</option><option value="checked">Checked only</option><option value="unchecked">Unchecked only</option><option value="unknown">Unknown duration</option><option value="review">Needs review</option><option value="cymbal">Cymbal heads</option><option value="duplicates">Possible duplicate heads</option></select></label>
     <label className="block text-sm">Instrument filter<select aria-label="Instrument filter" value={instrument} onChange={(event) => setInstrument(event.target.value as ChartInstrument | '')} className="ml-2 rounded bg-zinc-900 p-2"><option value="">All instruments</option>{CHART_INSTRUMENTS.map((name) => <option key={name}>{name}</option>)}</select></label>
@@ -46,6 +48,8 @@ export function CandidateNavigator({ notes, accepted, hints, focusedId, onFocus,
       {candidateReviewReasons(note, notes, hints).map((reason) => <p key={reason} className="text-amber-100">{reason}</p>)}
       {possibleDuplicateHeads(note,notes,staff?.gap).map(other=><div key={other.id} className="my-1 rounded border border-amber-300/40 p-2"><p>Possible overlapping head #{other.id+1}. Both may be real; compare the source before excluding either.</p><button onClick={()=>{setComparisonId(note.id);onFocus(other.id)}} className="m-1 rounded border p-1">Compare heads {note.id+1} and {other.id+1}</button><button onClick={()=>{onAccept(note.id,true);onAccept(other.id,false)}} className="m-1 rounded border p-1">Keep #{note.id+1}, exclude #{other.id+1}</button></div>)}
       {hints[note.id]?.contextMessage&&<p className="text-cyan-100">{hints[note.id].contextMessage}</p>}
+      {(hints[note.id]?.interruptedBeamNeighbours??[]).map(id=><button key={id} onClick={()=>{setComparisonId(note.id);onFocus(id)}} className="m-1 rounded border p-1">Compare interrupted beam #{id+1}</button>)}
+      {(hints[note.id]?.sharedStemNeighbours??[]).map(id=><button key={id} onClick={()=>{setComparisonId(note.id);onFocus(id)}} className="m-1 rounded border p-1">Compare shared-stem head #{id+1}</button>)}
       {(hints[note.id]?.contextNeighbours??[]).map(id=><button key={id} onClick={()=>{setComparisonId(note.id);onFocus(id)}} className="m-1 rounded border p-1">Compare beam neighbour #{id+1}</button>)}
       <CymbalCandidateReview note={note} onMap={onMap} onFocus={onFocus} onReviewIdentity={onReviewIdentity} />
       {note.positionHint && <p className="text-amber-100">Cymbal position evidence: {note.positionHint}. A cross above the top line can touch it; a Ride center lies on the line in the supplied key profiles.</p>}

@@ -1,0 +1,5 @@
+import {expect,it} from 'vitest'
+import {beamContextEvidence} from './beamContextEvidence'
+function sample(){const width=100,height=100,ink=new Uint8Array(width*height);for(let x=20;x<=60;x++)ink[Math.round(20+(x-20)*.3)*width+x]=1;return {width,height,ink,angle:0,staffs:[]}}
+it('checks a sloped path in either direction and separates interrupted from confirmed ink',()=>{const image=sample(),staff={top:60,gap:10},left={x:20,y:20},right={x:60,y:32};expect(beamContextEvidence(image,staff,left,right)).toBe('connected');expect(beamContextEvidence(image,staff,right,left)).toBe('connected');for(let x=37;x<=41;x++)image.ink[Math.round(20+(x-20)*.3)*image.width+x]=0;expect(beamContextEvidence(image,staff,left,right)).toBe('interrupted');for(let x=30;x<=50;x++)image.ink[Math.round(20+(x-20)*.3)*image.width+x]=0;expect(beamContextEvidence(image,staff,left,right)).toBe('none')})
+it('does not use a staff line as a beam path',()=>{const image=sample();expect(beamContextEvidence(image,{top:20,gap:10},{x:20,y:20},{x:60,y:20})).toBe('none')})

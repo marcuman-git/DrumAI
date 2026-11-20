@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { CandidateNavigator } from './CandidateNavigator'
 import { RhythmReview } from './RhythmReview'
@@ -9,7 +9,7 @@ it('offers review filtering without silently checking or remapping candidates', 
  const onAccept = vi.fn(); const onMap = vi.fn()
  render(<CandidateNavigator notes={notes} accepted={[0]} hints={{}} focusedId={null} onFocus={vi.fn()} onAccept={onAccept} onMap={onMap} />)
  fireEvent.change(screen.getByLabelText('Candidate filter'), { target: { value: 'review' } })
- expect(screen.getByText('Duration uncertain')).toBeVisible()
+ expect(within(screen.getByTestId('candidate-row-0')).getByText('Duration uncertain')).toBeVisible()
  expect(screen.getByRole('checkbox')).toBeChecked()
  expect(onAccept).not.toHaveBeenCalled(); expect(onMap).not.toHaveBeenCalled()
 })

@@ -16,5 +16,9 @@ export function candidateReviewReasons(note: NoteCandidate, notes: readonly Note
   if (identityStatus(note)!=='verified' && note.positionHint === 'ambiguous') reasons.push('Cross center near top line: Hi-hat/Ride position ambiguous; verify manually')
   if (note.articulationHint === 'half-open') reasons.push('Half-open articulation unsupported in playback')
   if (identityStatus(note)!=='verified' && note.cymbalHint === 'ledger-cross') reasons.push('Crossed ledger-line cymbal: verify Crash against source legend')
-  return reasons
+  reasons.push(...(hint?.recognitionWarnings??[]))
+  if(hint?.interruptedBeamNeighbours?.length)reasons.push('Interrupted beam path: compare source groups before treating these heads as connected')
+  const conflicts=(hint?.sharedStemNeighbours??[]).filter(id=>hints[id]&&hints[id].value!=='unknown'&&hint?.value!=='unknown'&&hints[id].value!==hint?.value)
+  if(conflicts.length)reasons.push('Shared-stem duration evidence differs for candidate(s) '+conflicts.map(id=>'#'+(id+1)).join(', ')+': review each voice independently')
+  return [...new Set(reasons)]
 }

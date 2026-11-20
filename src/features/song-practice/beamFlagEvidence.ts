@@ -1,6 +1,7 @@
+import {connectedFlagBands} from './curvedFlagEvidence'
 import type { RecognitionImage, StaffCandidate } from './notationRecognition'
 export interface StemGeometry { x: number; end: number; length: number; direction: number }
-export interface BeamFlagEvidence { beamBands: number; flagBands: number; evidence: 'beam' | 'flag' | 'none'; clipped: boolean }
+export interface BeamFlagEvidence { beamBands: number; flagBands: number; evidence: 'beam' | 'flag' | 'none'; clipped: boolean; alternateFlagBands?:number; recoveredFlag?:boolean }
 /** Count separated bands along local slopes; staff-line ink never supplies support. */
 export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate, stem: StemGeometry): BeamFlagEvidence {
  const {width,height,ink}=image; const gap=staff.gap
@@ -48,5 +49,8 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
   }
   flagBands=runs(rows,Math.max(2,Math.round(gap*0.18)))
  }
- return {beamBands,flagBands,evidence:beamBands?'beam':flagBands?'flag':'none',clipped}
+ const connected=beamBands?0:connectedFlagBands(image,staff,stem)
+ const recoveredFlag=!beamBands&&!flagBands&&connected>0&&connected<=2
+ if(!beamBands&&!flagBands&&connected>0&&connected<=2){flagBands=connected;beamBands=0}
+ return {beamBands,flagBands,recoveredFlag,alternateFlagBands:!beamBands&&connected!==flagBands?connected:undefined,evidence:beamBands?'beam':flagBands?'flag':'none',clipped}
 }

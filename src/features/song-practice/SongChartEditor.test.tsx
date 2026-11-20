@@ -1,3 +1,4 @@
+import { blankBar, newSongChart } from './songChartLogic'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SongChartEditor } from './SongChartEditor'
@@ -317,20 +318,27 @@ it('blocks a passage with mixed meters and leaves the current chart untouched',(
 it('rejects the whole passage when it exceeds chart capacity, without consuming or partially appending it',async()=>{const {newSongChart}=await import('./songChartLogic');const chart=newSongChart();chart.id='capacity';chart.bars=Array.from({length:15},()=>structuredClone(chart.bars[0]));localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]));const consumed=vi.fn();render(<SongChartEditor recognitionDraft={{bar:chart.bars[0],bars:[chart.bars[0],chart.bars[0]],source:'passage.pdf',page:1}} onDraftConsumed={consumed}/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'capacity'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));expect(screen.getByRole('button',{name:'Add detected bars'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Bar 16'})).not.toBeInTheDocument();expect(consumed).not.toHaveBeenCalled()})
 
 it('saves ordered per-page source crops and reviewed event anchors when appending a collection',async()=>{const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2,sourceAnchor:{page:2,x:.3,y:.3}},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8);render(<SongChartEditor recognitionDraft={{bar,bars:[bar,structuredClone(bar)],source:'study.pdf',page:2,references:[[{page:2,region:{x:.1,y:.2,width:.4,height:.2}}],[{page:3,region:{x:.1,y:.2,width:.4,height:.2}}]]}}/>);fireEvent.change(screen.getByLabelText('Chart time signature'),{target:{value:'2/4'}});fireEvent.click(screen.getByRole('button',{name:'Add detected bars'}));fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.review.bars.slice(-2).map((b:{page:number})=>b.page)).toEqual([2,3]);expect(saved.review.bars.at(-1).crops[0].page).toBe(3);expect(saved.bars.at(-2).rhythmEvents[0].sourceAnchor).toEqual({page:2,x:.3,y:.3})})
-it('plays a verified one-beat pickup in one second and repeats the shortened bar',async()=>{
+function loadPickupTestChart() {
+ const chart={...newSongChart(),id:'pickup-timing-test',bars:[blankBar()],pickupOffset:12}
+ chart.bars[0].Snare[12]=2
+ localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]))
  vi.useFakeTimers();vi.stubGlobal('AudioContext',AudioMock)
  vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>window.setTimeout(()=>callback(performance.now()),16));vi.stubGlobal('cancelAnimationFrame',(id:number)=>window.clearTimeout(id))
  render(<SongChartEditor />)
- for(const name of ['Hi-hat','Snare','Kick'])for(let step=1;step<=12;step++){
-  const button=screen.queryByRole('button',{name:`${name} step ${step}: note`})
-  if(button){fireEvent.click(button);fireEvent.click(button);fireEvent.click(button)}
- }
- fireEvent.change(screen.getByRole('combobox',{name:'First-bar pickup timing'}),{target:{value:'12'}})
+ fireEvent.change(screen.getByLabelText('Saved charts'),{target:{value:chart.id}})
+ fireEvent.click(screen.getByRole('button',{name:'Load chart'}))
+ expect(screen.getByLabelText('First-bar pickup timing')).toHaveValue('12')
+}
+it('plays a verified one-beat pickup in one second',async()=>{
+ loadPickupTestChart()
  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Play chart'}));await Promise.resolve()})
  await act(async()=>{await vi.advanceTimersByTimeAsync(800)})
  expect(screen.getByRole('button',{name:'Stop chart'})).toBeEnabled()
  await act(async()=>{await vi.advanceTimersByTimeAsync(400)})
  expect(screen.getByText('Chart completed. Session saved.')).toBeInTheDocument()
+})
+it('repeats the shortened pickup bar once per second',async()=>{
+ loadPickupTestChart()
  fireEvent.click(screen.getByRole('button',{name:'Loop Off'}))
  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Play chart'}));await Promise.resolve()})
  await act(async()=>{await vi.advanceTimersByTimeAsync(2200)})

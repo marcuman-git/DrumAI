@@ -1,0 +1,5 @@
+import {expect,it} from 'vitest'
+import {connectedFlagBands} from './curvedFlagEvidence'
+function sample(){const width=100,height=100,ink=new Uint8Array(width*height);for(let y=20;y<=70;y++)ink[y*width+20]=1;for(const origin of [22,34])for(let d=0;d<=15;d++){const x=21+Math.floor(d*.5);for(let dx=0;dx<=1;dx++)ink[(origin+d)*width+x+dx]=1}return {width,height,ink,angle:0,staffs:[]}}
+it('counts two attached curves beyond the old short scan and rejects detached marks',()=>{const image=sample(),staff={top:65,gap:10},stem={x:20,end:20,length:50,direction:-1};expect(connectedFlagBands(image,staff,stem)).toBe(2);for(let y=20;y<55;y++)for(let x=21;x<=23;x++)image.ink[y*image.width+x]=0;expect(connectedFlagBands(image,staff,stem)).toBe(0)})
+it('does not count an accent under the head as a flag',()=>{const width=100,height=100,ink=new Uint8Array(width*height);for(let y=20;y<=60;y++)ink[y*width+20]=1;for(let d=0;d<10;d++)ink[(70+d)*width+23+d]=1;expect(connectedFlagBands({width,height,ink,angle:0,staffs:[]},{top:35,gap:10},{x:20,end:20,length:40,direction:-1})).toBe(0)})
