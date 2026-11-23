@@ -3,7 +3,7 @@ import type {ChartBar} from './chartKit'
 import type {NoteCandidate} from './notationRecognition'
 import type {StaffCountMode} from './staffCountLabels'
 /** Explicit regular-pattern assumption, independent of crop padding and bar edges. */
-export function regularOnsetMapping(notes:readonly NoteCandidate[],gap:number,slots:number,mode:StaffCountMode):{bar:ChartBar|null;reason:string;columns:number}{
+export function regularOnsetMapping(notes:readonly NoteCandidate[],gap:number,slots:number,mode:StaffCountMode):{bar:ChartBar|null;reason:string;columns:number;onsets?:Record<number,number>}{
  const stride=mode==='quarter'?4:mode==='eighth'?2:1
  if(!Number.isFinite(gap)||gap<4||![8,16].includes(slots))return {bar:null,reason:'Invalid staff or source meter.',columns:0}
  const groups:NoteCandidate[][]=[]
@@ -15,5 +15,5 @@ export function regularOnsetMapping(notes:readonly NoteCandidate[],gap:number,sl
  if(groups.some(g=>new Set(g.map(n=>n.instrument)).size!==g.length))return {bar:null,reason:'Two checked heads share one instrument and onset. Review duplicate candidates before building.',columns:groups.length}
  const bar:ChartBar={...completeBar(),...(slots===8?{beats:2 as const}:{})}
  groups.forEach((group,i)=>group.forEach(note=>{bar[note.instrument]![i*stride]=2}))
- return {bar,reason:`${notes.length} checked heads mapped to ${groups.length} regular onset columns. Verify this timing assumption against the source.`,columns:groups.length}
+ return {bar,onsets:Object.fromEntries(groups.flatMap((group,i)=>group.map(note=>[note.id,i*stride]))),reason:`${notes.length} checked heads mapped to ${groups.length} regular onset columns. Verify this timing assumption against the source.`,columns:groups.length}
 }

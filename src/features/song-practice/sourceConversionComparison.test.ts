@@ -1,0 +1,10 @@
+import {expect,it} from 'vitest'
+import {compareSourceConversion} from './sourceConversionComparison'
+import {completeBar} from './chartKit'
+import type {NoteCandidate} from './notationRecognition'
+import type {RhythmEvent} from './rhythmTypes'
+const head=(id:number):NoteCandidate=>({id,x:20+id*20,y:40,instrument:'Snare',shape:'oval',strength:1,stemHint:true,flagHint:false})
+it('reserves exact matches before showing missing and shifted hits',()=>{const notes=[head(0),head(1),head(2)],bar=completeBar();bar.Snare[4]=2;bar.Snare[9]=2;const report=compareSourceConversion(notes,[],bar,{0:0,1:4,2:8});expect(report.rows.map(r=>r.status)).toEqual(['missing','matched','shifted']);expect(report.rows[2].actualStep).toBe(9);expect(report.summary.chartStrikes).toBe(2)})
+it('highlights a merged pair without stealing the merged stroke for another head',()=>{const bar=completeBar();bar.Snare[4]=2;const report=compareSourceConversion([head(0),head(1),head(2)],[],bar,{0:4,1:4,2:8});expect(report.rows.map(r=>r.status)).toEqual(['merged','merged','missing']);expect(report.extraStrikes).toHaveLength(0)})
+it('separates explicit reviewed rests and ties from lost detections, and leaves inputs unchanged',()=>{const notes=[head(0),head(1),head(2)],events:RhythmEvent[]=[{sourceCandidateId:0,instrument:'Snare',step:0,duration:2,kind:'rest',dynamic:2},{sourceCandidateId:1,instrument:'Snare',step:2,duration:2,kind:'note',dynamic:2,tieFromPrevious:true},{sourceCandidateId:2,instrument:'Kick',step:4,duration:2,kind:'note',dynamic:2}],bar=completeBar();bar.Kick[4]=2;const before=structuredClone({notes,events,bar});const report=compareSourceConversion(notes,events,bar);expect(report.rows.map(r=>r.status)).toEqual(['reviewed-rest','continuation','matched']);expect(report.rows[2].instrument).toBe('Kick');expect({notes,events,bar}).toEqual(before)})
+it('reports unassigned heads and extra manually added strikes',()=>{const bar=completeBar();bar.Kick[0]=2;const report=compareSourceConversion([head(0)],[],bar);expect(report.rows[0].status).toBe('unassigned');expect(report.extraStrikes).toEqual([{instrument:'Kick',step:0}])})

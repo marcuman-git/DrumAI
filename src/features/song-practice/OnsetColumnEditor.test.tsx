@@ -1,0 +1,10 @@
+import {useState} from 'react'
+import type {RhythmEvent} from './rhythmTypes'
+import {cleanup,fireEvent,render,screen} from '@testing-library/react'
+import {afterEach,expect,it,vi} from 'vitest'
+import {OnsetColumnEditor} from './OnsetColumnEditor'
+import type {NoteCandidate} from './notationRecognition'
+afterEach(cleanup)
+const notes:NoteCandidate[]=[{id:0,x:20,y:40,instrument:'Snare',shape:'oval',strength:1,stemHint:true,flagHint:false},{id:1,x:22,y:70,instrument:'Kick',shape:'oval',strength:1,stemHint:true,flagHint:false}]
+it('moves simultaneous heads together and supports separating their timing',()=>{const onApply=vi.fn(),onPendingChange=vi.fn();function Harness(){const [events,setEvents]=useState<RhythmEvent[]>([]);return <OnsetColumnEditor notes={notes} gap={10} first={20} last={100} slots={16} lastStep={14} events={events} hints={{}} defaultDuration={2} useHints={false} onApply={next=>{onApply(next);setEvents(next)}} onPendingChange={onPendingChange}/>};render(<Harness/>);fireEvent.change(screen.getByLabelText('Source onset column 1 slot'),{target:{value:'5'}});expect(onPendingChange).toHaveBeenLastCalledWith(true);fireEvent.click(screen.getByRole('button',{name:'Apply onset columns to review'}));expect(onApply.mock.calls[0][0].map((e:{step:number})=>e.step)).toEqual([4,4]);fireEvent.click(screen.getByRole('button',{name:'Separate head #2'}));fireEvent.change(screen.getByLabelText('Source onset column 2 slot'),{target:{value:'9'}});fireEvent.click(screen.getByRole('button',{name:'Apply onset columns to review'}));expect(onApply.mock.calls[1][0].map((e:{step:number})=>e.step)).toEqual([4,8]);expect(onPendingChange).toHaveBeenLastCalledWith(false)})
+it('does not apply a same-instrument collision',()=>{const onApply=vi.fn();render(<OnsetColumnEditor notes={notes.map(n=>({...n,instrument:'Snare'}))} gap={10} first={20} last={100} slots={8} lastStep={6} events={[]} hints={{}} defaultDuration={2} useHints={false} onApply={onApply}/>);fireEvent.click(screen.getByRole('button',{name:'Apply onset columns to review'}));expect(onApply).not.toHaveBeenCalled();expect(screen.getByRole('status')).toHaveTextContent('merge')})

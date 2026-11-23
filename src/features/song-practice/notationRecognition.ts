@@ -1,7 +1,7 @@
 import type {SourceCrop} from './sourceTrace'
 import type { CymbalIdentityReview } from './cymbalIdentityReview'
 import { hasCircledCymbalHead } from './circledCymbalHint'
-import { crossHeadCenter } from './crossCenter'
+import { crossHeadCenter,refineCrossHeadCenter } from './crossCenter'
 import { hasIsolatedCymbalLedger } from './cymbalLedgerHint'
 import { inspectHatMark } from './notationSymbols'
 import type { ChartBar, ChartInstrument } from './songChartLogic'
@@ -154,7 +154,9 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }
   // Reject weaker shoulders of the same oval head at neighboring half-space levels.
   // Equally strong adjacent heads remain available for simultaneous voices.
-  const centeredNotes = notes.map((note) => {
+  const centeredNotes = notes.map((original) => {
+    const refined=options.denseHeads&&original.shape==='cross'?refineCrossHeadCenter(image,staff,original.x,original.y):null
+    const note=refined?{...original,...refined}:original
     if (note.shape !== 'cross' || !['Hi-hat', 'Ride'].includes(note.instrument)) return note
     const center = crossHeadCenter(image, staff, note.x, note.y)
     if(profile==='generic')return {...note,y:Math.round(center)}

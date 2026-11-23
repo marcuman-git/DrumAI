@@ -1,7 +1,7 @@
 import type {RecognitionImage,StaffCandidate} from './notationRecognition'
 import type {StemGeometry} from './beamFlagEvidence'
 /** Count curves connected to the right of the stem, excluding staff-line paths and the head. */
-export function inspectConnectedFlags(image:RecognitionImage,staff:StaffCandidate,stem:StemGeometry):{bands:number;corroboratedBands:number} {
+export function inspectConnectedFlags(image:RecognitionImage,staff:StaffCandidate,stem:StemGeometry):{bands:number;corroboratedBands:number;splitOuterRay?:boolean} {
  const gap=staff.gap,limit=Math.floor(Math.min(gap*3.2,stem.length-gap*.8)),maxX=Math.ceil(gap*1.4)
  if(limit<gap||stem.length<gap*2)return {bands:0,corroboratedBands:0}
  const onStaff=(y:number)=>Array.from({length:5},(_,i)=>staff.top+i*gap).some(line=>Math.abs(line-y)<=1)
@@ -26,7 +26,8 @@ export function inspectConnectedFlags(image:RecognitionImage,staff:StaffCandidat
   counts.push(count);best=Math.max(best,count)
  }
  let consecutive=0,corroborated=0;for(const count of counts){consecutive=count===2?consecutive+1:0;corroborated=Math.max(corroborated,consecutive)}
- return {bands:best,corroboratedBands:corroborated>=Math.max(2,Math.round(gap*.18))?2:0}
+ const splitOuterRay=counts.length>=5&&counts.slice(0,3).every(count=>count===1)&&counts.filter(count=>count===2).length===1&&counts.findIndex(count=>count===2)>=counts.length-2&&counts.at(-1)===1
+ return {splitOuterRay,bands:best,corroboratedBands:corroborated>=Math.max(2,Math.round(gap*.18))?2:0}
 }
 
 export function connectedFlagBands(image:RecognitionImage,staff:StaffCandidate,stem:StemGeometry):number{return inspectConnectedFlags(image,staff,stem).bands}

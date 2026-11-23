@@ -62,6 +62,6 @@ export function inspectBeamFlags(image: RecognitionImage, staff: StaffCandidate,
  if(curve.corroboratedBands===2&&beamBands<2){beamBands=0;flagBands=2}
  const connected=beamBands?0:curve.bands
  const recoveredFlag=!beamBands&&!flagBands&&connected>0&&connected<=2
- if(!beamBands&&!flagBands&&connected>0&&connected<=2){flagBands=connected;beamBands=0}
+ if(!beamBands&&!flagBands&&connected>0&&connected<=2){flagBands=connected===2&&curve.splitOuterRay&&curve.corroboratedBands===0?1:connected;beamBands=0}
  return {beamBands,flagBands,comparison:{beamBands:localBeamBands,shortFlagBands:localFlagBands,curveFlagBands:curve.bands,corroboratedFlagBands:curve.corroboratedBands},recoveredFlag,alternateFlagBands:!beamBands&&connected!==flagBands?connected:undefined,evidence:beamBands?'beam':flagBands?'flag':'none',clipped}
 }
