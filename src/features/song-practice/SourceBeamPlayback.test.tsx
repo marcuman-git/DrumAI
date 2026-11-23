@@ -1,0 +1,23 @@
+import {act,cleanup,fireEvent,render,screen} from '@testing-library/react'
+import {afterEach,expect,it,vi} from 'vitest'
+import {SongChartEditor} from './SongChartEditor'
+import verse from './realVerseBeamFixtures'
+import {benchmarkRecoveredHeadValues} from './recoveredHeadValueBenchmark'
+import {applyOnsetColumns} from './onsetColumnLogic'
+import {fillReviewedRests,reviewedBar} from './reviewedRhythm'
+import {attachSourceAnchors} from './sourceTrace'
+import type {RhythmEvent} from './rhythmTypes'
+const play=vi.hoisted(()=>vi.fn())
+vi.mock('../groove-library/grooveAudio',()=>({createGroovePlayer:()=>play}))
+vi.mock('../../core/services/storage/practiceEvents',()=>({startPracticeSession:vi.fn(()=> 'source-playback'),stopPracticeSession:vi.fn(),trackPracticeEvent:vi.fn(async()=>undefined)}))
+class AudioMock {destination={};get currentTime(){return performance.now()/1000}resume=vi.fn(async()=>undefined);close=vi.fn(async()=>undefined)}
+function sourceBar(){const f=verse.find(f=>f.dpi===144)!,cases=benchmarkRecoveredHeadValues([f])[0].cases;
+ // Deliberate trial-kit mapping and visually labelled timing; identity is not an automatic recognition claim.
+ const notes=cases.map(c=>({...c.detected!,instrument:c.reference.shape==='cross'?'Hi-hat' as const:c.reference.y<f.staff.top+2*f.staff.gap?'Snare' as const:'Kick' as const}));
+ const columns=notes.map((n,i)=>({candidateIds:[n.id],step:f.cases[i].step}));let events:RhythmEvent[]=applyOnsetColumns(columns,notes,[],16,2,{}).map((e,i)=>({...e,duration:f.cases[i].value==='sixteenth'?1:2}));for(const voice of ['Hi-hat','Snare','Kick'] as const)events=fillReviewedRests(events,voice,16);
+ const bar=attachSourceAnchors(reviewedBar(events),events,notes,{width:f.width,height:f.height,angle:0},{page:1,region:{x:790/1190,y:1470/1684,width:325/1190,height:130/1684}});return {bar,expected:notes.map((n,i)=>({instrument:n.instrument,offset:f.cases[i].step*.25}))}
+}
+function setup(){vi.useFakeTimers();vi.stubGlobal('AudioContext',AudioMock);vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>window.setTimeout(()=>callback(performance.now()),250));vi.stubGlobal('cancelAnimationFrame',(id:number)=>window.clearTimeout(id));const source=sourceBar();render(<SongChartEditor recognitionDraft={{bar:source.bar,source:'Feel Good Inc source.pdf',page:1}}/>);fireEvent.click(screen.getByRole('button',{name:'Add detected bar'}));fireEvent.change(screen.getByLabelText('Start bar'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('End bar'),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Chart BPM'),{target:{value:'60'}});return source}
+afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals();play.mockClear();localStorage.removeItem('drummaster-song-charts-v1')})
+it('plays all thirteen real-source onsets at their labelled offsets, with mixed short-beam values and silent rest gaps',async()=>{const source=setup();fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.bars[1].rhythmEvents.filter((e:RhythmEvent)=>e.kind==='note')).toHaveLength(13);expect(saved.bars[1].rhythmEvents.filter((e:RhythmEvent)=>e.kind==='note').every((e:RhythmEvent)=>e.sourceAnchor?.page===1)).toBe(true);await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Play chart'}));await Promise.resolve()});await act(async()=>{await vi.advanceTimersByTimeAsync(4500)});expect(play).toHaveBeenCalledTimes(13);const start=Math.min(...play.mock.calls.map(c=>Number(c[1])));for(const expected of source.expected)expect(play.mock.calls.some(c=>c[0]===expected.instrument&&Math.abs(Number(c[1])-start-expected.offset)<.0001)).toBe(true);expect(screen.getByRole('button',{name:'Play chart'})).toBeEnabled();expect(screen.getByText('Chart completed. Session saved.')).toBeVisible()})
+it('loops the reviewed source bar and stops without scheduling further hits',async()=>{setup();fireEvent.click(screen.getByRole('button',{name:'Loop Off'}));await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Play chart'}));await Promise.resolve()});await act(async()=>{await vi.advanceTimersByTimeAsync(7900)});expect(play).toHaveBeenCalledTimes(26);expect(Number(play.mock.calls[13][1])-Number(play.mock.calls[0][1])).toBeCloseTo(4,5);fireEvent.click(screen.getByRole('button',{name:'Stop chart'}));const count=play.mock.calls.length;await act(async()=>{await vi.advanceTimersByTimeAsync(1000)});expect(play).toHaveBeenCalledTimes(count);expect(screen.getByRole('button',{name:'Play chart'})).toBeEnabled()})

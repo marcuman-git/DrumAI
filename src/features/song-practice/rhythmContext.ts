@@ -34,6 +34,13 @@ export function inspectRhythmContext(image:RecognitionImage,staff:StaffCandidate
  else if(interrupted.length){hint.contextEvidence='interrupted-beam';hint.contextMessage='A possible beam path contains missing ink. Compare the source: this can be a broken beam or a gap between separate groups. No shared duration is inferred.'}
  else if(hint.evidence==='flag'){hint.contextEvidence='isolated-flag';hint.contextMessage='Short flag evidence has no confirmed neighbouring beam path. Verify the flag count in the source.'}
  }
+ const original=Object.fromEntries(Object.entries(hints).map(([id,hint])=>[id,{...hint}]))
+ for(const note of notes){const hint=hints[note.id];if(hint.manualReviewed||hint.possibleDot||hint.clippedStem||hint.stemDirection==='unknown'||hint.value!=='quarter'||hint.beamBands||(hint.flagBands??0))continue
+  const peers=(hint.sharedStemNeighbours??[]).map(id=>original[id]).filter(peer=>peer&&!peer.possibleDot&&!peer.clippedStem&&peer.evidence==='beam'&&peer.beamBands>=1&&peer.beamBands<=2)
+  const bands=[...new Set(peers.map(peer=>peer.beamBands))]
+  if(bands.length===1){hint.beamBands=bands[0];hint.flagBands=0;hint.evidence='beam';hint.value=bands[0]===2?'sixteenth':'eighth';hint.contextRecovered='shared-stem';hint.recognitionWarnings=[...(hint.recognitionWarnings??[]),'Beam count recovered from the same continuous shared stem. Verify the stacked heads and duration against the source.']}
+  else if(hint.contextNeighbours?.length){hint.beamBands=1;hint.flagBands=0;hint.evidence='beam';hint.value='eighth';hint.contextRecovered='beam';hint.recognitionWarnings=[...(hint.recognitionWarnings??[]),'A connected primary beam supplies missing local evidence. Eighth is tentative; check partial secondary beams individually.']}
+ }
  return hints
 }
 export function unevenOnsetSpacing(notes:readonly NoteCandidate[],first:number,last:number):boolean{

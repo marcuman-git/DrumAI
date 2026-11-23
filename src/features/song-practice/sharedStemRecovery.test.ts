@@ -1,0 +1,7 @@
+import {expect,it,vi} from 'vitest'
+import {inspectRhythmContext} from './rhythmContext'
+import type {NoteCandidate} from './notationRecognition'
+vi.mock('./noteValueHints',()=>({inspectNoteValue:(_image:unknown,_staff:unknown,note:NoteCandidate)=>({value:note.id===1?'sixteenth':'quarter',manualReviewed:note.id===2,stemDirection:'up',beamBands:note.id===1?2:0,flagBands:0,evidence:note.id===1?'beam':'none',stemX:45,stemEnd:30,left:0,top:0,width:10,height:40})}))
+function sample(){const width=100,height=140,ink=new Uint8Array(width*height);for(let y=30;y<=100;y++)ink[y*width+45]=1;const notes:NoteCandidate[]=[70,100,85].map((y,id)=>({id,x:40,y,instrument:id?'Kick':'Snare',shape:'oval',strength:1,stemHint:true,flagHint:false}));return {image:{width,height,ink,angle:0,staffs:[]},notes}}
+it('recovers missing bands only through continuous shared-stem ink and retains a manually reviewed value',()=>{const {image,notes}=sample(),hints=inspectRhythmContext(image,{top:55,gap:10},notes);expect(hints[0].contextRecovered).toBe('shared-stem');expect(hints[0].value).toBe('sixteenth');expect(hints[1].value).toBe('sixteenth');expect(hints[2].value).toBe('quarter');expect(hints[2].manualReviewed).toBe(true)})
+it('does not borrow a duration across a broken stem',()=>{const {image,notes}=sample();for(let y=78;y<94;y++)image.ink[y*image.width+45]=0;const hints=inspectRhythmContext(image,{top:55,gap:10},notes.slice(0,2));expect(hints[0].contextRecovered).toBeUndefined();expect(hints[0].value).toBe('quarter')})
