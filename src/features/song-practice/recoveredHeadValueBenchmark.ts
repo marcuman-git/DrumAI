@@ -1,0 +1,5 @@
+import {benchmarkDenseHeads} from './denseHeadBenchmark'
+import {inspectNoteValue} from './noteValueHints'
+import type {ScaleSource} from './sourceScaleBenchmark'
+/** Uses automatic head positions; does not substitute manually labelled coordinates. */
+export function benchmarkRecoveredHeadValues(fixtures:readonly ScaleSource[]){return fixtures.map(f=>{const ink=new Uint8Array(f.width*f.height);for(const i of f.ink)ink[i]=1;const stemInk=f.stemInk?new Uint8Array(f.width*f.height):undefined;if(stemInk)for(const i of f.stemInk!)stemInk[i]=1;const image={width:f.width,height:f.height,ink,stemInk,angle:0,staffs:[f.staff]};const cases=benchmarkDenseHeads([f],true)[0].cases.map(c=>{const hint=c.detected?inspectNoteValue(image,f.staff,c.detected):null;return {...c,detectedValue:hint?.value??null,durationCorrect:hint?.value===c.reference.value,evidence:hint?.evidence??null}});return {source:f.source,dpi:f.dpi,cases,summary:{references:cases.length,recovered:cases.filter(c=>c.recovered).length,durationsCorrect:cases.filter(c=>c.durationCorrect).length}}})}
