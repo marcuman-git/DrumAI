@@ -23,3 +23,8 @@ it('gives open hi-hat a longer tail than closed hi-hat', () => {
   play('Hi-hat', 0, false, 0.3); play('Open hi-hat', 0, false, 0.3)
   expect(stops).toEqual([0.055, 0.35])
 })
+it('chokes existing cymbal attack and metal tails without cancelling future scheduled hits',()=>{
+ const gains:{gain:{setValueAtTime:ReturnType<typeof vi.fn>;exponentialRampToValueAtTime:ReturnType<typeof vi.fn>;cancelScheduledValues:ReturnType<typeof vi.fn>};connect:ReturnType<typeof vi.fn>}[]=[]
+ const context={sampleRate:1000,destination:{},createBuffer:()=>({getChannelData:()=>new Float32Array(600)}),createGain:()=>{const gain={gain:{setValueAtTime:vi.fn(),exponentialRampToValueAtTime:vi.fn(),cancelScheduledValues:vi.fn()},connect:vi.fn()};gains.push(gain);return gain},createBufferSource:()=>({connect:vi.fn(),start:vi.fn(),stop:vi.fn()}),createBiquadFilter:()=>({frequency:{value:0},Q:{value:0},connect:vi.fn()}),createOscillator:()=>({frequency:{value:0},connect:vi.fn(),start:vi.fn(),stop:vi.fn()})} as unknown as AudioContext
+ const play=createGroovePlayer(context);play('Ride',0,false,.3);play('Ride',.2,false,.3);play('Ride',.1,false,.3,'choke');expect(gains[0].gain.cancelScheduledValues).not.toHaveBeenCalled();for(const gain of gains.slice(1,3))expect(gain.gain.cancelScheduledValues).toHaveBeenCalledWith(.1);for(const gain of gains.slice(3,6))expect(gain.gain.cancelScheduledValues).not.toHaveBeenCalled()
+})
