@@ -8,8 +8,8 @@ export const SUPPORTED_REVIEW_RULES = [
   '4/4 and 2/4; 16 or 8 underlying timing slots per bar.',
   'Supported kit rows include bass/snare, toms, hi-hat/pedal, Crash and Ride.',
   'Supported cells: rest, normal stroke, ghost stroke and accent.',
-  'Confirmed reviewed durations include sixteenth, eighth, quarter and dotted eighth/quarter; counting is a separate display choice.',
-  'Adjacent within/across-bar ties support manual source review. Tuplets, flams, drags, repeats and other meters require manual interpretation.',
+  'Reviewed durations support long/dotted values,32nds/64ths and3:2 triplets; counting remains a separate display choice.',
+  'Adjacent ties, flam/drag grace groups and listed articulations support manual source review. MusicXML expands bounded repeats/endings; other meters and tuplets require manual preparation.',
   'PDF recognition is experimental; candidate strength is not recognition confidence.',
 ]
 export function barSignature(bar: ChartBar): string {
@@ -23,7 +23,7 @@ export function newChartReview(chart: SongChart): ChartReview { return { source:
 export function validChartReview(value: unknown, length: number): value is ChartReview {
   if (!value || typeof value !== 'object') return false
   const review = value as ChartReview
-  return typeof review.source === 'string' && review.source.length <= 120 && Array.isArray(review.bars) && review.bars.length === length && review.bars.every((bar) => bar && ['Pending', 'Uncertain', 'Reviewed'].includes(bar.status) && Number.isInteger(bar.page) && bar.page >= 1 && bar.page <= 999 && (bar.additionalPages === undefined || Array.isArray(bar.additionalPages) && bar.additionalPages.length <= 998 && bar.additionalPages.every(page=>Number.isInteger(page)&&page>=1&&page<=999)) && (bar.crops===undefined||Array.isArray(bar.crops)&&bar.crops.length<=16&&bar.crops.every(validSourceCrop)) && typeof bar.notes === 'string' && bar.notes.length <= 500 && typeof bar.signature === 'string' && bar.signature.length <= 24000)
+  return typeof review.source === 'string' && review.source.length <= 120 && Array.isArray(review.bars) && review.bars.length === length && review.bars.every((bar) => bar && ['Pending', 'Uncertain', 'Reviewed'].includes(bar.status) && Number.isInteger(bar.page) && bar.page >= 1 && bar.page <= 999 && (bar.additionalPages === undefined || Array.isArray(bar.additionalPages) && bar.additionalPages.length <= 998 && bar.additionalPages.every(page=>Number.isInteger(page)&&page>=1&&page<=999)) && (bar.crops===undefined||Array.isArray(bar.crops)&&bar.crops.length<=16&&bar.crops.every(validSourceCrop)) && typeof bar.notes === 'string' && bar.notes.length <= 500 && typeof bar.signature === 'string' && bar.signature.length <= 1000000)
 }
 export function reviewStatus(chart: SongChart, index: number): ReviewStatus {
   const review = chart.review?.bars[index]

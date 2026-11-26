@@ -7,7 +7,7 @@ export const REST_TEMPLATES = [
   { duration: 2 as const, rows: ['0011000','0111100','0011100','0001000','0001000','0010000','0010000','0010000','0100000'] },
   { duration: 1 as const, rows: ['0011000','0111100','0011100','0001000','0011000','0111100','0011100','0010000','0100000'] },
 ]
-export function detectRestHints(image: RecognitionImage, staff: StaffCandidate, heads: readonly { x: number; y: number }[] = []): RestCandidate[] {
+export function detectRestHints(image: RecognitionImage, staff: StaffCandidate, heads: readonly { x: number; y: number }[] = [],mode:'conservative'|'expanded'='conservative'): RestCandidate[] {
   if (!Number.isFinite(staff.top) || !Number.isFinite(staff.gap) || staff.gap < 4 || staff.gap > 80) throw new Error('Invalid staff geometry.')
   if (image.width * Math.min(image.height, staff.gap * 5) > 150000) throw new Error('Crop one smaller bar before detecting rest hints.')
   const found: RestCandidate[] = []; const scale = Math.max(1, Math.round(staff.gap / 5))
@@ -30,7 +30,7 @@ export function detectRestHints(image: RecognitionImage, staff: StaffCandidate, 
       }
     }
   }
-  const additional=sourceRestHints(image,staff,heads)
+  const additional=sourceRestHints(image,staff,heads,mode)
   for(const hint of additional)if(found.length<64&&!found.some(item=>Math.abs(item.x-hint.x)<staff.gap&&Math.abs(item.y-hint.y)<staff.gap*1.5))found.push({...hint,id:found.length})
   return found
 }

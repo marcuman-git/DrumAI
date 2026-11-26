@@ -27,8 +27,8 @@ it('preserves reviewed durations and creates ties at a crossing split', () => {
  const split=changeChartMeter(chart, '2/4');expect(isSongChart(split)).toBe(true);expect(split.bars[1].Snare![0]).toBe(0);expect(split.bars[1].rhythmEvents!.some(event=>event.step===0&&event.tieFromPrevious)).toBe(true)
 })
 it('refuses oversized splits and incomplete joins rather than dropping notes', () => {
- const chart = newSongChart(); chart.bars = Array.from({ length: 9 }, () => structuredClone(chart.bars[0]))
- expect(() => changeChartMeter(chart, '2/4')).toThrow(/exceed 16/)
+ const chart = newSongChart(); chart.bars = Array.from({ length: 129 }, () => structuredClone(chart.bars[0]))
+ expect(() => changeChartMeter(chart, '2/4')).toThrow(/exceed256/)
  const half = changeChartMeter(newSongChart(), '2/4'); half.bars.pop()
  expect(() => changeChartMeter(half, '4/4')).toThrow(/second 2\/4 bar/)
 })

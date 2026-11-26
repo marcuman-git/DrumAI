@@ -2,8 +2,8 @@ import {REAL_REST_TEMPLATES} from './realRestTemplates'
 import type {RecognitionImage,StaffCandidate} from './notationRecognition'
 import type {RestCandidate} from './restRecognition'
 /** Source-derived hints use shape and empty surroundings; they remain manually reviewed suggestions. */
-export function sourceRestHints(image:RecognitionImage,staff:StaffCandidate,heads:readonly {x:number;y:number}[]):RestCandidate[]{
- const at=(x:number,y:number)=>x>=0&&x<image.width&&y>=0&&y<image.height?image.ink[Math.round(y)*image.width+Math.round(x)]??0:0
+export function sourceRestHints(image:RecognitionImage,staff:StaffCandidate,heads:readonly {x:number;y:number}[],mode:'conservative'|'expanded'='conservative'):RestCandidate[]{
+ const at=(x:number,y:number)=>{const px=Math.round(x),py=Math.round(y);return px>=0&&px<image.width&&py>=0&&py<image.height?image.ink[py*image.width+px]??0:0}
  const onStaff=(y:number)=>Array.from({length:5},(_,i)=>staff.top+i*staff.gap).some(line=>Math.abs(y-line)<=1)
  const found:RestCandidate[]=[]
  for(const template of REAL_REST_TEMPLATES)for(const xSize of [.7,.85,1])for(const ySize of [.85,1,1.15]){
@@ -15,7 +15,7 @@ export function sourceRestHints(image:RecognitionImage,staff:StaffCandidate,head
    let hits=0,expected=0,extra=0,empty=0
    template.rows.forEach((row,dy)=>{const py=y+Math.round(dy*sy);if(onStaff(py))return;for(let dx=0;dx<row.length;dx++){const dark=at(x+Math.round(dx*sx),py);if(row[dx]==='1'){expected++;hits+=dark}else{empty++;extra+=dark}}})
    const score=expected>=20&&empty>=40?hits/expected-extra/empty*.7:0
-   if(score<.84)continue
+   if(score<(mode==='expanded'?.7:.84))continue
    let marginInk=0,marginTotal=0
    for(let yy=y;yy<=y+h;yy++){if(onStaff(yy))continue;for(const xx of [x-2,x-1,x+w,x+w+1]){marginInk+=at(xx,yy);marginTotal++}}
    if(marginTotal&&marginInk/marginTotal>.12)continue

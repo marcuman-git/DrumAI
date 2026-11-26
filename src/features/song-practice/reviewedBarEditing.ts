@@ -1,3 +1,4 @@
+import {sameTime} from './rhythmTime'
 import { reviewAfterBarEdits } from './chartReviewLogic'
 import type { SongChart } from './songChartLogic'
 import type { RhythmEvent } from './rhythmTypes'
@@ -5,8 +6,8 @@ import { barSlots } from './chartMeter'
 import { checkReviewedRhythm, reviewedBar, validReviewedBar } from './reviewedRhythm'
 export function reviewedEditTieIssues(chart:SongChart,index:number,events:RhythmEvent[]) {
  const previous=chart.bars[index-1],slots=barSlots(chart.bars[index])
- const incoming=events.flatMap((event,position)=>event.tieFromPrevious&&(event.kind!=='note'||!events.some(note=>note.instrument===event.instrument&&note.kind==='note'&&note.step+note.duration===event.step)&&!(event.step===0&&previous?.rhythmEvents?.some(note=>note.instrument===event.instrument&&note.kind==='note'&&note.step+note.duration===barSlots(previous))))?[`Event ${position+1}: ${event.instrument} tie has no adjacent preceding note.`]:[])
- const outgoing=chart.bars[index+1]?.rhythmEvents?.filter(event=>event.step===0&&event.tieFromPrevious&&!events.some(note=>note.instrument===event.instrument&&note.kind==='note'&&note.step+note.duration===slots)).map(event=>event.instrument)??[]
+ const incoming=events.flatMap((event,position)=>event.tieFromPrevious&&(event.kind!=='note'||!events.some(note=>note.instrument===event.instrument&&note.kind==='note'&&sameTime(note.step+note.duration,event.step))&&!(event.step===0&&previous?.rhythmEvents?.some(note=>note.instrument===event.instrument&&note.kind==='note'&&sameTime(note.step+note.duration,barSlots(previous)))))?[`Event ${position+1}: ${event.instrument} tie has no adjacent preceding note.`]:[])
+ const outgoing=chart.bars[index+1]?.rhythmEvents?.filter(event=>event.step===0&&event.tieFromPrevious&&!events.some(note=>note.instrument===event.instrument&&note.kind==='note'&&sameTime(note.step+note.duration,slots))).map(event=>event.instrument)??[]
  return {incoming,outgoing}
 }
 /** Validate both bar boundaries before atomically replacing an applied review. */

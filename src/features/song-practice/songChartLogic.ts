@@ -24,7 +24,7 @@ export function isSongChart(value: unknown): value is SongChart {
   if (!value || typeof value !== 'object') return false
   const chart = value as SongChart
   return typeof chart.id === 'string' && chart.id.length > 0 && chart.id.length <= 120 && typeof chart.title === 'string' && chart.title.trim().length > 0 && chart.title.length <= 80
-    && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 16
+    && Number.isInteger(chart.bpm) && chart.bpm >= 40 && chart.bpm <= 240 && Array.isArray(chart.bars) && chart.bars.length >= 1 && chart.bars.length <= 256
     && chart.bars.every((bar, index) => bar && (bar.beats === undefined || [2, 4].includes(bar.beats)) && (bar.beats === 2 ? 8 : 16) === chartSlots(chart) && validReviewedBar(bar, chart.bars[index - 1]) && CHART_INSTRUMENTS.every((instrument) => (!isCoreInstrument(instrument) && bar[instrument] === undefined) || (Array.isArray(bar[instrument]) && bar[instrument]!.length === 16 && bar[instrument]!.every((note, step) => Number.isInteger(note) && note >= 0 && note <= 3 && (step < chartSlots(chart) || note === 0)))))
     && validPickup(chart)
     && (chart.meter === undefined || ['2/4', '4/4'].includes(chart.meter))
@@ -50,7 +50,7 @@ export function saveSongCharts(charts: SongChart[]): void {
   localStorage.setItem(KEY, JSON.stringify(charts))
 }
 export function parseSongChart(raw: string): SongChart {
-  if (new Blob([raw]).size > 2 * 1024 * 1024) throw new Error('Chart file exceeds 2 MB.')
+  if (new Blob([raw]).size > 20 * 1024 * 1024) throw new Error('Chart file exceeds 20 MB.')
   const value = JSON.parse(raw) as { app?: unknown; schema?: unknown; chart?: unknown }
   if (!value || value.app !== 'DrumMaster AI Chart' || value.schema !== 1 || !isSongChart(value.chart)) throw new Error('Invalid drum chart file.')
   return { ...value.chart, id: crypto.randomUUID() }

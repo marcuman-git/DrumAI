@@ -1,3 +1,4 @@
+import {sameTime} from './rhythmTime'
 import { reviewAfterBarEdits } from './chartReviewLogic'
 import { CHART_INSTRUMENTS, notesFor } from './chartKit'
 import type { ChartBar, ChartInstrument } from './chartKit'
@@ -6,7 +7,7 @@ import { checkReviewedRhythm, reviewedBar, validReviewedBar } from './reviewedRh
 const slots=(bar:ChartBar)=>bar.beats===2?8:16
 export function boundaryTieVoices(bars:ChartBar[], index:number):ChartInstrument[] {
  if(index<1||!bars[index]?.rhythmEvents||!bars[index-1]?.rhythmEvents)return []
- return CHART_INSTRUMENTS.filter(instrument=>bars[index].rhythmEvents!.some(event=>event.instrument===instrument&&event.step===0&&event.kind==='note')&&bars[index-1].rhythmEvents!.some(event=>event.instrument===instrument&&event.kind==='note'&&event.step+event.duration===slots(bars[index-1])))
+ return CHART_INSTRUMENTS.filter(instrument=>bars[index].rhythmEvents!.some(event=>event.instrument===instrument&&event.step===0&&event.kind==='note')&&bars[index-1].rhythmEvents!.some(event=>event.instrument===instrument&&event.kind==='note'&&sameTime(event.step+event.duration,slots(bars[index-1]))))
 }
 /** Called only after the user compares both bar ends with the source. */
 export function setBoundaryTie(chart:SongChart,index:number,instrument:ChartInstrument,tied:boolean):SongChart {
@@ -28,7 +29,7 @@ export function detachOrphanBoundaryTies(chart:SongChart, previousChart?:SongCha
   const oldPrevious=previousChart?.bars[oldIndex>=0?oldIndex-1:index-1]
   const structuralChange=!!previousChart&&(previousChart.meter??'4/4')===(chart.meter??'4/4')&&previousChart.bars.length!==chart.bars.length
   const adjacencyChanged=structuralChange&&(oldIndex<0||oldPrevious!==previous)
-  const updated=events.map(event=>event.step===0&&event.tieFromPrevious&&(adjacencyChanged||!previous?.rhythmEvents?.some(note=>note.instrument===event.instrument&&note.kind==='note'&&note.step+note.duration===slots(previous)))?{...event,tieFromPrevious:false}:event)
+  const updated=events.map(event=>event.step===0&&event.tieFromPrevious&&(adjacencyChanged||!previous?.rhythmEvents?.some(note=>note.instrument===event.instrument&&note.kind==='note'&&sameTime(note.step+note.duration,slots(previous))))?{...event,tieFromPrevious:false}:event)
   if(updated.every((event,position)=>event===events[position]))return bar
   changed=true
   return {...bar,...Object.fromEntries(CHART_INSTRUMENTS.map(instrument=>[instrument,notesFor(bar,instrument).map((note,step)=>step===0?updated.find(event=>event.instrument===instrument&&event.step===0&&event.kind==='note'&&!event.tieFromPrevious)?.dynamic??note:note)])),rhythmEvents:updated}

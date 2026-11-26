@@ -1,3 +1,4 @@
+import {decomposeTime} from './rhythmTime'
 import { restructureReview } from './chartReviewLogic'
 import { CHART_INSTRUMENTS, completeBar, notesFor } from './chartKit'
 import type { ChartBar } from './chartKit'
@@ -10,7 +11,7 @@ export function chartSlots(chart: SongChart) { return chart.meter === '2/4' ? 8 
 /** Decompose unusual split fragments into supported values; note fragments continue with ties. */
 function fragments(event:RhythmEvent,start:number,length:number,continuation:boolean):RhythmEvent[] {
  const result:RhythmEvent[]=[]
- while(length){const duration=([6,4,3,2,1] as const).find(value=>value<=length)!;result.push({...event,step:start,duration,...(event.kind==='note'?{tieFromPrevious:continuation}: {tieFromPrevious:undefined})});start+=duration;length-=duration;continuation=event.kind==='note'}
+ for(const fragment of decomposeTime(start,length)){result.push({...event,...fragment,...(event.kind==='note'?{tieFromPrevious:continuation,...(continuation?{grace:undefined}:{})}:{tieFromPrevious:undefined})});continuation=event.kind==='note'}
  return result
 }
 export function changeChartMeter(chart: SongChart, meter: ChartMeter): SongChart {
@@ -19,7 +20,7 @@ export function changeChartMeter(chart: SongChart, meter: ChartMeter): SongChart
  if(!chart.bars.every((bar,index)=>validReviewedBar(bar,chart.bars[index-1])))throw new Error('Resolve invalid reviewed rhythm before meter conversion.')
  const bars: ChartBar[] = []; const labels: string[] = []
  if (meter === '2/4') {
-  if (chart.bars.length > 8) throw new Error('Splitting would exceed 16 bars. Use a shorter chart first.')
+  if (chart.bars.length > 128) throw new Error('Splitting would exceed256 bars. Use a shorter chart first.')
   chart.bars.forEach((bar, index) => {
    for (const offset of [0, 8]) {
     let half: ChartBar = { ...completeBar(), beats: 2 }

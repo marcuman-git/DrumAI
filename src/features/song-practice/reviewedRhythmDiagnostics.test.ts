@@ -25,7 +25,7 @@ it('fills only the first gap with explicit rests and preserves notes and other v
 })
 it('fills a new voice explicitly but never exceeds the event limit', () => {
  expect(fillNextReviewedGap([], 'Kick')).toHaveLength(4)
- const full = Array.from({ length: 192 }, () => ({ ...event }))
+ const full = Array.from({ length: 4096 }, () => ({ ...event }))
  expect(fillNextReviewedGap(full, 'Kick')).toEqual(full)
 })
 it('diagnoses and fills 2/4 gaps without introducing slots beyond beat two', () => {
