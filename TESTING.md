@@ -1,29 +1,11 @@
-# DrumMaster AI Testing
+# Testing
 
-## Plug-and-Play (No Local Browser/System Setup)
+Run `npm ci`, `npm run test:unit`, and `npm run build`. Browser tests: `npx playwright install --with-deps chromium`, then `npm run test:e2e`. Existing GitHub Actions and Docker workflows remain available; upload the entire release before running them.
 
-### Option A: GitHub Actions (No local execution)
-1. Push branch to GitHub.
-2. Open Actions tab.
-3. Run **DrumMaster AI Tests** workflow (or let it run on push/PR).
+The source regression report runs from the repository root: `node tools/realSourceRecognitionBenchmark.mjs REAL_SOURCE_VALIDATION.json`. These labelled-source crops and rendering scales measure covered cases; they do not establish general transcription accuracy. Expanded rest scanning has a separate unit regression using previously examined Baba crops; these cases are development data for that mode.
 
-This runs:
-- Unit tests (Vitest)
-- E2E tests (Playwright)
-- Production build
+Verify advanced MusicXML round trips, triplet/fine timing, simultaneous voices, grace/articulation metadata, repeat endings and fractional meter conversion. Verify old charts still load, structural edits preserve source references, and unapplied review edits require confirmation.
 
-### Option B: Docker one-command run
-From project root:
+Check full backup export/restore, malformed imports, unrelated storage exclusion and transaction failure recovery. Keep the automatic safety copy when testing replacement restores. Compare profile, libraries, chart notes and history after reloading.
 
-```bash
-docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tester
-```
-
-No local Playwright browser deps are required.
-
-## Local (optional)
-```bash
-npm run test:unit
-npm run test:e2e
-npm run test:coverage
-```
+Before stable release, complete `RELEASE_READINESS.md`: physical audio, microphone, MIDI hotplug/latency, navigation cleanup, browser/mobile accessibility, offline launch and update behavior. Device-free tests cannot certify those checks.
