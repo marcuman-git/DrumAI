@@ -131,6 +131,8 @@ export default function App() {
   const hydrate = useAppStore((state) => state.hydrate)
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
   const [online, setOnline] = useState(navigator.onLine)
+  const [storageFailed,setStorageFailed]=useState(false)
+  const [updateReady,setUpdateReady]=useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [profile, setProfile] = useState<UserProfile | null>(null)
 
@@ -160,6 +162,10 @@ export default function App() {
       setInstallEvent(event as BeforeInstallPromptEvent)
     }
 
+    const onStorageFailed=()=>setStorageFailed(true)
+    const onUpdate=()=>setUpdateReady(true)
+    window.addEventListener('drummaster-storage-unavailable',onStorageFailed)
+    window.addEventListener('drummaster-update-ready',onUpdate)
     const onOnline = () => setOnline(true)
     const onOffline = () => setOnline(false)
 
@@ -168,6 +174,8 @@ export default function App() {
     window.addEventListener('offline', onOffline)
 
     return () => {
+      window.removeEventListener('drummaster-storage-unavailable',onStorageFailed)
+      window.removeEventListener('drummaster-update-ready',onUpdate)
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
@@ -188,6 +196,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#1f2937_0%,_#09090b_35%,_#030712_100%)] text-zinc-100">
       <div className="mx-auto max-w-[1450px] p-4 md:p-6">
+        {storageFailed&&<p role="alert">Practice changes could not be saved. Download a backup and check browser storage before closing.</p>}
+        {updateReady&&<div role="status"><p>Update available. Stop playback and save your work before reloading.</p><button onClick={()=>window.dispatchEvent(new Event('drummaster-apply-update'))}>Reload for update</button></div>}
         <header className="mb-4 rounded-2xl border border-white/10 bg-black/35 p-4 backdrop-blur-xl">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -195,22 +205,22 @@ export default function App() {
                 <Drum size={20} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">DrumMaster AI - BETA</h1>
+                <h1 className="text-2xl font-bold tracking-tight">DrumMaster AI — v1.0 RC</h1>
                 <p className="text-sm text-zinc-400">
-                  The definitive AI-powered ecosystem for timing, technique, groove, musicality, and performance.
+                  Local drum practice, timing feedback, score review and training plans.
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <div className={`rounded-lg border px-3 py-1 text-xs ${statusTone}`}>{online ? 'Online Sync Ready' : 'Offline Mode Active'}</div>
+              <div className={`rounded-lg border px-3 py-1 text-xs ${statusTone}`}>{online ? 'Online — local data' : 'Offline Mode Active'}</div>
               <div className="rounded-lg border border-violet-300/25 px-3 py-1 text-xs text-violet-100">
                 <PlugZap size={12} className="mr-1 inline" />
                 MIDI + Audio Analysis
               </div>
               <button
                 type="button"
-                onClick={() => void installEvent?.prompt()}
+                disabled={!installEvent} onClick={() => void installEvent?.prompt()}
                 className="rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100"
               >
                 <Download size={12} className="mr-1 inline" /> Install PWA
@@ -222,7 +232,7 @@ export default function App() {
               >
                 <UserRoundCog size={12} className="mr-1 inline" /> {profile ? 'Edit Profile' : 'Start Onboarding'}
               </button>
-              <button type="button" className="rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-200">
+              <button type="button" onClick={()=>setActiveModule('coach')} className="rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-200">
                 <Bell size={12} className="mr-1 inline" /> Daily Plan
               </button>
             </div>
