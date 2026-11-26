@@ -36,53 +36,26 @@ const initialState: Omit<
 > = {
   activeModule: 'dashboard',
   summary: {
-    todayGoalMinutes: 90,
-    todayCompletedMinutes: 62,
-    streakDays: 19,
-    weeklyProgressPercent: 73,
-    totalPracticeHours: 412,
-    timingAccuracy: 95,
-    bestBpm: 212,
+    todayGoalMinutes: 20,
+    todayCompletedMinutes: 0,
+    streakDays: 0,
+    weeklyProgressPercent: 0,
+    totalPracticeHours: 0,
+    timingAccuracy: 0,
+    bestBpm: 0,
   },
   skills: [
-    { key: 'timing', label: 'Timing', value: 95 },
-    { key: 'coordination', label: 'Coordination', value: 87 },
-    { key: 'dynamics', label: 'Dynamics', value: 81 },
-    { key: 'reading', label: 'Reading', value: 78 },
-    { key: 'speed', label: 'Speed', value: 90 },
-    { key: 'overall', label: 'Overall', value: 86 },
+    { key: 'timing', label: 'Timing', value: 0 },
+    { key: 'coordination', label: 'Coordination', value: 0 },
+    { key: 'dynamics', label: 'Dynamics', value: 0 },
+    { key: 'reading', label: 'Reading', value: 0 },
+    { key: 'speed', label: 'Speed', value: 0 },
+    { key: 'overall', label: 'Overall', value: 0 },
   ],
   hits: [],
   micLevel: 0,
-  achievements: [
-    {
-      id: 'first-practice',
-      title: 'First Practice',
-      description: 'Completed your first focused session.',
-      earnedAt: '2026-10-14',
-    },
-    {
-      id: 'streak-7',
-      title: '7-Day Streak',
-      description: 'Practiced 7 days in a row.',
-      earnedAt: '2026-10-18',
-    },
-    {
-      id: 'timing-wizard',
-      title: 'Timing Wizard',
-      description: 'Reached 95% timing accuracy.',
-      earnedAt: '2026-10-21',
-    },
-  ],
-  insights: [
-    {
-      id: 'coach-1',
-      createdAt: new Date().toISOString(),
-      focus: 'timing',
-      recommendation:
-        'Your left hand trails by an average of 11ms above 135 BPM. Run paradiddle inversion training at 120 BPM for 10 minutes.',
-    },
-  ],
+  achievements: [],
+  insights: [],
 }
 
 let isHydrated = false
@@ -127,7 +100,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     isHydrated = true
 
     const stored = await loadState<PersistedState>()
-    if (!stored) return
+    if (!stored||!stored.summary||!Object.values(stored.summary).every(value=>typeof value==='number'&&Number.isFinite(value)&&value>=0)||!Array.isArray(stored.skills)||!Array.isArray(stored.hits)||!Array.isArray(stored.achievements)||!Array.isArray(stored.insights)||typeof stored.activeModule!=='string') return
 
     set({
       activeModule: stored.activeModule,
