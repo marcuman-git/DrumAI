@@ -1,16 +1,12 @@
 import { get, set } from 'idb-keyval'
-
 const KEY = 'drummaster-ai-state-v1'
-
-export async function saveState<T>(value: T): Promise<void> {
-  await set(KEY, value)
-  localStorage.setItem(KEY, JSON.stringify(value))
+let writes:Promise<void>=Promise.resolve()
+export function saveState<T>(value:T):Promise<void>{
+ const copy=JSON.stringify(value)
+ writes=writes.catch(()=>{}).then(async()=>{let saved=false;try{await set(KEY,JSON.parse(copy));saved=true}catch{/* local fallback */}try{localStorage.setItem(KEY,copy);saved=true}catch{/* database may still have committed */}if(!saved)window.dispatchEvent(new Event('drummaster-storage-unavailable'))})
+ return writes
 }
-
-export async function loadState<T>(): Promise<T | null> {
-  const fromDb = await get<T>(KEY)
-  if (fromDb) return fromDb
-
-  const fromLocal = localStorage.getItem(KEY)
-  return fromLocal ? (JSON.parse(fromLocal) as T) : null
+export async function loadState<T>():Promise<T|null>{
+ try{const value=await get<T>(KEY);if(value&&typeof value==='object')return value}catch{/* local fallback */}
+ try{const raw=localStorage.getItem(KEY),value=raw?JSON.parse(raw):null;return value&&typeof value==='object'?value:null}catch{return null}
 }
