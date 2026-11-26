@@ -1,3 +1,4 @@
+import {FullBackupPanel} from './FullBackupPanel'
 import { useMemo, useState } from 'react'
 import type { PracticeEvent } from '../../core/types/drumming'
 import { GlassCard } from '../../shared/components/GlassCard'
@@ -52,7 +53,7 @@ export function BackupPanel({ events, onRestored }: { events: PracticeEvent[]; o
     finally { setBusy(false) }
   }
   return <GlassCard layout={false} className="space-y-3">
-    <h3 className="text-lg font-semibold">Session Export + Practice Backup</h3>
+    <FullBackupPanel/><h3 className="text-lg font-semibold">Session Export + Practice Backup</h3>
     <p className="text-xs text-zinc-400">Backup includes practice events and journal reflections, including test events. It does not include profile, preferences, saved exercises, playlists, personal-record caches, or audio/video. No server upload is used.</p>
     <label className="block text-sm">Export session<select aria-label="Export session" disabled={busy} value={sessionId} onChange={(event) => setSessionId(event.target.value)} className="mt-1 w-full rounded-lg border border-white/20 bg-zinc-900 p-2"><option value="">All completed sessions (CSV)</option>{sessions.map((session) => <option key={session.id} value={session.id}>{new Date(session.started).toLocaleString()} / {session.module} / {session.minutes} min</option>)}</select></label>
     <div className="flex flex-wrap gap-2"><button disabled={busy} onClick={() => void exportFile('csv')} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Export sessions CSV</button><button disabled={busy || !sessionId} onClick={() => void exportFile('session')} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Export session JSON</button><button disabled={busy} onClick={() => void exportFile('backup')} className="rounded bg-cyan-700 px-3 py-2 disabled:opacity-40">Download practice backup</button></div>
