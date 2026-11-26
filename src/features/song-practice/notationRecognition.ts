@@ -71,6 +71,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   if (existing) return existing.map((note) => ({ ...note }))
   const { width, height, ink } = image; const notes: NoteCandidate[] = []
   const at = (x: number, y: number) => x >= 0 && x < width && y >= 0 && y < height ? ink[Math.round(y) * width + Math.round(x)] ?? 0 : 0
+  const crossAt=(x:number,y:number)=>{if(at(x,y))return 1;if(!options.denseHeads||staff.gap>=7||!image.stemInk||x<2||x>=width-2||y<0||y>=height)return 0;const row=Math.round(y)*width,column=Math.round(x);return image.stemInk[row+column]&&!(image.stemInk[row+column-2]&&image.stemInk[row+column+2])?1:0}
   const halfX = Math.max(2, Math.round(staff.gap * 0.48 * headScale)); const halfY = Math.max(2, Math.round(staff.gap * 0.3 * headScale))
   const oval: [number, number][] = []; const cross: [number, number][] = []
   let ovalArea = 0
@@ -101,7 +102,7 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
       let bestScore = -1; let bestY = y
       for (let shift = -tolerance; shift <= tolerance; shift++) {
         const centerY = y + shift; let dark = 0; let area = ovalArea; let usefulRows = 0
-        if (crossHead) { for (const [dx, dy] of cross) dark += Math.max(at(x + dx, centerY + dy - 1), at(x + dx, centerY + dy), at(x + dx, centerY + dy + 1)) }
+        if (crossHead) { for (const [dx, dy] of cross) dark += Math.max(crossAt(x + dx, centerY + dy - 1), crossAt(x + dx, centerY + dy), crossAt(x + dx, centerY + dy + 1)) }
         else { for (const [dy, radius] of oval) { const rowY = centerY + dy; const sums = rowPrefix(rowY)
           if (options.cleanHeads && sums) {
             const line = staffLines.some((line) => Math.abs(line - rowY) <= 1)
@@ -168,7 +169,8 @@ export function findNoteCandidates(image: RecognitionImage, staff: StaffCandidat
   }).sort((a,b)=>b.strength-a.strength).filter((note, index, all) => !all.some((other, otherIndex) => otherIndex < index && note.shape === 'cross' && other.shape === 'cross' && other.instrument === note.instrument && Math.abs(other.x - note.x) < staff.gap * Math.max(0.7,1.1*headScale) && Math.abs(other.y - note.y) < staff.gap * 0.8))
   const symbolNotes = centeredNotes.map(note => note.shape === 'cross' && hasCircledCymbalHead(image, staff, note.x, note.y) ? { ...note, symbolHint: 'circled-cross' as const } : note)
   const result = symbolNotes.map((original) => { const note: NoteCandidate = original.shape === 'cross' && ['Hi-hat', 'Ride', 'Crash'].includes(original.instrument) && hasIsolatedCymbalLedger(image, staff, original.x, original.y) ? { ...original, cymbalHint: 'ledger-cross', sourceLabel: (original.sourceLabel ?? original.instrument) + '; possible crossed ledger line: check Crash against source legend' } : original; if (note.symbolHint === 'circled-cross' || note.instrument !== 'Hi-hat') return note; const mark = inspectHatMark(image, staff, note.x, note.y); return mark === 'open' ? { ...note, articulationHint: mark, instrument: 'Open hi-hat' as ChartInstrument, sourceLabel: 'Open hi-hat suggestion: possible open circle; verify' } : mark === 'half-open' ? { ...note, articulationHint: mark, sourceLabel: 'Possible half-open hi-hat marker; playback remains closed hi-hat; verify manually' } : note }).filter((note) => !options.cleanHeads || note.shape !== 'cross' || !centeredNotes.some((other) => other.shape === 'cross' && other.strength > note.strength + 0.02 && Math.abs(other.x - note.x) <= staff.gap * Math.max(0.6,0.9*headScale) && Math.abs(other.y - note.y) <= staff.gap * 0.8)).filter((note) => note.shape !== 'oval' || !notes.some((other) => other.shape === 'oval' && other.strength > note.strength + (options.cleanHeads ? 0.02 : 0.12) && Math.abs(other.x - note.x) <= staff.gap * 0.65 && Math.abs(other.y - note.y) <= staff.gap * (options.cleanHeads ? 0.8 : 0.6))).sort((a, b) => a.x - b.x)
-  const filtered=options.denseHeads?result.filter((note,index,all)=>!all.some((other,j)=>j<index&&note.shape==='oval'&&other.shape==='oval'&&Math.abs(note.x-other.x)<staff.gap*.65&&Math.abs(note.y-other.y)<staff.gap*.65&&other.strength>=note.strength)):result
+  const lowResolutionNotes=options.denseHeads&&staff.gap<7?result.filter(note=>note.shape!=='cross'||note.strength>=.85||!staffLines.some(line=>Math.abs(line-note.y)<=1.5)):result
+  const filtered=options.denseHeads?lowResolutionNotes.filter((note,index,all)=>!all.some((other,j)=>j<index&&note.shape==='oval'&&other.shape==='oval'&&Math.abs(note.x-other.x)<staff.gap*.65&&Math.abs(note.y-other.y)<staff.gap*.65&&other.strength>=note.strength)):lowResolutionNotes
   const entries = cache ?? new Map<string, NoteCandidate[]>()
   if (entries.size >= 8) entries.delete(entries.keys().next().value!)
   entries.set(key, filtered); candidateCache.set(image, entries)

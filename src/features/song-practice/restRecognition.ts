@@ -1,5 +1,6 @@
+import {sourceRestHints} from './sourceRestMatching'
 import type { RecognitionImage, StaffCandidate } from './notationRecognition'
-export interface RestCandidate { id: number; x: number; y: number; duration: 1 | 2 | 4; strength: number }
+export interface RestCandidate { id: number; x: number; y: number; duration: 1 | 2 | 4; strength: number;sourceTemplate?:boolean;bounds?:{left:number;top:number;width:number;height:number} }
 // Conservative template hints, not a general OCR model. Staff lines are excluded.
 export const REST_TEMPLATES = [
   { duration: 4 as const, rows: ['0001000','0011000','0001100','0000110','0001100','0011000','0010000','0011000','0001100'] },
@@ -24,10 +25,12 @@ export function detectRestHints(image: RecognitionImage, staff: StaffCandidate, 
         if (pixel === '1') { expected++; if (ink) hit++ } else { empty++; if (ink) extra++ }
       }))
       const score = expected >= 10 && empty > 0 ? hit / expected - extra / empty : 0
-      if (score >= 0.9 && !found.some((item) => Math.abs(item.x - (x + 3 * scale)) < 7 * scale && Math.abs(item.y - (y + 4 * scale)) < 9 * scale)) found.push({ id: found.length, x: x + 3 * scale, y: y + 4 * scale, duration: template.duration, strength: score })
+      if (score >= 0.9 && !found.some((item) => Math.abs(item.x - (x + 3 * scale)) < 7 * scale && Math.abs(item.y - (y + 4 * scale)) < 9 * scale)) found.push({ id: found.length, x: x + 3 * scale, y: y + 4 * scale, duration: template.duration, strength: score,bounds:{left:x,top:y,width:7*scale,height:9*scale} })
       if (found.length >= 64) return found
       }
     }
   }
+  const additional=sourceRestHints(image,staff,heads)
+  for(const hint of additional)if(found.length<64&&!found.some(item=>Math.abs(item.x-hint.x)<staff.gap&&Math.abs(item.y-hint.y)<staff.gap*1.5))found.push({...hint,id:found.length})
   return found
 }

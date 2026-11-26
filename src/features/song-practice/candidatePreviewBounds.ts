@@ -1,6 +1,6 @@
 import type { NoteCandidate, StaffCandidate } from './notationRecognition'
 import type { NoteValueHint } from './noteValueHints'
-export interface CandidatePreviewSource { pixels: Uint8ClampedArray; width: number; height: number; angle: number; staff?: StaffCandidate }
+export interface CandidatePreviewSource { pixels: Uint8ClampedArray; width: number; height: number; angle: number; staff?: StaffCandidate;threshold?:number }
 export function sourcePoint(x:number,y:number,source:Pick<CandidatePreviewSource,'width'|'angle'>) {
  return {x,y:y+Math.tan(source.angle*Math.PI/180)*(x-source.width/2)}
 }
