@@ -1,0 +1,6 @@
+import {afterEach,expect,it,vi} from 'vitest'
+import {connectMidi} from './midiService'
+afterEach(()=>vi.unstubAllGlobals())
+it('reconciles hotplug, ignores note-off, uses event timing and cleans up',async()=>{
+ const input=Object.assign(new EventTarget(),{state:'connected',name:'Test pad'}),second=Object.assign(new EventTarget(),{state:'connected',name:'Second pad'}),access=Object.assign(new EventTarget(),{inputs:new Map([['one',input]])});vi.stubGlobal('navigator',{requestMIDIAccess:vi.fn(async()=>access)});const hit=vi.fn(),stop=await connectMidi(hit);const send=(target:EventTarget,status:number,time:number)=>(()=>{const event=new Event('midimessage');Object.defineProperties(event,{data:{value:new Uint8Array([status,38,90])},timeStamp:{value:time}});return target.dispatchEvent(event)})();send(input,0x80,5);expect(hit).not.toHaveBeenCalled();send(input,0x90,20);expect(hit.mock.calls[0][0].timestamp).toBe(20);access.inputs.set('two',second);access.dispatchEvent(new Event('statechange'));send(second,0x90,10);expect(hit.mock.calls[1][0].timestamp).toBe(20);input.state='disconnected';access.dispatchEvent(new Event('statechange'));send(input,0x90,30);expect(hit).toHaveBeenCalledTimes(2);stop();send(second,0x90,40);expect(hit).toHaveBeenCalledTimes(2)
+})
