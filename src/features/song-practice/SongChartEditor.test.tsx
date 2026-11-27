@@ -1,6 +1,6 @@
 import { blankBar, newSongChart } from './songChartLogic'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { SongChartEditor } from './SongChartEditor'
 vi.mock('../../core/services/storage/practiceEvents', () => ({ startPracticeSession: vi.fn(() => 'chart-session'), stopPracticeSession: vi.fn(), trackPracticeEvent: vi.fn(async () => undefined) }))
 class AudioMock {
@@ -15,7 +15,12 @@ class AudioMock {
   createBufferSource() { return { buffer: null, connect: vi.fn(), start: vi.fn(), stop: vi.fn() } }
   createBiquadFilter() { return { type: '', frequency: { value: 0 }, Q: { value: 0 }, connect: vi.fn() } }
 }
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); localStorage.removeItem('drummaster-song-charts-v1') })
+const clearEditorStorage = () => {
+  for (const key of ['drummaster-song-charts-v1', 'drummaster-song-practice-workspace-v1', 'drummaster-song-practice-views-v1', 'drummaster-visible-chart-instruments']) localStorage.removeItem(key)
+}
+// Each editor case starts from a clean device, even with an older shared setup file.
+beforeEach(clearEditorStorage)
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); clearEditorStorage() })
 describe('Song Chart editor', () => {
   it('edits cells, duplicates bars, and retains multiple named saves', () => {
     render(<SongChartEditor initialWorkspaceMode="edit" />)
