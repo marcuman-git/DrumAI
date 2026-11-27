@@ -848,3 +848,9 @@ Chromium downloaded, but browser execution could not start because host librarie
 - Added same-center competing-identity protection, explicit distinct-head selection, difficult-duration alternatives, conversion-issue filtering, labelled/focusable mobile grid and a mobile regression.
 - Added Highway complete-bar timing evidence at four scales.232 timing references across20 source cases; six72-DPI durations require explicit review, six unmatched detections remain reported. Existing source guards pass.
 - 561 unit tests across161 files, production build and lint with0 errors/32 existing warnings pass. Browser launch blocked by missing libatk runtime; hardware/audio/offline checks remain pending. Complete install/testing details in PLAYBACK_ALIGNMENT.md. One rc4 upload over complete rc3; no dependency additions, workflow or chart-schema changes.
+
+### v1.0.0-rc.5 — continuous drummer score (2026-11-27)
+
+- Combined continuous dark percussion notation, responsive rows/zoom/following, direct fine-onset selection, normalized loop passages, compact participating-voice mix and collapsed training/source tools in a practice-first workspace. Detailed edit/review remains available.
+- Added validated latest-chart autosave and per-song practice preferences/positions, quick save/open, selected percussion-part MusicXML import with scoped identity mappings, and a four-bar94-BPM Back in Black excerpt manually encoded from the supplied screenshot. Source navigation now opens/passes requests to the matching PDF viewer.
+-569 tests across164 files, production build and source regression guards pass. Lint0 errors/32 existing warnings. Silent three-count-mode visual preview verified; browser runtime libraries unavailable locally. Device/audio/offline checks remain manual. Full scope and install instructions in DRUMMER_SCORE.md. One combined update over rc4; no package dependencies, workflow or chart-schema changes.

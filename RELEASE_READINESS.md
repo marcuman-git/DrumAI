@@ -1,4 +1,4 @@
-# v1.0.0-rc.4 release readiness
+# v1.0.0-rc.5 release readiness
 
 ## Combined release scope
 
@@ -17,7 +17,7 @@ The phantom-rest correction and its verification are described in REST_NOTATION_
 
 ## Automated evidence
 
-561 unit tests pass across161 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
+569 unit tests pass across164 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
 
 ## Required checks before stable v1.0
 
@@ -36,3 +36,7 @@ Automatic arbitrary-score transcription, mixed meter/tempo MusicXML, nested repe
 ## Rc4 playback and review evidence
 
 See `PLAYBACK_ALIGNMENT.md`. Selected counting and actual onsets drive playback visualization. Grace strokes honor the mix. Same-center competing checked identities block draft confirmation. Five complete source bars at four scales yield232 timing references; six72-DPI Highway durations require explicit review. Source regression guards pass; six unmatched suggestions remain. The mobile browser regression is included but local launch is blocked by a missing Linux runtime library. Physical-audio and device checks above remain required.
+
+## Rc5 drummer workspace
+
+See `DRUMMER_SCORE.md` for the combined score/navigation/import/persistence changes and source excerpt.569 unit tests and production build pass; source guards remain passing. The mobile browser regression is updated. Local browser launch remains blocked by missing Linux runtime libraries; no physical audio or offline certification is claimed. Guitar Pro parsing and automatic arbitrary-score transcription are not included.
