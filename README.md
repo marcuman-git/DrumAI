@@ -1,4 +1,4 @@
-# DrumMaster AI — v1.0.0-rc.5
+# DrumMaster AI — v1.0.0-rc.6
 
 A local-first drum practice app with metronome, timing analysis, rudiments, stick control, reading, dictation, independence, grooves, fills, polyrhythm, odd-time, dynamics, speed training, song charts, analytics and a rule-based practice coach.
 
@@ -29,3 +29,5 @@ This is a release candidate. Automated validation is recorded in `RELEASE_READIN
 Playback alignment and the five combined review improvements are described in `PLAYBACK_ALIGNMENT.md`.
 
 Song Practice now opens a continuous drummer score with direct navigation, loop selection, remembered workspace and selected percussion-track MusicXML import. See `DRUMMER_SCORE.md`.
+
+Snare Studies adds single-line reading, sticking, measured rudiments, additional study meters, confirmed progress and compatible Song Practice transfer. See `SNARE_STUDIES.md`.

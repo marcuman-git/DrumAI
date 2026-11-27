@@ -1,4 +1,4 @@
-# v1.0.0-rc.5 release readiness
+# v1.0.0-rc.6 release readiness
 
 ## Combined release scope
 
@@ -17,7 +17,7 @@ The phantom-rest correction and its verification are described in REST_NOTATION_
 
 ## Automated evidence
 
-569 unit tests pass across164 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
+585 unit tests pass across167 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
 
 ## Required checks before stable v1.0
 
@@ -40,3 +40,7 @@ See `PLAYBACK_ALIGNMENT.md`. Selected counting and actual onsets drive playback 
 ## Rc5 drummer workspace
 
 See `DRUMMER_SCORE.md` for the combined score/navigation/import/persistence changes and source excerpt.569 unit tests and production build pass; source guards remain passing. The mobile browser regression is updated. Local browser launch remains blocked by missing Linux runtime libraries; no physical audio or offline certification is claimed. Guitar Pro parsing and automatic arbitrary-score transcription are not included.
+
+## Rc6 snare studies
+
+See `SNARE_STUDIES.md`:14 original studies, explicit attack expansion, single-line score, additional study meters, clean rounds per tempo/hand, backup and compatible chart transfer.585 unit tests, production build and source guards pass; lint0 errors/32 existing warnings. Book checks resolve10/12 known-coordinate quarter values and retain explicit review for all three thirty-second cases. Browser/device/audio checks remain pending.

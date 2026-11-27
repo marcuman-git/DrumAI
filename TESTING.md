@@ -17,3 +17,7 @@ Run `npm run test:unit`, `npm run build` and `npm run test:e2e` after the comple
 ## Rc5 continuous drummer score
 
 See `DRUMMER_SCORE.md`. The updated browser regression checks the mobile score, excerpt, loop range, note selection, zoom and Play/Stop. Unit tests isolate automatic workspace storage between tests; new persistence tests verify restore within a test. Local browser launch is blocked by missing Linux runtime libraries.
+
+## Rc6 Snare Studies
+
+Run the full unit/build/browser suites after uploading every file. See `SNARE_STUDIES.md` for meter, roll/grace, cancellation, confirmed-progress, backup and transfer checks. The browser suite now also checks the study player and compound-meter transfer boundary; local launch is blocked by unavailable Linux runtime libraries.
