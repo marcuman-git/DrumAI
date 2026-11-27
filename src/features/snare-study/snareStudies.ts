@@ -1,0 +1,20 @@
+import type {Hand,SnareStudy,StudyBar,StudyEvent,StudyMeter} from './snareStudy'
+function bar(meter:StudyMeter,values:readonly number[],hands:readonly Hand[]=['R','L'],accents:readonly number[]=[]):StudyBar{let step=0;return {meter,events:values.map((duration,i)=>{const e:StudyEvent={step,duration:Math.abs(duration),kind:duration<0?'rest':'note',...(duration>0?{hand:hands[i%hands.length],accent:accents.includes(i)}:{})};step+=Math.abs(duration);return e})}}
+const study=(id:string,title:string,level:number,focus:string,bars:StudyBar[],guide:string):SnareStudy=>({id,title,level,focus,bars,guide})
+/** Original short studies illustrating the reference book's concepts; not reproduced book lessons. */
+export const SNARE_STUDIES:SnareStudy[]=[
+ study('four-strokes','Four strokes, one hand',1,'Full / down / tap / up',[bar('4/4',[4,4,4,4],['R'],[0,1])],'Practise slowly with one hand, then reverse to the other. High-high, high-low, low-low and low-high prepare each following stroke.'),
+ study('quarters','Quarter notes and silence',1,'Reading and steady pulse',[bar('4/4',[4,-4,4,-4]),bar('4/4',[4,4,-4,4])],'Count through rests. A silent beat takes its full time; do not add a stroke.'),
+ study('halves','Long notes and ties',1,'Duration versus attack',[bar('4/4',[8,8]),{meter:'4/4',events:[{step:0,duration:4,kind:'note',hand:'R'},{step:4,duration:4,kind:'note',hand:'R',tie:true},{step:8,duration:8,kind:'rest'}]}],'A long snare note has one attack, not a sustained roll. A tie extends time without another attack.'),
+ study('eighths','Alternating eighths',1,'R/L coordination',[bar('4/4',Array(8).fill(2))],'Keep R and L evenly spaced. Reverse the lead hand without changing timing.'),
+ study('accents','Accents and the four strokes',2,'Full, down, tap and up',[bar('4/4',Array(16).fill(1),['R','L'],[0,4,8,12])],'Accents are louder attacks. Prepare the next stroke of the same hand: full, down, tap or up. This is guidance, not motion measurement.'),
+ study('paradiddle','Single paradiddle reading',2,'Sticking and accents',[bar('4/4',Array(16).fill(1),['R','L','R','R','L','R','L','L'],[0,4,8,12])],'Read R L R R / L R L L. Keep doubled hands in the same rhythmic spacing.'),
+ study('dotted','Dotted-eighth combinations',2,'Mixed durations',[bar('4/4',[3,1,2,2,3,1,2,2])],'A dotted eighth lasts three sixteenth slots; the following sixteenth completes a quarter beat.'),
+ study('flams','Flam and drag separation',3,'Soft grace before the main stroke',[{meter:'4/4',events:[0,4,8,12].map((step,i)=>({step,duration:4,kind:'note',hand:i%2?'L':'R',grace:i<2?1:2,accent:true}))}],'One soft grace stroke makes a flam; two make a drag. Grace spacing is a demonstration, not a universal technique target.'),
+ study('five-roll','Measured five-stroke roll',3,'Written duration versus roll strokes',[{meter:'4/4',events:Array.from({length:8},(_,i)=>({step:i*2,duration:2,kind:'note',hand:'R',...(i%2?{accent:true}:{roll:4})}))}],'Each pair contains RRLL in four thirty-second strokes, then an accented R: five attacks over one quarter beat. A measured roll is not a buzz roll.'),
+ study('triplets','Eighth-note triplets',3,'Three evenly spaced strokes per beat',[bar('4/4',Array(12).fill(4/3),['R','L'],[0,3,6,9])],'Count three equal strokes per quarter beat. Labels and sticking do not change their spacing.'),
+ study('three-four','Three-quarter time',2,'Different bar length',[bar('3/4',[4,4,4]),bar('3/4',Array(6).fill(2))],'Three quarter beats per bar. At60 BPM a complete3/4 bar lasts three seconds.'),
+ study('six-eight','Compound six-eight',3,'Two groups of three eighths',[bar('6/8',Array(6).fill(2),['R','L'],[0,3])],'Group six eighths as two pulses. Tempo here is quarter-note BPM; at60 BPM a6/8 bar lasts three seconds.'),
+ study('five-four','Five-quarter phrasing',3,'3+2 grouping',[bar('5/4',Array(10).fill(2),['R','L'],[0,6])],'Count five quarter beats grouped3+2. Avoid shortening the last beat.'),
+ study('mixed','Mixed-meter reading',4,'Maintain the quarter-note pulse',[bar('2/4',[2,2,2,2]),bar('3/4',[2,2,2,2,2,2]),bar('4/4',Array(8).fill(2))],'Keep one tempo through bar changes. The bars last two, three and four quarter beats.'),
+]
