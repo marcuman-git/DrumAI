@@ -38,7 +38,7 @@ export function isSongChart(value: unknown): value is SongChart {
     && (chart.section === undefined || (chart.section !== null && Number.isInteger(chart.section.start) && Number.isInteger(chart.section.end) && chart.section.start >= 0 && chart.section.end >= chart.section.start && chart.section.end < chart.bars.length))
 }
 export function cycleChartNote(chart: SongChart, bar: number, instrument: ChartInstrument, step: number): SongChart {
-  if (!Number.isInteger(step) || step < 0 || step >= chartSlots(chart)) return chart
+  if (!Number.isInteger(step) || step < 0 || step >= chartSlots(chart)||chart.bars[bar]?.rhythmEvents?.some(e=>e.kind==='note'&&!Number.isInteger(e.step))) return chart
   const cycle = [0, 2, 1, 3]
   return { ...chart, bars: chart.bars.map((row, index) => index === bar ? { ...withoutReviewedDurations(row), [instrument]: notesFor(withoutReviewedDurations(row), instrument).map((note, position) => position === step ? cycle[(cycle.indexOf(note) + 1) % cycle.length] : note) } : row) }
 }

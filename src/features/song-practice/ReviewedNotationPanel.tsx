@@ -1,3 +1,4 @@
+import {MusicalTimingReview} from './MusicalTimingReview'
 import {RhythmEventExtras} from './RhythmEventExtras'
 import {DURATION_OPTIONS,timeTick,tickTime} from './rhythmTime'
 import {RestHintReview} from './RestHintReview'
@@ -49,7 +50,8 @@ export function ReviewedNotationPanel({ notes, hints, first, last, image, staff,
   }
   return <section className="space-y-3 rounded border border-cyan-300/40 p-3" aria-label="Duration-aware notation review">
     <h4 className="font-semibold">Duration-aware notation review</h4>
-    <p className="text-xs text-amber-100">Single {slots / 4}/4 bar; quarter, eighth, sixteenth and dotted eighth/quarter. Ties join adjacent notes of the same voice within this bar. Tuplets and rolls require separate interpretation. Simultaneous instruments are checked independently. Source spacing is not proportional to time: correct onset slots manually.</p>
+    <MusicalTimingReview key={JSON.stringify(events)} notes={notes} hints={hints} events={events} gap={staff?.gap??10} slots={slots} onApply={update} onInspect={onInspectCandidate}/>
+    <p className="text-xs text-amber-100">Single {slots / 4}/4 bar; long, dotted and fine durations,3:2 triplets and adjacent ties. Automatic source hints currently cover quarter/eighth/sixteenth values; choose other values explicitly. Simultaneous instruments are checked independently. Source spacing is not proportional to time: correct onset slots manually.</p>
     <div className="flex flex-wrap items-center gap-2"><button disabled={!history.past.length} onClick={() => navigateHistory('undo')} className="rounded border border-white/30 px-3 py-2 disabled:opacity-40">Undo review edit</button><button disabled={!history.future.length} onClick={() => navigateHistory('redo')} className="rounded border border-white/30 px-3 py-2 disabled:opacity-40">Redo review edit</button><span className="text-xs text-zinc-300">Undo: {history.past.length} / 50 edits · Redo: {history.future.length}</span></div>
     <p className="text-xs text-amber-100">History covers event edits only, not source scans or filters. Undo/Redo clears source confirmation and unaccepted rest hints. Rescan hints if needed. History resets when the source/candidate selection changes or this review is closed.</p>
     <p className="text-xs text-amber-100">One flag or one beam suggests Eighth (2 slots); two suggest Sixteenth (1 slot); an unflagged stem suggests Quarter (4 slots). Count labels do not override reviewed durations. Choose a starting duration for unknown values, then correct each event against the source.</p>

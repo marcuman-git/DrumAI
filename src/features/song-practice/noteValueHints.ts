@@ -1,3 +1,4 @@
+import {connectedStemRecovery} from './connectedStemRecovery'
 import { possibleNoteDot } from './dotEvidence'
 import { inspectBeamFlags } from './beamFlagEvidence'
 import type { NoteCandidate, RecognitionImage, StaffCandidate } from './notationRecognition'
@@ -32,6 +33,7 @@ export function inspectNoteValue(image: RecognitionImage, staff: StaffCandidate,
   }
   }
   attachmentRecovered=expandedSearch&&best.length>=gap*1.6
+  if(best.length<gap*1.6){const connected=connectedStemRecovery(image,staff,note);if(connected){best=connected;attachmentRecovered=true}}
   const evidence = inspectBeamFlags(image, staff, best)
   const bands = evidence.beamBands || evidence.flagBands
   // Isolated ink to the right is only tentative dot evidence. Dotted

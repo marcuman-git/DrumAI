@@ -1,3 +1,4 @@
+import {reviewedNotationBeams} from './reviewedNotationBeams'
 import {durationNotation,sameTime} from './rhythmTime'
 import { barSlots } from './chartMeter'
 import { groupedGridNotation } from './gridNotationGrouping'
@@ -14,6 +15,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
   const countMode = controlledCountMode ?? localCountMode
   const [crashStyle, setCrashStyle] = useState<'ledger' | 'circle'>('ledger')
   const displayBar = groupedGridNotation(bar, countMode)
+  const beams=reviewedNotationBeams(displayBar.rhythmEvents??[])
   const slots = barSlots(bar)
   const displaySteps=[...new Set([...Array.from({length:slots},(_,i)=>i),...(displayBar.rhythmEvents?.map(e=>e.step)??[])])].sort((a,b)=>a-b)
   const tuplets= instruments.flatMap(instrument=>{const events=(displayBar.rhythmEvents??[]).filter(e=>e.instrument===instrument).sort((a,b)=>a.step-b.step),groups:{instrument:typeof instrument;start:number;end:number}[]=[];for(let i=0;i<events.length;i++){const a=events[i],c=events[i+1],d=events[i+2];if(durationNotation(a.duration).triplet&&c&&d&&sameTime(a.duration,c.duration)&&sameTime(a.duration,d.duration)&&sameTime(a.step+a.duration,c.step)&&sameTime(c.step+c.duration,d.step)){groups.push({instrument,start:a.step,end:d.step});i+=2}}return groups})
@@ -30,6 +32,7 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
         <line x1={108} y1={55} x2={108} y2={95} stroke="currentColor" /><line x1={width - 12} y1={55} x2={width - 12} y2={95} stroke="currentColor" />
         <path d="M 116 64 v 22 M 120 64 v 22" stroke="currentColor" strokeWidth={2} />
         <text x={126} y={71} fontSize={15} fill="currentColor">{slots / 4}</text><text x={126} y={88} fontSize={15} fill="currentColor">4</text>
+        {beams.filter(b=>instruments.includes(b.instrument)).map((beam,i)=>{const x=start+beam.from*spacing+25,end=beam.stub?x+(beam.stub==='right'?1:-1)*Math.min(18,spacing*.5):start+beam.to*spacing+25,y=HEAD_Y[beam.instrument]-32+(beam.level-1)*7;return <path key={i} aria-label={`${beam.instrument} beam level ${beam.level}${beam.stub?' partial':''}`} d={`M ${x} ${y} H ${end}`} stroke="currentColor" strokeWidth={3} fill="none"/>})}
         {tuplets.map((group,i)=>{const x=start+group.start*spacing+20,end=start+group.end*spacing+20,y=HEAD_Y[group.instrument]-50;return <g key={i} aria-label={`${group.instrument} triplet group`} stroke="currentColor"><path d={`M ${x-7} ${y+4} v -4 H ${end+7} v 4`} fill="none"/><text x={(x+end)/2} y={y-3} textAnchor="middle" fontSize={11} stroke="none" fill="currentColor">3</text></g>})}
         {displaySteps.map((step) => {
           const x = start + step * spacing + 20; const color = activeStep === step ? '#b45309' : '#18181b'
@@ -51,11 +54,11 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
               const event = displayBar.rhythmEvents?.find((item) => item.instrument === instrument && sameTime(item.step,step))
               const note=displayBar.rhythmEvents?(event?.kind==='note'?event.dynamic:0):notesFor(bar,instrument)[step];const spec=durationNotation(event?.duration??1);const value=spec.label.toLowerCase()
               return <g key={instrument} data-testid={`staff-${instrument}-${step}`} data-active={activeStep === step} aria-label={`${instrument} slot ${step + 1}: ${event ? value + ' ' + event.kind : displayBar.rhythmEvents ? 'continuation or inactive voice' : ['sixteenth rest', 'ghost sixteenth note', 'sixteenth note', 'accented sixteenth note'][note]}`} stroke={color} fill={color}>
-                <title>{instrument} slot {step + 1}: {event ? (event.tieFromPrevious ? 'tied continuation' : event.kind) : ['rest', 'ghost', 'note', 'accent'][note]}</title>
+                <title>{`${instrument} slot ${step + 1}: ${event ? (event.tieFromPrevious ? 'tied continuation' : event.kind) : ['rest', 'ghost', 'note', 'accent'][note]}`}</title>
                 {event?.kind === 'rest' && <g data-testid={`review-rest-${instrument}-${step}`}>
                   {['whole','half'].includes(spec.type)?<rect x={x-6} y={y-4} width={12} height={4}/>:spec.type==='quarter' ? <path d={`M ${x} ${y - 12} l -5 7 8 7 -6 7 5 7`} fill="none" strokeWidth={2} /> : <><path d={`M ${x + 4} ${y - 10} l -8 24`} fill="none" strokeWidth={2} /><circle cx={x} cy={y - 8} r={3} />{Array.from({length:Math.max(0,spec.flags-1)},(_,i)=><circle key={i} cx={x-3-i*3} cy={y+1+i*7} r={3}/>)}</>}
                 </g>}
-                {displayBar.rhythmEvents && event?.kind === 'note' && spec.type!=='whole' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${Array.from({length:spec.flags},(_,i)=>` M ${x+5} ${y-32+i*7} q 15 8 8 18`).join('')}`} fill="none" strokeWidth={1.5} />}
+                {displayBar.rhythmEvents && event?.kind === 'note' && spec.type!=='whole' && <path data-testid={`review-stem-${instrument}-${step}`} d={`M ${x + 5} ${y} V ${y - 32}${Array.from({length:beams.some(b=>b.instrument===instrument&&(sameTime(b.from,step)||sameTime(b.to,step)))?0:spec.flags},(_,i)=>` M ${x+5} ${y-32+i*7} q 15 8 8 18`).join('')}`} fill="none" strokeWidth={1.5} />}
                 {note > 0 && headOffsets.get(instrument) === -11 && <path d={`M ${x - 5} ${y} H ${x + 5}`} fill="none" strokeWidth={1} />}
                 {event && spec.dot && <circle cx={x+13} cy={y-2} r={2} />}
                 {event?.kind==='note' && sameTime(event.step+event.duration,slots) && nextBar?.rhythmEvents?.some(item=>item.instrument===instrument&&item.step===0&&item.tieFromPrevious) && <path aria-label="Tie to next bar" d={`M ${x+7} ${y+9} Q ${width-50} ${y+25} ${width-12} ${y+9}`} fill="none" />}

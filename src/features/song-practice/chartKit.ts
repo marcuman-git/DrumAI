@@ -10,6 +10,7 @@ export function completeBar(): Record<ChartInstrument, number[]> { return Object
 /** Dropping duration review turns each formerly tied head into a grid strike. */
 export function withoutReviewedDurations(bar:ChartBar):ChartBar {
  if(!bar.rhythmEvents)return bar
+ if(bar.rhythmEvents.some(event=>event.kind==='note'&&!Number.isInteger(event.step)))throw Error('Fine onsets cannot be converted to a sixteenth grid without losing strokes. Use reviewed-duration editing.')
  const next:ChartBar={...bar,rhythmEvents:undefined}
  for(const instrument of CHART_INSTRUMENTS){const notes=[...notesFor(bar,instrument)];for(const event of bar.rhythmEvents)if(event.instrument===instrument&&event.kind==='note')notes[event.step]=event.dynamic;next[instrument]=notes}
  return next

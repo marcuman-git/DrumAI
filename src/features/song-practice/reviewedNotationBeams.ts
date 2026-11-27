@@ -1,0 +1,8 @@
+import type {RhythmEvent} from './rhythmTypes'
+import {durationNotation,sameTime} from './rhythmTime'
+export interface NotationBeam {instrument:RhythmEvent['instrument'];from:number;to:number;level:number;stub?:'left'|'right'}
+/** Engrave each voice using its actual reviewed values. Rests and beat boundaries break beams. */
+export function reviewedNotationBeams(events:readonly RhythmEvent[]):NotationBeam[]{const result:NotationBeam[]=[]
+ for(const instrument of new Set(events.map(e=>e.instrument))){const voice=events.filter(e=>e.instrument===instrument).sort((a,b)=>a.step-b.step);const linked=new Set<number>();for(let i=0;i<voice.length-1;i++){const a=voice[i],b=voice[i+1],fa=durationNotation(a.duration).flags,fb=durationNotation(b.duration).flags;if(a.kind!=='note'||b.kind!=='note'||!fa||!fb||!sameTime(a.step+a.duration,b.step)||Math.floor(a.step/4)!==Math.floor(b.step/4))continue;linked.add(i);linked.add(i+1);for(let level=1;level<=Math.min(fa,fb);level++)result.push({instrument,from:a.step,to:b.step,level})}
+ for(const i of linked){const event=voice[i],flags=durationNotation(event.duration).flags;for(let level=2;level<=flags;level++){if(result.some(beam=>beam.instrument===instrument&&beam.level===level&&(sameTime(beam.from,event.step)||sameTime(beam.to,event.step))))continue;const right=voice[i+1],hasRight=right?.kind==='note'&&sameTime(event.step+event.duration,right.step)&&Math.floor(event.step/4)===Math.floor(right.step/4)&&durationNotation(right.duration).flags>0;result.push({instrument,from:event.step,to:event.step,level,stub:hasRight?'right':'left'})}}
+ }return result}
