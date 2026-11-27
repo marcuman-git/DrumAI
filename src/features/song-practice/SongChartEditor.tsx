@@ -1,3 +1,7 @@
+import {backInBlackPracticeExcerpt} from './backInBlackPracticeExcerpt'
+import {loadPracticeView,savePracticeWorkspace} from './songPracticeWorkspace'
+import {ContinuousDrumScore} from './ContinuousDrumScore'
+import type {ScorePosition} from './ContinuousDrumScore'
 import {chartPlaybackAudit} from './chartPlaybackAudit'
 import {withoutReviewedDurations} from './chartKit'
 import {chartPlaybackFrames} from './chartPlaybackFrames'
@@ -32,9 +36,15 @@ import { MusicXmlImportPanel } from './MusicXmlImportPanel'
 
 function canAppendDraftChart(chart:SongChart,draft:RecognitionDraft){try{appendReviewedDraft(chart,draft);return true}catch{return false}}
 function canCreateDraftChart(draft:RecognitionDraft){try{createChartFromDraft(draft);return true}catch{return false}}
-export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceReference }: { recognitionDraft?: RecognitionDraft | null; onDraftConsumed?: () => void; onSourceReference?: (reference: SourceReferenceRequest) => void } = {}) {
+export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceReference, initialWorkspaceMode = 'practice' }: { initialWorkspaceMode?:'practice'|'edit'; recognitionDraft?: RecognitionDraft | null; onDraftConsumed?: () => void; onSourceReference?: (reference: SourceReferenceRequest) => void } = {}) {
   const { chart, setChart, commitChart, resetChart, canUndo, canRedo, undo, redo } = useChartHistory()
+  const [workspaceMode,setWorkspaceMode]=useState(initialWorkspaceMode)
+  const [zoom,setZoom]=useState(()=>loadPracticeView(chart.id).zoom)
+  const [follow,setFollow]=useState(()=>loadPracticeView(chart.id).follow)
+  const [seekPosition,setSeekPosition]=useState<ScorePosition>(()=>{const view=loadPracticeView(chart.id);return {bar:Math.min(view.bar,chart.bars.length-1),step:view.step}})
+  const [workspaceMessage,setWorkspaceMessage]=useState('Practice workspace is saved automatically on this device.')
   const [visible, setVisible] = useState<readonly typeof CHART_INSTRUMENTS[number][]>(() => {
+    const remembered=loadPracticeView(chart.id).instruments;if(remembered)return remembered
     try { const stored = JSON.parse(localStorage.getItem('drummaster-visible-chart-instruments') ?? 'null'); if (Array.isArray(stored)) return CHART_INSTRUMENTS.filter((name) => stored.includes(name)) } catch { /* Use all rows when preferences cannot be read. */ }
     return CHART_INSTRUMENTS
   })
@@ -47,14 +57,21 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
   const [storedBar, setSelectedBar] = useState(0)
   const selectedBar = Math.min(storedBar, chart.bars.length - 1)
   const [playing, setPlaying] = useState(false)
-  const [countMode, setCountMode] = useState<StaffCountMode>('eighth')
+  const [countMode, setCountMode] = useState<StaffCountMode>(()=>loadPracticeView(chart.id).countMode)
   const [countBeat, setCountBeat] = useState<number | null>(null)
   const [active, setActive] = useState(-1)
   const [sounding, setSounding] = useState<string[]>([])
   const [activeBar, setActiveBar] = useState(0)
-  const [loop, setLoop] = useState(false)
-  const [volume, setVolume] = useState(0.3)
+  const [loop, setLoop] = useState(()=>loadPracticeView(chart.id).loop)
+  const [volume, setVolume] = useState(()=>loadPracticeView(chart.id).volume)
   const [message, setMessage] = useState('Click cells to cycle: rest  to  note  to  ghost  to  accent  to  rest. Each bar is 4/4 with sixteen slots.')
+  const viewSong=useRef(chart.id)
+  // oxlint-disable-next-line react/set-state-in-effect -- Restore this song's view from external device storage.
+  useEffect(()=>{if(viewSong.current===chart.id)return;viewSong.current=chart.id;const view=loadPracticeView(chart.id);if(view.instruments)setVisible(view.instruments);setCountMode(view.countMode);setLoop(view.loop);setVolume(view.volume);setZoom(view.zoom);setFollow(view.follow);setSeekPosition({bar:Math.min(view.bar,chart.bars.length-1),step:Math.min(view.step,chartSlots(chart)-1)})},[chart])
+  const checkpoint=useRef({chart,view:{instruments:visible,countMode,loop,volume,zoom,follow,bar:seekPosition.bar,step:seekPosition.step}})
+  useLayoutEffect(()=>{checkpoint.current={chart,view:{instruments:visible,countMode,loop,volume,zoom,follow,bar:playing?activeBar:Math.min(seekPosition.bar,chart.bars.length-1),step:playing&&active>=0?active:Math.min(seekPosition.step,chartSlots(chart)-1)}}})
+  useEffect(()=>{const timer=window.setTimeout(()=>{setWorkspaceMessage(savePracticeWorkspace(checkpoint.current.chart,checkpoint.current.view)?'Practice workspace saved on this device.':'Workspace could not be saved. Export chart JSON to keep your work.')},600);return()=>window.clearTimeout(timer)},[chart,countMode,loop,volume,zoom,follow,seekPosition,playing,visible])
+  useEffect(()=>()=>{savePracticeWorkspace(checkpoint.current.chart,checkpoint.current.view)},[])
   const generation = useRef(0)
   const owned = useRef<{ context: AudioContext; timer: number; frame: number; session: string | null; bars: number; cycleBars: number } | null>(null)
   const config = useRef({ chart, loop, volume, countMode })
@@ -74,10 +91,11 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
     document.addEventListener('visibilitychange', onHidden)
     return () => { document.removeEventListener('visibilitychange', onHidden); stop(false) }
   }, [])
-  const start = async () => {
+  const start = async (position?:ScorePosition) => {
+    if(!isSongChart(chart)){setMessage('Resolve invalid chart timing or settings before playback.');return}
     stop(); const token = generation.current
     setCycles(0); if ((chart.training ?? defaultTraining()).enabled) { setLoop(true); config.current.loop = true }
-    setConfirmClear(false); setPlaying(true); setActiveBar(chartSection(chart).start); setMessage('Preparing chart audio...')
+    setConfirmClear(false); setPlaying(true); setActiveBar(position?.bar??chartSection(chart).start); setMessage('Preparing chart audio...')
     let context: AudioContext | null = null
     try {
       context = new AudioContext(); await context.resume()
@@ -85,7 +103,8 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       const audio = context; const play = createGroovePlayer(audio)
       const resource = { context: audio, timer: 0, frame: 0, session: null as string | null, bars: 0, cycleBars: chartSection(chart).end - chartSection(chart).start + 1 }
       owned.current = resource
-      const section = chartSection(chart); const slots = chartSlots(chart); let first = playbackStart(chart, section.start); const limit = (section.end + 1) * slots
+      const selectedSection=chartSection(chart); const section=position&& (position.bar<selectedSection.start||position.bar>selectedSection.end)?{start:position.bar,end:chart.bars.length-1}:selectedSection; const slots = chartSlots(chart); let first = position ? position.bar*slots+Math.floor(position.step) : playbackStart(chart, section.start); let partialOffset=position?position.step%1:0; const limit = (section.end + 1) * slots
+      resource.cycleBars=section.end-section.start+1
       let index = first; let next = audio.currentTime + 0.04; let end: number | null = null
       const training = chart.training ?? defaultTraining(); let scheduledCycles = 0
       let remainingCount = chart.countIn ? 4 : 0; let countIndex = 0
@@ -115,16 +134,17 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
             first = playbackStart(current.chart,section.start); index = first
           }
           const time = Math.max(next, audio.currentTime)
+          const intervalOffset=partialOffset;partialOffset=0
           const bar = current.chart.bars[Math.floor(index / slots)]
           for (const instrument of CHART_INSTRUMENTS) {
-            for(const hit of chartScheduledHits(bar,instrument,index%slots,index===first)){const onset=time+hit.offset*60/current.chart.bpm/4;const level=current.volume*mixLevel(current.chart.mix??defaultMix(),instrument);if(level<=0)continue;for(let grace=hit.grace??0;grace>0;grace--)play(instrument,Math.max(audio.currentTime,onset-grace*.035),true,level*.35);play(instrument,onset,hit.dynamic===1,level*(hit.dynamic===3?1.35:.8),hit.articulation)}
+            for(const hit of chartScheduledHits(bar,instrument,index%slots,index===first)){if(hit.offset<intervalOffset)continue;const onset=time+(hit.offset-intervalOffset)*60/current.chart.bpm/4;const level=current.volume*mixLevel(current.chart.mix??defaultMix(),instrument);if(level<=0)continue;for(let grace=hit.grace??0;grace>0;grace--)play(instrument,Math.max(audio.currentTime,onset-grace*.035),true,level*.35);play(instrument,onset,hit.dynamic===1,level*(hit.dynamic===3?1.35:.8),hit.articulation)}
 
           }
           for (const frame of chartPlaybackFrames(bar,index%slots,index===first,current.countMode,current.chart.mix,current.volume)) {
-            visuals.push({index:Math.floor(index/slots)*slots+frame.step,time:time+frame.offset*60/current.chart.bpm/4,boundary:false,sounding:frame.instruments})
+            if(frame.offset<intervalOffset)continue;visuals.push({index:Math.floor(index/slots)*slots+frame.step,time:time+(frame.offset-intervalOffset)*60/current.chart.bpm/4,boundary:false,sounding:frame.instruments})
           }
           visuals.sort((a,b)=>a.time-b.time)
-          next = time + 60 / current.chart.bpm / 4; index += 1
+          next = time + (1-intervalOffset)*60 / current.chart.bpm / 4; index += 1
           if (index % slots === 0) visuals.push({ index, time: next, boundary: true })
         }
       }
@@ -139,7 +159,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
             resource.bars += 1
             setCycles(Math.floor(resource.bars / (section.end - section.start + 1)))
             void trackPracticeEvent('song-practice', 'score', { source: 'chart', completedBars: resource.bars, completedCycles: Math.floor(resource.bars / resource.cycleBars), bpm: config.current.chart.bpm, measuredTiming: false }, resource.session)
-          } else { setActiveBar(Math.floor(item.index / chartSlots(chart))); setActive(item.index % chartSlots(chart)); setSounding(item.sounding??[]) }
+          } else { setActiveBar(Math.floor(item.index / chartSlots(chart))); setActive(item.index % chartSlots(chart)); setSounding(item.sounding??[]); setSeekPosition({bar:Math.floor(item.index/chartSlots(chart)),step:item.index%chartSlots(chart)}) }
         }
         if (end !== null && audio.currentTime >= end) {
           if (config.current.loop && (!training.enabled || scheduledCycles < training.repetitions)) schedule()
@@ -159,7 +179,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
     try {
       const entry: SongChart = { ...normalizeReview(chart), id: update ? selectedSave : crypto.randomUUID(), title: chart.title.trim() }
       const next = update ? saved.map((item) => item.id === selectedSave ? entry : item) : [...saved, entry]
-      saveSongCharts(next); setSaved(next); resetChart(entry); setSelectedSave(entry.id); setMessage(update ? 'Selected chart updated.' : 'New chart saved on this device.')
+      saveSongCharts(next); savePracticeWorkspace(entry,checkpoint.current.view); setSaved(next); resetChart(entry); setSelectedSave(entry.id); setMessage(update ? 'Selected chart updated.' : 'New chart saved on this device.')
     } catch { setMessage('Could not save. Enter a title and check browser storage.') }
   }
   const importFile = async (file: File) => {
@@ -173,7 +193,13 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
   const detectedMeter=detectedBars[0]?.beats===2?'2/4':'4/4'
   const detectedCompatible=detectedBars.every(bar=>(bar.beats===2?'2/4':'4/4')===detectedMeter)
   const shownBar = playing ? activeBar : Math.min(selectedBar, chart.bars.length - 1)
-  return <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
+  const presentInstruments=CHART_INSTRUMENTS.filter(name=>chart.bars.some(bar=>notesFor(bar,name).some(Boolean)||bar.rhythmEvents?.some(event=>event.instrument===name&&event.kind==='note')))
+  const scoreInstruments=visible.filter(name=>presentInstruments.includes(name))
+  const scorePosition=playing?{bar:activeBar,step:active}:{bar:Math.min(seekPosition.bar,chart.bars.length-1),step:Math.min(seekPosition.step,chartSlots(chart)-1)}
+  return <div className="space-y-3">
+    <div className="flex flex-wrap items-center gap-2"><button aria-pressed={workspaceMode==='practice'} onClick={()=>setWorkspaceMode('practice')} className="min-h-11 rounded border px-4 py-2">Practice score</button><button aria-pressed={workspaceMode==='edit'} onClick={()=>setWorkspaceMode('edit')} className="min-h-11 rounded border px-4 py-2">Edit and import</button><span role="status" className="text-xs text-zinc-400">{workspaceMessage}</span></div>
+    {workspaceMode==='practice'&&<><div className="flex flex-wrap items-center gap-2"><label>Saved drum charts <select aria-label="Open saved drum chart" disabled={playing} value={selectedSave} onChange={event=>{const entry=saved.find(item=>item.id===event.target.value);if(entry){resetChart(structuredClone(entry));setSelectedSave(entry.id);setSelectedBar(0)}}} className="rounded bg-zinc-900 p-2"><option value="">Choose a saved song</option>{saved.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label><button disabled={playing} onClick={()=>persist(!!selectedSave)} className="min-h-11 rounded border px-3 py-2">Save score</button><button disabled={playing} onClick={()=>{commitChart(backInBlackPracticeExcerpt());setSelectedSave('');setSelectedBar(0);setMessage('Loaded four manually encoded source excerpt bars. Undo in Edit and import restores the previous chart. Save score to keep this excerpt.')}} className="min-h-11 rounded border px-3 py-2">Load Back in Black excerpt</button></div><ContinuousDrumScore key={chart.id+':'+chart.bars.length} chart={chart} instruments={scoreInstruments} countMode={countMode} onCountMode={setCountMode} playing={playing} position={scorePosition} onPosition={position=>{setSeekPosition(position);setSelectedBar(position.bar)}} onPlay={()=>void start({...scorePosition,step:scorePosition.bar===0?Math.max(scorePosition.step,chart.pickupOffset??0):scorePosition.step})} onStop={()=>{setSeekPosition({...scorePosition,step:Math.max(0,scorePosition.step)});stop();setMessage('Score stopped. Session saved.')}} loop={loop} onLoop={()=>setLoop(value=>!value)} onRange={(start,end,enableLoop=true)=>{setChart(current=>({...current,section:{start,end}}));setSeekPosition({bar:start,step:start===0?chart.pickupOffset??0:0});if(enableLoop)setLoop(true)}} volume={volume} onVolume={setVolume} zoom={zoom} onZoom={setZoom} follow={follow} onFollow={setFollow} onTempo={bpm=>setChart(current=>({...current,bpm}))}/><div role="status" className="text-sm text-cyan-100">{countBeat!==null?'Count-in: '+countBeat+' / 4':playing?sounding.length?'Scheduled strokes: '+sounding.join(', '):'Rest — keep counting':message}</div><details><summary className="cursor-pointer text-sm">Shown drum voices</summary><div className="flex flex-wrap gap-3">{presentInstruments.map(name=><label key={name}><input type="checkbox" checked={visible.includes(name)} onChange={event=>changeVisible(event.target.checked?CHART_INSTRUMENTS.filter(item=>item===name||visible.includes(item)):visible.filter(item=>item!==name))}/>{name}</label>)}</div></details><ChartPracticeControls compactTraining chart={chart} setChart={setChart} playing={playing} cycles={cycles} instruments={scoreInstruments}/>{recognitionDraft&&<p role="alert">A reviewed draft is ready. Open Edit and import to create or append its chart.</p>}</>}
+    <div hidden={workspaceMode!=='edit'} className="grid gap-3 lg:grid-cols-[2fr_1fr]">
     <GlassCard layout={false} className="min-w-0 space-y-3">
       <h3 className="text-lg font-semibold">Editable Drum Chart</h3>
       <MusicXmlImportPanel disabled={playing} onImport={(value) => { resetChart(value); setSelectedBar(0); setConfirmClear(false) }} />
@@ -228,5 +254,6 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       <label className="block text-sm">Import chart JSON<input aria-label="Import chart JSON" disabled={playing} type="file" accept=".json,application/json" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void importFile(file) }} className="mt-2 block w-full text-xs file:mr-2 file:rounded file:border-0 file:bg-cyan-300 file:p-2 file:text-slate-950" /></label>
       <p className="text-xs text-zinc-400">Up to 256 bars. Structural edits stop while playing; note edits stay live. Chart saves are local and are not included in practice-history backups. Export chart JSON to back them up. Playback records practice time, not measured accuracy.</p>
     </GlassCard>
+    </div>
   </div>
 }

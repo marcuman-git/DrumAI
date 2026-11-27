@@ -18,7 +18,7 @@ class AudioMock {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); localStorage.removeItem('drummaster-song-charts-v1') })
 describe('Song Chart editor', () => {
   it('edits cells, duplicates bars, and retains multiple named saves', () => {
-    render(<SongChartEditor />)
+    render(<SongChartEditor initialWorkspaceMode="edit" />)
     fireEvent.click(screen.getByRole('button', { name: 'Snare step 1: rest' }))
     expect(screen.getByRole('button', { name: 'Snare step 1: note' })).toBeInTheDocument()
     fireEvent.change(screen.getByRole('textbox', { name: 'Chart title' }), { target: { value: 'First chart' } })
@@ -35,7 +35,7 @@ describe('Song Chart editor', () => {
     vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
     vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-    render(<SongChartEditor />)
+    render(<SongChartEditor initialWorkspaceMode="edit" />)
     fireEvent.click(screen.getByRole('button', { name: 'Duplicate bar' }))
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play chart' })); await Promise.resolve() })
     await act(async () => { await vi.advanceTimersByTimeAsync(7850) })
@@ -47,7 +47,7 @@ describe('Song Chart editor', () => {
   })
 })
 it('retains bar labels in saves and resets range on structural edits', () => {
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('textbox', { name: 'Bar label' }), { target: { value: 'Verse' } })
   fireEvent.click(screen.getByRole('button', { name: 'Duplicate bar' }))
   expect(screen.getByRole('button', { name: 'Bar 2: Verse' })).toBeInTheDocument()
@@ -64,7 +64,7 @@ it('loops only the selected bar and finishes it when loop is disabled', async ()
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.click(screen.getByRole('button', { name: 'Duplicate bar' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'Start bar' }), { target: { value: '1' } })
   fireEvent.click(screen.getByRole('button', { name: 'Loop Off' }))
@@ -82,7 +82,7 @@ it('cancels count-in without starting a practice session', async () => {
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('combobox', { name: 'Chart count-in' }), { target: { value: '4' } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play chart' })); await Promise.resolve() })
   await act(async () => { await vi.advanceTimersByTimeAsync(1100) })
@@ -99,7 +99,7 @@ it('starts history after count-in and traverses silent slots', async () => {
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('combobox', { name: 'Chart count-in' }), { target: { value: '4' } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play chart' })); await Promise.resolve() })
   await act(async () => { await vi.advanceTimersByTimeAsync(4400) })
@@ -115,7 +115,7 @@ it('starts history after count-in and traverses silent slots', async () => {
   expect(screen.getByRole('button', { name: 'Play chart' })).toBeEnabled()
 })
 it('confirms clearing just the current bar and restores it with undo', () => {
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.click(screen.getByRole('button', { name: 'Clear current bar' }))
   fireEvent.click(screen.getByRole('button', { name: 'Cancel clear' }))
   expect(screen.getByRole('button', { name: 'Kick step 1: note' })).toBeInTheDocument()
@@ -134,7 +134,7 @@ it('counts each preparation bar from one to four', async () => {
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('combobox', { name: 'Chart count-in' }), { target: { value: '8' } })
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Play chart' })); await Promise.resolve() })
   await act(async () => { await vi.advanceTimersByTimeAsync(4400) })
@@ -150,7 +150,7 @@ it('completes a two-cycle target and increases tempo between cycles', async () =
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.click(screen.getByRole('checkbox', { name: 'Repetition training' }))
   fireEvent.change(screen.getByRole('combobox', { name: 'repetitions' }), { target: { value: '2' } })
   fireEvent.click(screen.getByRole('checkbox', { name: 'Tempo ladder' }))
@@ -165,7 +165,7 @@ it('completes a two-cycle target and increases tempo between cycles', async () =
   expect(screen.getByText('Completed cycles: 2 / 2')).toBeInTheDocument()
 })
 it('duplicates complete charts and searches saved metadata', () => {
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('textbox', { name: 'Chart title' }), { target: { value: 'Pocket' } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Chart style' }), { target: { value: 'Funk' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save as new' }))
@@ -183,7 +183,7 @@ it('enabling ladder alone activates training and notation follows the second cyc
   vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
   vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.click(screen.getByRole('checkbox', { name: 'Tempo ladder' }))
   expect(screen.getByRole('checkbox', { name: 'Repetition training' })).toBeChecked()
   fireEvent.change(screen.getByRole('combobox', { name: 'repetitions' }), { target: { value: '2' } })
@@ -197,7 +197,7 @@ it('enabling ladder alone activates training and notation follows the second cyc
 
 
 it('keeps the editor free of removed review and shortcut panels', () => {
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   expect(screen.queryByRole('button', { name: 'Start manual chart review' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Copy bar' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
@@ -205,7 +205,7 @@ it('keeps the editor free of removed review and shortcut panels', () => {
 it('appends a confirmed recognition draft without replacing existing bars and supports undo', () => {
   const bar = { 'Hi-hat': Array(16).fill(0), Snare: Array(16).fill(2), Kick: Array(16).fill(0) }
   const consumed = vi.fn()
-  render(<SongChartEditor recognitionDraft={{ bar, source: 'fixture.pdf', page: 1 }} onDraftConsumed={consumed} />)
+  render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{ bar, source: 'fixture.pdf', page: 1 }} onDraftConsumed={consumed} />)
   expect(screen.getByRole('button', { name: 'Kick step 1: note' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Add detected bar' }))
   expect(consumed).toHaveBeenCalled()
@@ -217,7 +217,7 @@ it('appends a confirmed recognition draft without replacing existing bars and su
 })
 it('loads a legacy chart and lets separate cymbal rows be edited and mixed', () => {
   localStorage.setItem('drummaster-song-charts-v1', JSON.stringify([{ id: 'legacy-kit', title: 'Legacy kit', bpm: 60, bars: [{ 'Hi-hat': Array(16).fill(0), Snare: Array(16).fill(0), Kick: Array(16).fill(0) }], mix: { 'Hi-hat': { volume: 1, muted: false, solo: false }, Snare: { volume: 1, muted: false, solo: false }, Kick: { volume: 1, muted: false, solo: false } } }]))
-  render(<SongChartEditor />)
+  render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.change(screen.getByRole('combobox', { name: 'Saved charts' }), { target: { value: 'legacy-kit' } })
   fireEvent.click(screen.getByRole('button', { name: 'Load chart' }))
   fireEvent.click(screen.getByRole('button', { name: 'Crash step 1: rest' }))
@@ -229,14 +229,14 @@ it('loads a legacy chart and lets separate cymbal rows be edited and mixed', () 
 })
 it('hides rows and staff without deleting notes, and retains visibility on refresh', () => {
   localStorage.removeItem('drummaster-visible-chart-instruments')
-  const view = render(<SongChartEditor />)
+  const view = render(<SongChartEditor initialWorkspaceMode="edit" />)
   fireEvent.click(screen.getByRole('button', { name: 'Tom 1 step 1: rest' }))
   fireEvent.click(screen.getByRole('checkbox', { name: 'Tom 1' }))
   expect(screen.queryByRole('button', { name: 'Tom 1 step 1: note' })).not.toBeInTheDocument()
   expect(screen.queryByTestId('staff-Tom 1-0')).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Save as new' }))
   expect(JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!)[0].bars[0]['Tom 1'][0]).toBe(2)
-  view.unmount(); render(<SongChartEditor />)
+  view.unmount(); render(<SongChartEditor initialWorkspaceMode="edit" />)
   expect(screen.getByRole('checkbox', { name: 'Tom 1' })).not.toBeChecked()
   fireEvent.click(screen.getByRole('button', { name: 'Show all instruments' }))
   expect(screen.getByRole('checkbox', { name: 'Tom 1' })).toBeChecked()
@@ -246,7 +246,7 @@ it('plays a selected 2/4 bar for two beats and preserves meter when clearing and
  vi.useFakeTimers(); vi.stubGlobal('AudioContext', AudioMock)
  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 16))
  vi.stubGlobal('cancelAnimationFrame', (id: number) => window.clearTimeout(id))
- render(<SongChartEditor />)
+ render(<SongChartEditor initialWorkspaceMode="edit" />)
  fireEvent.change(screen.getByLabelText('Chart time signature'), { target: { value: '2/4' } })
  expect(screen.queryByRole('button', { name: /Kick step 16:/ })).toBeNull()
  fireEvent.change(screen.getByLabelText('End bar'), { target: { value: '0' } })
@@ -262,7 +262,7 @@ it('plays a selected 2/4 bar for two beats and preserves meter when clearing and
 it('blocks a mismatched PDF draft until the chart meter matches and saves its 2/4 metadata', () => {
  const bar = { Snare: Array<number>(16).fill(0), Kick: Array<number>(16).fill(0), 'Hi-hat': Array<number>(16).fill(0), beats: 2 as const }; bar.Snare[7] = 2
  const consumed = vi.fn()
- render(<SongChartEditor recognitionDraft={{ bar, source: 'two.pdf', page: 1 }} onDraftConsumed={consumed} />)
+ render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{ bar, source: 'two.pdf', page: 1 }} onDraftConsumed={consumed} />)
  expect(screen.getByRole('button', { name: 'Add detected bar' })).toBeDisabled()
  fireEvent.change(screen.getByLabelText('Chart time signature'), { target: { value: '2/4' } })
  fireEvent.click(screen.getByRole('button', { name: 'Add detected bar' }))
@@ -276,7 +276,7 @@ it('edits loaded reviewed durations, keeps applied chart Undo/Redo and saves the
  const {reviewedBar}=await import('./reviewedRhythm')
  const bar=reviewedBar([{instrument:'Snare',step:0,duration:2,kind:'note',dynamic:2},{instrument:'Snare',step:2,duration:2,kind:'rest',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'note',dynamic:2}],8)
  localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'duration-review',title:'Duration review',bpm:60,meter:'2/4',bars:[bar]}]))
- render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'duration-review'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}))
+ render(<SongChartEditor initialWorkspaceMode="edit"/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'duration-review'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}))
  fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
  fireEvent.change(screen.getByLabelText('Reviewed event 1 duration'),{target:{value:'3'}});fireEvent.change(screen.getByLabelText('Reviewed event 2 slot'),{target:{value:'4'}});fireEvent.change(screen.getByLabelText('Reviewed event 2 duration'),{target:{value:'1'}})
  fireEvent.click(screen.getByLabelText('Verify edited durations against source'));fireEvent.click(screen.getByRole('button',{name:'Apply reviewed duration edits'}))
@@ -288,7 +288,7 @@ it('edits loaded reviewed durations, keeps applied chart Undo/Redo and saves the
 })
 
 it('retains an appended draft source/page, navigates to it and saves those references',()=>{
- const onSourceReference=vi.fn();render(<SongChartEditor recognitionDraft={{bar:{'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)},source:'study.pdf',page:3}} onDraftConsumed={vi.fn()} onSourceReference={onSourceReference}/>)
+ const onSourceReference=vi.fn();render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{bar:{'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)},source:'study.pdf',page:3}} onDraftConsumed={vi.fn()} onSourceReference={onSourceReference}/>)
  fireEvent.click(screen.getByRole('button',{name:'Add detected bar'}));fireEvent.click(screen.getByText('Source reference — Bar 2'));expect(screen.getByLabelText('Chart source PDF name')).toHaveValue('study.pdf');expect(screen.getByLabelText('Chart source page')).toHaveValue(3)
  fireEvent.click(screen.getByRole('button',{name:'Show source reference — page 3'}));expect(onSourceReference).toHaveBeenCalledWith({source:'study.pdf',page:3})
  fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!);expect(saved[0].review.source).toBe('study.pdf');expect(saved[0].review.bars[1].page).toBe(3)
@@ -297,14 +297,14 @@ it('retains an appended draft source/page, navigates to it and saves those refer
 
 it('resets unapplied duration drafts and source verification when the saved reference changes',async()=>{
  const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8)
- localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'source-edit',title:'Source edit',bpm:60,meter:'2/4',bars:[bar]}]));render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'source-edit'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
+ localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'source-edit',title:'Source edit',bpm:60,meter:'2/4',bars:[bar]}]));render(<SongChartEditor initialWorkspaceMode="edit"/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'source-edit'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/))
  fireEvent.change(screen.getByLabelText('Reviewed event 1 dynamic'),{target:{value:'3'}});fireEvent.click(screen.getByLabelText('Verify edited durations against source'));expect(screen.getByLabelText('Verify edited durations against source')).toBeChecked()
  fireEvent.click(screen.getByText('Source reference — Bar 1'));fireEvent.change(screen.getByLabelText('Chart source PDF name'),{target:{value:'new.pdf'}});fireEvent.click(screen.getByText(/Edit reviewed durations — Bar 1/));expect(screen.getByLabelText('Verify edited durations against source')).not.toBeChecked();expect(screen.getByLabelText('Reviewed event 1 dynamic')).toHaveValue('2');expect(screen.getByRole('button',{name:'Undo draft edit'})).toBeDisabled()
 })
 
 it('retains source pages through editor duplicate/add/remove and meter Undo/Redo, then saves joined references',async()=>{
  const {newSongChart}=await import('./songChartLogic');const {newChartReview}=await import('./chartReviewLogic');const chart=newSongChart();chart.id='reference-structure';chart.bars.push(structuredClone(chart.bars[0]));chart.review=newChartReview(chart);chart.review.source='study.pdf';chart.review.bars[0].page=2;chart.review.bars[1].page=3
- localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]));render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'reference-structure'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));fireEvent.click(screen.getByText('Source reference — Bar 1'))
+ localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]));render(<SongChartEditor initialWorkspaceMode="edit"/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'reference-structure'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));fireEvent.click(screen.getByText('Source reference — Bar 1'))
  fireEvent.click(screen.getByRole('button',{name:'Duplicate bar'}));expect(screen.getByLabelText('Chart source PDF name')).toHaveValue('study.pdf');expect(screen.getByLabelText('Chart source page')).toHaveValue(2)
  fireEvent.click(screen.getByRole('button',{name:'Remove bar'}));expect(screen.getByLabelText('Chart source page')).toHaveValue(2)
  fireEvent.click(screen.getByRole('button',{name:'Add blank bar'}));expect(screen.getByLabelText('Chart source PDF name')).toHaveValue('study.pdf');expect(screen.getByLabelText('Chart source page')).toHaveValue(1);fireEvent.click(screen.getByRole('button',{name:'Remove bar'}))
@@ -314,19 +314,19 @@ it('retains source pages through editor duplicate/add/remove and meter Undo/Redo
  fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!);expect(saved.at(-1).review.source).toBe('study.pdf');expect(saved.at(-1).review.bars[0].additionalPages).toEqual([4]);expect(saved.at(-1).review.bars[1].page).toBe(3)
 })
 
-it('appends an ordered passage atomically with source references and Undo restores the previous chart',()=>{const bar={'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)},second=structuredClone(bar);bar.Snare[0]=2;second.Kick[4]=3;render(<SongChartEditor recognitionDraft={{bar,bars:[bar,second],source:'passage.pdf',page:3}} onDraftConsumed={vi.fn()}/>);fireEvent.click(screen.getByRole('button',{name:'Add detected bars'}));expect(screen.getByRole('button',{name:'Bar 3: PDF passage'})).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Undo'}));expect(screen.queryByRole('button',{name:'Bar 3: PDF passage'})).not.toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Redo'}));fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.bars).toHaveLength(3);expect(saved.bars[1].Snare[0]).toBe(2);expect(saved.bars[2].Kick[4]).toBe(3);expect(saved.review.bars.map((b:{page:number})=>b.page)).toEqual([1,3,3])})
-it('blocks a passage with mixed meters and leaves the current chart untouched',()=>{const bar={'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)};render(<SongChartEditor recognitionDraft={{bar,bars:[bar,{...bar,beats:2}],source:'passage.pdf',page:1}}/>);expect(screen.getByRole('button',{name:'Add detected bars'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Bar 2'})).not.toBeInTheDocument()})
+it('appends an ordered passage atomically with source references and Undo restores the previous chart',()=>{const bar={'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)},second=structuredClone(bar);bar.Snare[0]=2;second.Kick[4]=3;render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{bar,bars:[bar,second],source:'passage.pdf',page:3}} onDraftConsumed={vi.fn()}/>);fireEvent.click(screen.getByRole('button',{name:'Add detected bars'}));expect(screen.getByRole('button',{name:'Bar 3: PDF passage'})).toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Undo'}));expect(screen.queryByRole('button',{name:'Bar 3: PDF passage'})).not.toBeInTheDocument();fireEvent.click(screen.getByRole('button',{name:'Redo'}));fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.bars).toHaveLength(3);expect(saved.bars[1].Snare[0]).toBe(2);expect(saved.bars[2].Kick[4]).toBe(3);expect(saved.review.bars.map((b:{page:number})=>b.page)).toEqual([1,3,3])})
+it('blocks a passage with mixed meters and leaves the current chart untouched',()=>{const bar={'Hi-hat':Array(16).fill(0),Snare:Array(16).fill(0),Kick:Array(16).fill(0)};render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{bar,bars:[bar,{...bar,beats:2}],source:'passage.pdf',page:1}}/>);expect(screen.getByRole('button',{name:'Add detected bars'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Bar 2'})).not.toBeInTheDocument()})
 
-it('rejects the whole passage when it exceeds chart capacity, without consuming or partially appending it',async()=>{const {newSongChart}=await import('./songChartLogic');const chart=newSongChart();chart.id='capacity';chart.bars=Array.from({length:255},()=>structuredClone(chart.bars[0]));localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]));const consumed=vi.fn();render(<SongChartEditor recognitionDraft={{bar:chart.bars[0],bars:[chart.bars[0],chart.bars[0]],source:'passage.pdf',page:1}} onDraftConsumed={consumed}/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'capacity'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));expect(screen.getByRole('button',{name:'Add detected bars'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Bar 256'})).not.toBeInTheDocument();expect(consumed).not.toHaveBeenCalled()})
+it('rejects the whole passage when it exceeds chart capacity, without consuming or partially appending it',async()=>{const {newSongChart}=await import('./songChartLogic');const chart=newSongChart();chart.id='capacity';chart.bars=Array.from({length:255},()=>structuredClone(chart.bars[0]));localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]));const consumed=vi.fn();render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{bar:chart.bars[0],bars:[chart.bars[0],chart.bars[0]],source:'passage.pdf',page:1}} onDraftConsumed={consumed}/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'capacity'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));expect(screen.getByRole('button',{name:'Add detected bars'})).toBeDisabled();expect(screen.queryByRole('button',{name:'Bar 256'})).not.toBeInTheDocument();expect(consumed).not.toHaveBeenCalled()})
 
-it('saves ordered per-page source crops and reviewed event anchors when appending a collection',async()=>{const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2,sourceAnchor:{page:2,x:.3,y:.3}},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8);render(<SongChartEditor recognitionDraft={{bar,bars:[bar,structuredClone(bar)],source:'study.pdf',page:2,references:[[{page:2,region:{x:.1,y:.2,width:.4,height:.2}}],[{page:3,region:{x:.1,y:.2,width:.4,height:.2}}]]}}/>);fireEvent.change(screen.getByLabelText('Chart time signature'),{target:{value:'2/4'}});fireEvent.click(screen.getByRole('button',{name:'Add detected bars'}));fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.review.bars.slice(-2).map((b:{page:number})=>b.page)).toEqual([2,3]);expect(saved.review.bars.at(-1).crops[0].page).toBe(3);expect(saved.bars.at(-2).rhythmEvents[0].sourceAnchor).toEqual({page:2,x:.3,y:.3})})
+it('saves ordered per-page source crops and reviewed event anchors when appending a collection',async()=>{const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2,sourceAnchor:{page:2,x:.3,y:.3}},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8);render(<SongChartEditor initialWorkspaceMode="edit" recognitionDraft={{bar,bars:[bar,structuredClone(bar)],source:'study.pdf',page:2,references:[[{page:2,region:{x:.1,y:.2,width:.4,height:.2}}],[{page:3,region:{x:.1,y:.2,width:.4,height:.2}}]]}}/>);fireEvent.change(screen.getByLabelText('Chart time signature'),{target:{value:'2/4'}});fireEvent.click(screen.getByRole('button',{name:'Add detected bars'}));fireEvent.click(screen.getByRole('button',{name:'Save as new'}));const saved=JSON.parse(localStorage.getItem('drummaster-song-charts-v1')!).at(-1);expect(saved.review.bars.slice(-2).map((b:{page:number})=>b.page)).toEqual([2,3]);expect(saved.review.bars.at(-1).crops[0].page).toBe(3);expect(saved.bars.at(-2).rhythmEvents[0].sourceAnchor).toEqual({page:2,x:.3,y:.3})})
 function loadPickupTestChart() {
  const chart={...newSongChart(),id:'pickup-timing-test',bars:[blankBar()],pickupOffset:12}
  chart.bars[0].Snare[12]=2
  localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([chart]))
  vi.useFakeTimers();vi.stubGlobal('AudioContext',AudioMock)
  vi.stubGlobal('requestAnimationFrame',(callback:FrameRequestCallback)=>window.setTimeout(()=>callback(performance.now()),16));vi.stubGlobal('cancelAnimationFrame',(id:number)=>window.clearTimeout(id))
- render(<SongChartEditor />)
+ render(<SongChartEditor initialWorkspaceMode="edit" />)
  fireEvent.change(screen.getByLabelText('Saved charts'),{target:{value:chart.id}})
  fireEvent.click(screen.getByRole('button',{name:'Load chart'}))
  expect(screen.getByLabelText('First-bar pickup timing')).toHaveValue('12')
@@ -348,5 +348,5 @@ it('repeats the shortened pickup bar once per second',async()=>{
  expect(screen.getByText(/Completed cycles: 2/)).toBeInTheDocument()
  fireEvent.click(screen.getByRole('button',{name:'Stop chart'}))
 })
-it('uses the selected count mode for grid labels without dropping underlying notes',()=>{render(<SongChartEditor/>);expect(screen.getByTestId('grid-count-2')).toHaveTextContent('&');fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'quarter'}});expect(screen.getByTestId('grid-count-2')).toBeEmptyDOMElement();expect(screen.getByRole('button',{name:'Hi-hat step 3: note'})).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'sixteenth'}});expect(screen.getByTestId('grid-count-1')).toHaveTextContent('e')})
-it('preserves reviewed timing in read-only grid cells and makes conversion explicit and undoable',async()=>{const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8);localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'safe-grid',title:'Safe grid',bpm:60,meter:'2/4',bars:[bar]}]));render(<SongChartEditor/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'safe-grid'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));const cell=screen.getAllByRole('button').find(button=>button.getAttribute('aria-label')?.includes('Snare')&&button.getAttribute('aria-label')?.includes('step 1:'))!;expect(cell).toBeDisabled();fireEvent.click(screen.getByRole('button',{name:'Convert reviewed bar to grid editing'}));expect(screen.queryByRole('button',{name:'Convert reviewed bar to grid editing'})).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Undo'}));expect(screen.getByRole('button',{name:'Convert reviewed bar to grid editing'})).toBeInTheDocument();expect(screen.getByRole('button',{name:'Snare step 1: note'})).toBeDisabled()})
+it('uses the selected count mode for grid labels without dropping underlying notes',()=>{render(<SongChartEditor initialWorkspaceMode="edit"/>);expect(screen.getByTestId('grid-count-2')).toHaveTextContent('&');fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'quarter'}});expect(screen.getByTestId('grid-count-2')).toBeEmptyDOMElement();expect(screen.getByRole('button',{name:'Hi-hat step 3: note'})).toBeInTheDocument();fireEvent.change(screen.getByLabelText('Staff count labels'),{target:{value:'sixteenth'}});expect(screen.getByTestId('grid-count-1')).toHaveTextContent('e')})
+it('preserves reviewed timing in read-only grid cells and makes conversion explicit and undoable',async()=>{const {reviewedBar}=await import('./reviewedRhythm');const bar=reviewedBar([{instrument:'Snare',step:0,duration:4,kind:'note',dynamic:2},{instrument:'Snare',step:4,duration:4,kind:'rest',dynamic:2}],8);localStorage.setItem('drummaster-song-charts-v1',JSON.stringify([{id:'safe-grid',title:'Safe grid',bpm:60,meter:'2/4',bars:[bar]}]));render(<SongChartEditor initialWorkspaceMode="edit"/>);fireEvent.change(screen.getByRole('combobox',{name:'Saved charts'}),{target:{value:'safe-grid'}});fireEvent.click(screen.getByRole('button',{name:'Load chart'}));const cell=screen.getAllByRole('button').find(button=>button.getAttribute('aria-label')?.includes('Snare')&&button.getAttribute('aria-label')?.includes('step 1:'))!;expect(cell).toBeDisabled();fireEvent.click(screen.getByRole('button',{name:'Convert reviewed bar to grid editing'}));expect(screen.queryByRole('button',{name:'Convert reviewed bar to grid editing'})).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Undo'}));expect(screen.getByRole('button',{name:'Convert reviewed bar to grid editing'})).toBeInTheDocument();expect(screen.getByRole('button',{name:'Snare step 1: note'})).toBeDisabled()})

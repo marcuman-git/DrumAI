@@ -1,3 +1,4 @@
+import {loadPracticeWorkspace} from './songPracticeWorkspace'
 import { detachOrphanBoundaryTies } from './chartTieReview'
 import { useCallback, useReducer } from 'react'
 import type { SetStateAction } from 'react'
@@ -21,7 +22,7 @@ export function chartHistoryReducer(state: History, action: Action): History {
   return { past: [...state.past, state.present].slice(-50), present: next, future: [] }
 }
 export function useChartHistory() {
-  const [history, dispatch] = useReducer(chartHistoryReducer, undefined, () => ({ past: [], present: newSongChart(), future: [] }))
+  const [history, dispatch] = useReducer(chartHistoryReducer, undefined, () => ({ past: [], present: loadPracticeWorkspace() ?? newSongChart(), future: [] }))
   const setChart = useCallback((update: SetStateAction<SongChart>) => dispatch({ type: 'edit', update }), [])
   return { chart: history.present, setChart, commitChart:(chart:SongChart)=>dispatch({type:'validated',chart}), canUndo: history.past.length > 0, canRedo: history.future.length > 0, undo: () => dispatch({ type: 'undo' }), redo: () => dispatch({ type: 'redo' }), resetChart: (chart: SongChart) => dispatch({ type: 'reset', chart }) }
 }

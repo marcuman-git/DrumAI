@@ -6,27 +6,32 @@ import type { RhythmEvent } from './rhythmTypes'
 import { blankBar } from './songChartLogic'
 import type { ChartBar, ChartInstrument, SongChart } from './songChartLogic'
 const text = (node: Element, selector: string) => node.querySelector(selector)?.textContent?.trim() ?? ''
-export function importMusicXml(xml: string): SongChart {
+export function importMusicXml(xml: string, partId?:string): SongChart {
   if (xml.length > 8*1024*1024 || /<!DOCTYPE|<!ENTITY/i.test(xml)) throw new Error('Use an uncompressed MusicXML file without a DTD, below8 MB.')
   const document = new DOMParser().parseFromString(xml, 'application/xml')
   if (document.querySelector('parsererror') || document.documentElement.localName !== 'score-partwise') throw new Error('Expected a valid score-partwise MusicXML document.')
   const parts = document.querySelectorAll('score-partwise > part')
-  if (parts.length !== 1) throw new Error('Export a single percussion part before importing.')
+  if (parts.length !== 1 && !partId) throw new Error('Select one percussion part before importing.')
+  const part=partId?Array.from(parts).find(item=>item.getAttribute('id')===partId):parts[0]
+  if(!part)throw Error('Selected part is missing.')
+  const definitions=Array.from(document.querySelectorAll('part-list > score-part'))
+  const definition=definitions.find(item=>item.getAttribute('id')===part.getAttribute('id')) ?? (parts.length===1 ? definitions[0] ?? document.createElement('score-part') : undefined)
+  if(!definition)throw Error('Selected part has no instrument definition.')
 
   const mapping = new Map<string, ChartInstrument>()
-  for (const item of document.querySelectorAll('score-part > midi-instrument')) {
+  for (const item of definition.querySelectorAll('midi-instrument')) {
     const midi = Number(text(item, 'midi-unpitched'))
     // MusicXML midi-unpitched is one-based (GM drum-note number plus one).
     const gm: Record<number, ChartInstrument> = { 36: 'Kick 2', 37: 'Kick', 39: 'Snare', 41: 'Snare', 42: 'Floor tom 2', 44: 'Floor tom 1', 46: 'Tom 3', 48: 'Tom 2', 49: 'Tom 2', 51: 'Tom 1', 43: 'Hi-hat', 45: 'Pedal hi-hat', 47: 'Open hi-hat', 50: 'Crash', 58: 'Crash', 52: 'Ride', 54: 'Ride bell', 60: 'Ride', 53: 'China', 56: 'Splash' }
     const instrument = gm[midi]
     if (instrument) mapping.set(item.getAttribute('id') ?? '', instrument)
   }
-  const measures = expandedMusicXmlMeasures(parts[0])
+  const measures = expandedMusicXmlMeasures(part)
   if (!measures.length || measures.length > 256) throw new Error('Import between one and256 complete 2/4 or 4/4 bars.')
   let divisions = 0; let bpm = 60; let meter: '2/4' | '4/4' | null = null; let chartMeter: '2/4' | '4/4' | null = null; let barsTempoSeen = false
    const openTies=new Map<ChartInstrument,number>(); const previousBars:ChartBar[]=[]
   const sharedVoices=new Map<string,Set<ChartInstrument>>()
-  for(const note of parts[0].querySelectorAll('note')){const instrument=mapping.get(note.querySelector('instrument')?.getAttribute('id')??'');const voice=text(note,'voice');if(instrument&&voice){const used=sharedVoices.get(voice)??new Set<ChartInstrument>();used.add(instrument);sharedVoices.set(voice,used)}}
+  for(const note of part.querySelectorAll('note')){const instrument=mapping.get(note.querySelector('instrument')?.getAttribute('id')??'');const voice=text(note,'voice');if(instrument&&voice){const used=sharedVoices.get(voice)??new Set<ChartInstrument>();used.add(instrument);sharedVoices.set(voice,used)}}
   const bars = Array.from(measures, (measure) => {
     const attributes = measure.querySelector(':scope > attributes')
     if (attributes) {
