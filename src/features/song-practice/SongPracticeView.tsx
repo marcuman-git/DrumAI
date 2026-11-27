@@ -1,3 +1,5 @@
+import {SnareStudyTrainer} from '../snare-study/SnareStudyTrainer'
+import {savePracticeWorkspace,defaultPracticeView} from './songPracticeWorkspace'
 import type { SourceReferenceRequest } from './sourceReferenceNavigation'
 import type { RecognitionDraft } from './notationRecognition'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
@@ -22,7 +24,7 @@ export function SongPracticeView() {
   const detachLoopRef = useRef<null | (() => void)>(null)
   const countInRef = useRef<AbortController | null>(null)
   const urlsRef = useRef(new Set<string>())
-  const [mode, setMode] = useState<'chart' | 'audio'>('chart')
+  const [mode, setMode] = useState<'chart' | 'audio' | 'snare'>('chart')
   const [isCountingIn, setIsCountingIn] = useState(false)
   const [audioMessage, setAudioMessage] = useState('Audio uploads are available for this visit only. Reloading requires choosing the audio files again.')
 
@@ -114,9 +116,10 @@ export function SongPracticeView() {
   return (
     <div className="space-y-4">
       <SectionHeader title="Song Practice" subtitle="Create editable drum charts, or practice separately with uploaded audio tracks." />
-      <div className="flex gap-2">{(['chart', 'audio'] as const).map((value) => <button key={value} aria-pressed={mode === value} onClick={() => { pausePlayback(); setMode(value) }} className={`rounded-lg border px-4 py-2 ${mode === value ? 'border-cyan-200 bg-cyan-300/20' : 'border-white/20'}`}>{value === 'chart' ? 'Drum Chart' : 'Audio Tracks'}</button>)}</div>
+      <div className="flex gap-2">{(['chart', 'audio', 'snare'] as const).map((value) => <button key={value} aria-pressed={mode === value} onClick={() => { pausePlayback(); setMode(value) }} className={`rounded-lg border px-4 py-2 ${mode === value ? 'border-cyan-200 bg-cyan-300/20' : 'border-white/20'}`}>{value === 'chart' ? 'Drum Chart' : value === 'snare' ? 'Snare Studies' : 'Audio Tracks'}</button>)}</div>
 
       <div hidden={mode !== 'chart'}><div className="min-w-0 space-y-4">{mode === 'chart' && <SongChartEditor onSourceReference={reference=>{setShowSources(true);setSourceReference({...reference,requestId:(sourceReference?.requestId??0)+1})}} recognitionDraft={recognitionDraft} onDraftConsumed={() => setRecognitionDraft(null)} />}<details open={showSources} onToggle={event=>setShowSources(event.currentTarget.open)} className="rounded-lg border border-white/20 p-3"><summary className="cursor-pointer font-semibold">Analyze PDF / source tools</summary><PdfChartReference sourceReference={sourceReference} onDraft={draft=>{setRecognitionDraft(draft);setShowSources(false)}} /></details></div></div>
+      {mode === 'snare' && <SnareStudyTrainer onChart={chart=>{const saved=savePracticeWorkspace(chart,defaultPracticeView());if(saved)setMode('chart');return saved}}/>}
       {mode === 'audio' && <><p role="status" className="text-sm text-zinc-300">{audioMessage}</p><div className="grid gap-3 lg:grid-cols-[1.6fr_1fr]">
         <GlassCard className="space-y-3">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-xs text-zinc-100">
