@@ -1,4 +1,4 @@
-# DrumMaster AI — v1.0.0-rc.2
+# DrumMaster AI — v1.0.0-rc.3
 
 A local-first drum practice app with metronome, timing analysis, rudiments, stick control, reading, dictation, independence, grooves, fills, polyrhythm, odd-time, dynamics, speed training, song charts, analytics and a rule-based practice coach.
 
@@ -8,7 +8,7 @@ Use a current Node version supported by Vite. Run `npm ci`, then `npm run dev`. 
 
 ## Score workflow
 
-Load a local PDF, crop a staff, analyze it, review selected noteheads and ambiguous cymbal identities, compare beam/flag evidence, and assign onsets and durations. Fill rests only after checking the source. Use the musical timing resolver to combine note values, connected beams, simultaneous columns and explicit anchors; ambiguous placements remain reviewable. Confirm the reviewed draft before creating or appending a chart. Reviewed grid cells are read-only; edit durations directly. See TIMING_UPDATE.md. PDF detection is experimental and does not guarantee complete transcription. Keep source PDFs separately; backups preserve references, not PDF bytes.
+Load a local PDF, crop a staff, analyze it, review selected noteheads and ambiguous cymbal identities, compare beam/flag evidence, and assign onsets and durations. Fill rests only after checking the source. Use the musical timing resolver to combine note values, connected beams, simultaneous columns and explicit anchors; ambiguous placements remain reviewable. Confirm the reviewed draft before creating or appending a chart. Reviewed grid cells are read-only; edit durations directly. See TIMING_UPDATE.md. Staff previews suppress inactive-voice coverage rests while another instrument plays; shared silence appears once. Explicitly reviewed source rests remain available. See REST_NOTATION_FIX.md. PDF detection is experimental and does not guarantee complete transcription. Keep source PDFs separately; backups preserve references, not PDF bytes.
 
 Charts support 2/4 and 4/4, up to256 bars, labels, selected sections, looping, pickups, source references, review status and undo/redo. Existing sixteenth-slot grid charts remain compatible. Reviewed events use finer timing for32nds,64ths, dotted values and3:2 triplets. Count-label selection groups grid notation; it never rewrites reviewed durations.
 

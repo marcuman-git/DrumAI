@@ -1,4 +1,4 @@
-# v1.0.0-rc.2 release readiness
+# v1.0.0-rc.3 release readiness
 
 ## Combined release scope
 
@@ -13,9 +13,11 @@
 
 The consolidated timing workflow and source comparison checks are described in TIMING_UPDATE.md.
 
+The phantom-rest correction and its verification are described in REST_NOTATION_FIX.md.
+
 ## Automated evidence
 
-543 unit tests pass across157 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
+548 unit tests pass across158 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
 
 ## Required checks before stable v1.0
 

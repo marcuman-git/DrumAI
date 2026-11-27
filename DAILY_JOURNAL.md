@@ -1,3 +1,9 @@
+# v1.0.0-rc.3 — remove invented rest glyphs
+
+The highlighted symbols were generated per-instrument coverage rests, not detected noteheads. Composite staff rendering now shows shared silence once, retains explicitly reviewed/source-anchored rest glyphs, and hides inactive-voice coverage gaps while other instruments play. Legacy charts benefit without reanalysis; underlying timing and playback remain intact. Rest display intent is preserved through saves and MusicXML print-object flags. See REST_NOTATION_FIX.md.
+
+---
+
 # Consolidated musical timing update — v1.0.0-rc.2
 
 Added source-evidence timing constraints, explicit ambiguity/anchors, mixed beams, preserved review metadata, connected stylized-head stem recovery, and safeguards against accidental grid conversion. Whole-bar timing regressions check184 heads across16 source/scale cases; five unmatched detections remain reported. See TIMING_UPDATE.md for workflow, evidence and limits.

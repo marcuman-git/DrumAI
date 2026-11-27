@@ -1,3 +1,9 @@
+# v1.0.0-rc.3 — remove invented rest glyphs
+
+The highlighted symbols were generated per-instrument coverage rests, not detected noteheads. Composite staff rendering now shows shared silence once, retains explicitly reviewed/source-anchored rest glyphs, and hides inactive-voice coverage gaps while other instruments play. Legacy charts benefit without reanalysis; underlying timing and playback remain intact. Rest display intent is preserved through saves and MusicXML print-object flags. See REST_NOTATION_FIX.md.
+
+---
+
 # v1.0.0-rc.2 — musical timing consolidation
 
 The requested timing work is delivered as one update. Test the source → timing proposal → reviewed draft → chart → playback workflow using TIMING_UPDATE.md. Stable release still requires browser/device/listening and independent-source validation; no additional serial timing release plan is required to use this update.
