@@ -59,7 +59,7 @@ export function importMusicXml(xml: string): SongChart {
         if(!stop)bar[instrument]![Math.floor(start)] = dynamic
         if(supportedDuration(duration))events.push({instrument,step:start,duration:tickTime(timeTick(duration)),kind:'note',dynamic,...(graceCounts.has(instrument)?{grace:graceCounts.get(instrument) as 1|2}:{}),...(text(entry,'other-articulation')?{articulation:text(entry,'other-articulation') as RhythmEvent['articulation']}:{}),...(stop?{tieFromPrevious:true}:{})});graceCounts.delete(instrument)
       }
-      if(entry.localName==='note' && entry.querySelector('rest')) { if(entry.querySelector('tie'))throw new Error('Rests cannot be tied.'); const instrument=voiceMap.get(text(entry,'voice'))??(mapping.size===0?'Snare':undefined); if(instrument && supportedDuration(duration))events.push({instrument,step:start,duration:duration as RhythmEvent['duration'],kind:'rest',dynamic:2}) }
+      if(entry.localName==='note' && entry.querySelector('rest')) { if(entry.querySelector('tie'))throw new Error('Rests cannot be tied.'); const instrument=voiceMap.get(text(entry,'voice'))??(mapping.size===0?'Snare':undefined); if(instrument && supportedDuration(duration))events.push({instrument,step:start,duration:duration as RhythmEvent['duration'],kind:'rest',dynamic:2,...(entry.getAttribute('print-object')==='no'?{restOrigin:'gap' as const}:entry.getAttribute('print-object')==='yes'?{restOrigin:'explicit' as const}:{})}) }
       if (!chord) { previous = cursor; cursor=tickTime(timeTick(cursor+duration)); hasPrevious = entry.localName === 'note' }
       extent = Math.max(extent, start + duration)
     }

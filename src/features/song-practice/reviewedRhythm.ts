@@ -5,7 +5,7 @@ import type { ChartBar, ChartInstrument } from './chartKit'
 import type { RhythmEvent } from './rhythmTypes'
 export type { RhythmEvent } from './rhythmTypes'
 export function validRhythmEvents(value: unknown, slots = 16): value is RhythmEvent[] {
-  return Array.isArray(value) && value.length <= 4096 && value.every((event) => event && (event.sourceAnchor===undefined||validSourceAnchor(event.sourceAnchor)) && CHART_INSTRUMENTS.includes(event.instrument) && alignedTime(event.step) && event.step >= 0 && event.step < slots && supportedDuration(event.duration) && timeTick(event.step+event.duration)<=slots*RHYTHM_TICKS && (event.grace===undefined||event.kind==='note'&&!event.tieFromPrevious&&[1,2].includes(event.grace))&&(event.articulation===undefined||event.kind==='note'&&['rimshot','cross-stick','marcato','choke','let-ring','open','closed','half-open'].includes(event.articulation))&&['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
+  return Array.isArray(value) && value.length <= 4096 && value.every((event) => event && (event.sourceAnchor===undefined||validSourceAnchor(event.sourceAnchor)) && CHART_INSTRUMENTS.includes(event.instrument) && alignedTime(event.step) && event.step >= 0 && event.step < slots && supportedDuration(event.duration) && timeTick(event.step+event.duration)<=slots*RHYTHM_TICKS && (event.grace===undefined||event.kind==='note'&&!event.tieFromPrevious&&[1,2].includes(event.grace))&&(event.articulation===undefined||event.kind==='note'&&['rimshot','cross-stick','marcato','choke','let-ring','open','closed','half-open'].includes(event.articulation))&&(event.restOrigin===undefined||event.kind==='rest'&&['gap','explicit'].includes(event.restOrigin))&&['note', 'rest'].includes(event.kind) && [1, 2, 3].includes(event.dynamic))
 }
 export function checkReviewedRhythm(events: RhythmEvent[], slots = 16, previousBar?: ChartBar) {
   let overlaps = 0; let missing = 0
@@ -24,7 +24,7 @@ export function reviewedBar(events: RhythmEvent[], slots = 16, previousBar?: Cha
   if (!checkReviewedRhythm(events, slots, previousBar).valid) throw new Error('Resolve missing time and overlaps before confirming.')
   const bar: ChartBar = { ...completeBar(), ...(slots === 8 ? { beats: 2 as const } : {}) }
   for (const event of events) if (event.kind === 'note' && !event.tieFromPrevious) bar[event.instrument]![Math.floor(event.step)] = event.dynamic
-  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic, tieFromPrevious,sourceAnchor,grace,articulation }) => ({ instrument, step, duration, kind, dynamic, ...(tieFromPrevious ? { tieFromPrevious } : {}),...(sourceAnchor?{sourceAnchor:{...sourceAnchor}}:{}),...(grace?{grace}:{}),...(articulation?{articulation}:{}) }))
+  bar.rhythmEvents = events.map(({ instrument, step, duration, kind, dynamic, tieFromPrevious,sourceAnchor,grace,articulation,restOrigin }) => ({ instrument, step, duration, kind, dynamic, ...(tieFromPrevious ? { tieFromPrevious } : {}),...(sourceAnchor?{sourceAnchor:{...sourceAnchor}}:{}),...(restOrigin?{restOrigin}:{}),...(grace?{grace}:{}),...(articulation?{articulation}:{}) }))
   return bar
 }
 export function validReviewedBar(bar: ChartBar, previousBar?: ChartBar): boolean {
@@ -39,6 +39,6 @@ export function validReviewedBar(bar: ChartBar, previousBar?: ChartBar): boolean
 }
 export function fillReviewedRests(events:RhythmEvent[],instrument:ChartInstrument,slots=16):RhythmEvent[]{
  const covered=new Set<number>();for(const event of events.filter(e=>e.instrument===instrument))for(let tick=timeTick(event.step);tick<timeTick(event.step+event.duration);tick++)covered.add(tick)
- const added:RhythmEvent[]=[];let tick=0;while(tick<slots*RHYTHM_TICKS){if(covered.has(tick)){tick++;continue}const start=tick;while(tick<slots*RHYTHM_TICKS&&!covered.has(tick))tick++;const startTime=tickTime(start),length=tickTime(tick-start);if(Number.isInteger(startTime)&&Number.isInteger(length))for(let step=startTime;step<startTime+length;step++)added.push({instrument,step,duration:1,kind:'rest',dynamic:2});else for(const fragment of decomposeTime(startTime,length))added.push({...fragment,instrument,kind:'rest',dynamic:2})}
+ const added:RhythmEvent[]=[];let tick=0;while(tick<slots*RHYTHM_TICKS){if(covered.has(tick)){tick++;continue}const start=tick;while(tick<slots*RHYTHM_TICKS&&!covered.has(tick))tick++;const startTime=tickTime(start),length=tickTime(tick-start);if(Number.isInteger(startTime)&&Number.isInteger(length))for(let step=startTime;step<startTime+length;step++)added.push({instrument,step,duration:1,kind:'rest',dynamic:2,restOrigin:'gap'});else for(const fragment of decomposeTime(startTime,length))added.push({...fragment,instrument,kind:'rest',dynamic:2})}
  if(events.length+added.length>4096)throw Error('Rest fill exceeds event capacity.');return [...events,...added]
 }

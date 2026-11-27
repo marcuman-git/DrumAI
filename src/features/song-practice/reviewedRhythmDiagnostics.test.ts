@@ -19,7 +19,7 @@ it('fills only the first gap with explicit rests and preserves notes and other v
  const events: RhythmEvent[] = [event, { ...event, step: 8 }, { ...event, instrument: 'Kick' }]
  const next = fillNextReviewedGap(events, 'Snare')
  expect(next.slice(0, 3)).toEqual(events)
- expect(next.slice(3)).toEqual([{ ...event, step: 4, kind: 'rest' }])
+ expect(next.slice(3)).toEqual([{ ...event, step: 4, kind: 'rest', restOrigin:'gap' }])
  expect(formatSlotRanges(diagnoseReviewedRhythm(next).find((voice) => voice.instrument === 'Snare')!.gaps)).toBe('13-16')
  expect(events).toHaveLength(3)
 })

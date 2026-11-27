@@ -1,3 +1,4 @@
+import {staffRestNotation} from './staffRestNotation'
 import {reviewedNotationBeams} from './reviewedNotationBeams'
 import {durationNotation,sameTime} from './rhythmTime'
 import { barSlots } from './chartMeter'
@@ -17,7 +18,8 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
   const displayBar = groupedGridNotation(bar, countMode)
   const beams=reviewedNotationBeams(displayBar.rhythmEvents??[])
   const slots = barSlots(bar)
-  const displaySteps=[...new Set([...Array.from({length:slots},(_,i)=>i),...(displayBar.rhythmEvents?.map(e=>e.step)??[])])].sort((a,b)=>a-b)
+  const visibleRests=displayBar.rhythmEvents?staffRestNotation(displayBar.rhythmEvents,slots,instruments,bar.rhythmEvents?undefined:countMode==='quarter'?4:countMode==='eighth'?2:1):[]
+  const displaySteps=[...new Set([...Array.from({length:slots},(_,i)=>i),...(displayBar.rhythmEvents?.map(e=>e.step)??[]),...visibleRests.map(e=>e.step)])].sort((a,b)=>a-b)
   const tuplets= instruments.flatMap(instrument=>{const events=(displayBar.rhythmEvents??[]).filter(e=>e.instrument===instrument).sort((a,b)=>a.step-b.step),groups:{instrument:typeof instrument;start:number;end:number}[]=[];for(let i=0;i<events.length;i++){const a=events[i],c=events[i+1],d=events[i+2];if(durationNotation(a.duration).triplet&&c&&d&&sameTime(a.duration,c.duration)&&sameTime(a.duration,d.duration)&&sameTime(a.step+a.duration,c.step)&&sameTime(c.step+c.duration,d.step)){groups.push({instrument,start:a.step,end:d.step});i+=2}}return groups})
   const width = 1080; const start = 140; const spacing = 896 / slots
   return <section className="min-w-0 space-y-2" aria-label="Drum staff notation">
@@ -50,8 +52,8 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
               <path d={`M ${x + 7} 62 l -9 30 M ${x + 6} 64 q -6 9 -12 1 M ${x + 3} 74 q -6 9 -12 1`} fill="none" /><circle cx={x - 7} cy={63} r={2.3} /><circle cx={x - 10} cy={73} r={2.3} />
             </g>}
             {instruments.map((instrument) => {
-              const y = HEAD_Y[instrument]
-              const event = displayBar.rhythmEvents?.find((item) => item.instrument === instrument && sameTime(item.step,step))
+              const event=displayBar.rhythmEvents?.find(item=>item.instrument===instrument&&sameTime(item.step,step)&&item.kind==='note')??visibleRests.find(item=>item.instrument===instrument&&sameTime(item.step,step))
+              const y=event?.kind==='rest'?75:HEAD_Y[instrument]
               const note=displayBar.rhythmEvents?(event?.kind==='note'?event.dynamic:0):notesFor(bar,instrument)[step];const spec=durationNotation(event?.duration??1);const value=spec.label.toLowerCase()
               return <g key={instrument} data-testid={`staff-${instrument}-${step}`} data-active={activeStep === step} aria-label={`${instrument} slot ${step + 1}: ${event ? value + ' ' + event.kind : displayBar.rhythmEvents ? 'continuation or inactive voice' : ['sixteenth rest', 'ghost sixteenth note', 'sixteenth note', 'accented sixteenth note'][note]}`} stroke={color} fill={color}>
                 <title>{`${instrument} slot ${step + 1}: ${event ? (event.tieFromPrevious ? 'tied continuation' : event.kind) : ['rest', 'ghost', 'note', 'accent'][note]}`}</title>
@@ -78,6 +80,6 @@ export function ChartStaffNotation({ bar, barNumber, activeStep, initialCountMod
         })}
       </svg>
     </div>
-    <p className="text-xs text-zinc-400">Reviewed rests are shown per instrument; continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards duration review and turns tied heads into separate grid strikes. Recheck ties before confirming again.</p>
+    <p className="text-xs text-zinc-400">Coverage gaps in inactive instruments do not add source rest symbols. Shared silence is shown once; explicitly reviewed source rests are retained. Continuing durations have no new strike. Playback triggers note onsets only. Grid editing discards duration review and turns tied heads into separate grid strikes. Recheck ties before confirming again.</p>
   </section>
 }

@@ -1,3 +1,4 @@
+import {staffRestNotation} from './staffRestNotation'
 import back from './realBackFullTimingFixtures'
 import intro from './realIntroGrooveFixtures'
 import mixed from './realMixedGrooveFixtures'
@@ -18,6 +19,6 @@ export function benchmarkMusicalTimingSources(){return ([['back',back],['intro',
  const expected=scan.cases.map(c=>{const i=columns.findIndex(xs=>xs.includes(c.reference.x));return {id:c.detected?.id,step:labels[name].onsets[i],duration:labels[name].values[i],instrument:instrument(c.reference)}})
  const existing=name==='mixed'?[{instrument:'Hi-hat' as const,step:8,duration:2,kind:'rest' as const,dynamic:2 as const}]:[]
  const result=resolveMusicalTiming(selected,hints,{slots:16,gap:f.staff.gap,existing})
- const proposal=result.proposals[0],correct=expected.filter(r=>proposal?.events.some(e=>e.kind==='note'&&e.sourceCandidateId===r.id&&e.step===r.step&&e.duration===r.duration)).length
- return {source:f.source,dpi:f.dpi,scope:'Detected head positions matched to checked source labels; manual row identities and a reviewed eighth rest at slot9 for the mixed bar. No head coordinates substituted; unmatched detections remain reported.',status:result.status,issues:result.issues,hints,expected,proposed:proposal?.events??[],summary:{references:expected.length,headsRecovered:scan.summary.recovered,unmatchedDetections:scan.summary.unmatched,correctTiming:correct,complete:result.status==='resolved'&&correct===expected.length}}
+ const proposal=result.proposals[0],renderedRests=staffRestNotation(proposal?.events??[],16,['Hi-hat','Snare','Kick']),correct=expected.filter(r=>proposal?.events.some(e=>e.kind==='note'&&e.sourceCandidateId===r.id&&e.step===r.step&&e.duration===r.duration)).length
+ return {source:f.source,dpi:f.dpi,scope:'Detected head positions matched to checked source labels; manual row identities and a reviewed eighth rest at slot9 for the mixed bar. No head coordinates substituted; unmatched detections remain reported.',renderedRests,status:result.status,issues:result.issues,hints,expected,proposed:proposal?.events??[],summary:{references:expected.length,headsRecovered:scan.summary.recovered,unmatchedDetections:scan.summary.unmatched,correctTiming:correct,complete:result.status==='resolved'&&correct===expected.length}}
  }))}

@@ -33,7 +33,7 @@ export function fillNextReviewedGap(events: readonly RhythmEvent[], instrument: 
  while (step < (gap.endExclusive??gap.end)-.001) {
   const remaining = (gap.endExclusive??gap.end) - step
   const duration = remaining >= 4 ? 4 : remaining >= 2 ? 2 : remaining>=1?1:decomposeTime(step,remaining)[0].duration
-  added.push({ instrument, step, duration, kind: 'rest', dynamic: 2 }); step += duration
+  added.push({ instrument, step, duration, kind: 'rest', dynamic: 2, restOrigin:'gap' }); step += duration
  }
  if (events.length + added.length > 4096) return [...events]
  return [...events, ...added]
