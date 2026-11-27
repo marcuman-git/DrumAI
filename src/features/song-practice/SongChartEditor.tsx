@@ -1,5 +1,6 @@
+import {chartPlaybackAudit} from './chartPlaybackAudit'
 import {withoutReviewedDurations} from './chartKit'
-import {chartPlaybackNote} from './chartTieReview'
+import {chartPlaybackFrames} from './chartPlaybackFrames'
 import {chartScheduledHits} from './chartScheduledHits'
 import {ChartReviewChecklist} from './ChartReviewChecklist'
 import {createChartFromDraft,appendReviewedDraft} from './chartDraftWorkflow'
@@ -49,14 +50,15 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
   const [countMode, setCountMode] = useState<StaffCountMode>('eighth')
   const [countBeat, setCountBeat] = useState<number | null>(null)
   const [active, setActive] = useState(-1)
+  const [sounding, setSounding] = useState<string[]>([])
   const [activeBar, setActiveBar] = useState(0)
   const [loop, setLoop] = useState(false)
   const [volume, setVolume] = useState(0.3)
   const [message, setMessage] = useState('Click cells to cycle: rest  to  note  to  ghost  to  accent  to  rest. Each bar is 4/4 with sixteen slots.')
   const generation = useRef(0)
   const owned = useRef<{ context: AudioContext; timer: number; frame: number; session: string | null; bars: number; cycleBars: number } | null>(null)
-  const config = useRef({ chart, loop, volume })
-  useLayoutEffect(() => { config.current = { chart, loop, volume } }, [chart, loop, volume])
+  const config = useRef({ chart, loop, volume, countMode })
+  useLayoutEffect(() => { config.current = { chart, loop, volume, countMode } }, [chart, loop, volume, countMode])
   const stop = (updateUI = true) => {
     generation.current += 1
     const resource = owned.current
@@ -65,7 +67,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       if (resource.session) stopPracticeSession('song-practice', resource.session, { source: 'chart', completedBars: resource.bars, completedCycles: Math.floor(resource.bars / resource.cycleBars) })
       void resource.context.close(); owned.current = null
     }
-    if (updateUI) { setPlaying(false); setCountBeat(null); setActive(-1) }
+    if (updateUI) { setPlaying(false); setCountBeat(null); setActive(-1); setSounding([]) }
   }
   useEffect(() => {
     const onHidden = () => { if (document.hidden) { stop(); setMessage('Chart stopped because this tab was hidden. Session saved.') } }
@@ -87,7 +89,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       let index = first; let next = audio.currentTime + 0.04; let end: number | null = null
       const training = chart.training ?? defaultTraining(); let scheduledCycles = 0
       let remainingCount = chart.countIn ? 4 : 0; let countIndex = 0
-      const visuals: { index: number; time: number; boundary: boolean; count?: number }[] = []
+      const visuals: { index: number; time: number; boundary: boolean; count?: number; sounding?: string[] }[] = []
       const schedule = () => {
         if (token !== generation.current) return
         if (end !== null && config.current.loop && (!training.enabled || scheduledCycles < training.repetitions)) { end = null; first = playbackStart(config.current.chart,section.start); index = first }
@@ -115,10 +117,13 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
           const time = Math.max(next, audio.currentTime)
           const bar = current.chart.bars[Math.floor(index / slots)]
           for (const instrument of CHART_INSTRUMENTS) {
-            for(const hit of chartScheduledHits(bar,instrument,index%slots,index===first)){const onset=time+hit.offset*60/current.chart.bpm/4;for(let grace=hit.grace??0;grace>0;grace--)play(instrument,Math.max(audio.currentTime,onset-grace*.035),true,current.volume*.35);play(instrument,onset,hit.dynamic===1,current.volume*mixLevel(current.chart.mix??defaultMix(),instrument)*(hit.dynamic===3?1.35:.8),hit.articulation)}
+            for(const hit of chartScheduledHits(bar,instrument,index%slots,index===first)){const onset=time+hit.offset*60/current.chart.bpm/4;const level=current.volume*mixLevel(current.chart.mix??defaultMix(),instrument);if(level<=0)continue;for(let grace=hit.grace??0;grace>0;grace--)play(instrument,Math.max(audio.currentTime,onset-grace*.035),true,level*.35);play(instrument,onset,hit.dynamic===1,level*(hit.dynamic===3?1.35:.8),hit.articulation)}
 
           }
-          visuals.push({ index, time, boundary: false })
+          for (const frame of chartPlaybackFrames(bar,index%slots,index===first,current.countMode,current.chart.mix,current.volume)) {
+            visuals.push({index:Math.floor(index/slots)*slots+frame.step,time:time+frame.offset*60/current.chart.bpm/4,boundary:false,sounding:frame.instruments})
+          }
+          visuals.sort((a,b)=>a.time-b.time)
           next = time + 60 / current.chart.bpm / 4; index += 1
           if (index % slots === 0) visuals.push({ index, time: next, boundary: true })
         }
@@ -134,7 +139,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
             resource.bars += 1
             setCycles(Math.floor(resource.bars / (section.end - section.start + 1)))
             void trackPracticeEvent('song-practice', 'score', { source: 'chart', completedBars: resource.bars, completedCycles: Math.floor(resource.bars / resource.cycleBars), bpm: config.current.chart.bpm, measuredTiming: false }, resource.session)
-          } else { setActiveBar(Math.floor(item.index / chartSlots(chart))); setActive(item.index % chartSlots(chart)) }
+          } else { setActiveBar(Math.floor(item.index / chartSlots(chart))); setActive(item.index % chartSlots(chart)); setSounding(item.sounding??[]) }
         }
         if (end !== null && audio.currentTime >= end) {
           if (config.current.loop && (!training.enabled || scheduledCycles < training.repetitions)) schedule()
@@ -189,12 +194,12 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       <section aria-label="Cross-bar tie review" className="space-y-2 rounded border border-cyan-300/40 p-3"><strong>{shownBar>0?`Review ties from bar ${shownBar} to bar ${shownBar+1}`:'Select a later bar to review its incoming tie'}</strong><p className="text-xs">Compare the final note of the previous bar and first note of this bar against the source. Tying suppresses the new strike. Playback entering this bar directly sounds the continuation once. Editing the preceding bar can detach orphan ties; recheck the source.</p>{boundaryTieVoices(chart.bars,shownBar).map(instrument=><label key={instrument} className="block"><input aria-label={`Tie ${instrument} from previous bar`} type="checkbox" disabled={playing} checked={!!chart.bars[shownBar].rhythmEvents?.find(event=>event.instrument===instrument&&event.step===0)?.tieFromPrevious} onChange={event=>{try{setChart(setBoundaryTie(chart,shownBar,instrument,event.target.checked));setMessage('Boundary tie updated after your source review. Undo can restore it.')}catch(error){setMessage(error instanceof Error?error.message:'Tie review failed.')}}} /> I verified the {instrument} tie across this barline</label>)}{!boundaryTieVoices(chart.bars,shownBar).length&&<p>No adjacent reviewed note pair in this boundary. Both bars must have duration review.</p>}{shownBar>0&&chart.bars[shownBar-1].rhythmEvents&&<details><summary>Compare previous bar ending</summary><ChartStaffNotation bar={chart.bars[shownBar-1]} nextBar={chart.bars[shownBar]} barNumber={shownBar} activeStep={-1} instruments={CHART_INSTRUMENTS.filter(name=>chart.bars[shownBar-1].rhythmEvents?.some(event=>event.instrument===name))}/></details>}</section>
       <label className="block text-sm">Time signature<select aria-label="Chart time signature" disabled={playing} value={chart.meter ?? '4/4'} onChange={(event) => { try { const next = changeChartMeter(chart, event.target.value as '2/4' | '4/4'); setChart(next); setSelectedBar(0); setMessage('Meter converted without losing strokes. Bar count and section reset; verify the source.') } catch (error) { setMessage(error instanceof Error ? error.message : 'Meter conversion failed; chart unchanged.') } }} className="ml-2 rounded bg-zinc-900 p-2"><option>4/4</option><option>2/4</option></select></label><p className="text-xs text-amber-100">4/4 to 2/4 splits each bar into two; returning joins pairs. Reviewed durations crossing the split become tied fragments; joining retains those ties. PDF drafts must match the chart meter before appending. Select the source meter explicitly in PDF review.</p>
       <ChartStaffNotation nextBar={chart.bars[shownBar+1]} countMode={countMode} onCountModeChange={setCountMode} instruments={visible} bar={chart.bars[shownBar]} barNumber={shownBar + 1} activeStep={playing && countBeat === null ? active : -1} />
-      <div className="overflow-x-auto rounded-lg border border-white/15 bg-black/25 p-2"><div className="min-w-[580px] space-y-3 p-1">
+      <div role="region" aria-label="Drum chart grid, scroll horizontally for later slots" tabIndex={0} className="overflow-x-auto rounded-lg border border-white/15 bg-black/25 p-2"><div className="min-w-[580px] space-y-3 p-1">
         <div style={{ gridTemplateColumns: `80px repeat(${chartSlots(chart)}, minmax(0, 1fr))` }} className="grid gap-1 text-center text-xs text-zinc-300"><span>Count</span>{Array.from({ length: chartSlots(chart) }, (_, index) => <span key={index} data-testid={`grid-count-${index}`}>{staffCountLabel(index,countMode)}</span>)}</div>
-        {visible.map((instrument) => <div key={instrument} style={{ gridTemplateColumns: `80px repeat(${chartSlots(chart)}, minmax(0, 1fr))` }} className="grid gap-1"><span className="self-center text-sm text-cyan-100">{instrument}</span>{notesFor(chart.bars[shownBar], instrument).slice(0, chartSlots(chart)).map((note, index) => <button key={index} aria-label={`${instrument} step ${index + 1}: ${chart.bars[shownBar].rhythmEvents?.some(event=>event.instrument===instrument&&event.step===index&&event.tieFromPrevious)?'tied continuation':['rest', 'ghost', 'note', 'accent'][note]}`} disabled={!!chart.bars[shownBar].rhythmEvents} onClick={() => setChart((current) => cycleChartNote(current, shownBar, instrument, index))} className={`flex h-12 items-center justify-center rounded border text-sm ${playing && active === index ? 'ring-2 ring-amber-300' : ''} ${note === 3 ? 'border-amber-300 bg-amber-300/20 text-amber-100' : note ? 'border-cyan-300/40 bg-cyan-500/20 text-cyan-100' : 'border-white/15 bg-zinc-900 text-zinc-500'}`}>{note === 3 ? '>x' : note === 2 ? 'x' : note === 1 ? '(x)' : chart.bars[shownBar].rhythmEvents?.some(event=>event.instrument===instrument&&event.step===index&&event.tieFromPrevious)?'↝':'-'}</button>)}</div>)}
+        {visible.map((instrument) => <div key={instrument} style={{ gridTemplateColumns: `80px repeat(${chartSlots(chart)}, minmax(0, 1fr))` }} className="grid gap-1"><span className="self-center text-sm text-cyan-100">{instrument}</span>{notesFor(chart.bars[shownBar], instrument).slice(0, chartSlots(chart)).map((note, index) => <button key={index} aria-label={`${instrument} step ${index + 1}: ${chart.bars[shownBar].rhythmEvents?.some(event=>event.instrument===instrument&&event.step===index&&event.tieFromPrevious)?'tied continuation':['rest', 'ghost', 'note', 'accent'][note]}`} disabled={!!chart.bars[shownBar].rhythmEvents} onClick={() => setChart((current) => cycleChartNote(current, shownBar, instrument, index))} className={`flex h-12 items-center justify-center rounded border text-sm ${playing && active === index && sounding.includes(instrument) ? 'ring-2 ring-amber-300' : ''} ${note === 3 ? 'border-amber-300 bg-amber-300/20 text-amber-100' : note ? 'border-cyan-300/40 bg-cyan-500/20 text-cyan-100' : 'border-white/15 bg-zinc-900 text-zinc-500'}`}>{note === 3 ? '>x' : note === 2 ? 'x' : note === 1 ? '(x)' : chart.bars[shownBar].rhythmEvents?.some(event=>event.instrument===instrument&&event.step===index&&event.tieFromPrevious)?'↝':'-'}</button>)}</div>)}
       </div></div>
-      <div role="status" className="rounded-lg border border-cyan-300/30 bg-cyan-950/30 p-3 text-sm text-cyan-100">{countBeat !== null ? `Count-in: ${countBeat} / 4 - prepare to play` : playing && active >= 0 ? `Bar ${activeBar + 1}, count ${staffCountLabel(active, countMode) ? `${active % 4 ? Math.floor(active / 4) + 1 : ''}${staffCountLabel(active, countMode)}` : '—'}: ${CHART_INSTRUMENTS.every((instrument) => chartPlaybackNote(chart.bars[activeBar],instrument,active,activeBar===chartSection(chart).start) === 0) ? 'Rest - keep counting, no stroke' : 'Play highlighted notes'}` : 'Rest means no stroke on that instrument. Other instruments may still play.'}</div>
-      <p className="text-xs text-zinc-400">- rest / x normal / (x) ghost / accented x / ↝ tied continuation. Each grid slot lasts one sixteenth note. Staff symbols and playback count labels follow the current Count labels selection. Empty slots are silent but still take time.</p>
+      <div role="status" className="rounded-lg border border-cyan-300/30 bg-cyan-950/30 p-3 text-sm text-cyan-100">{countBeat !== null ? `Count-in: ${countBeat} / 4 - prepare to play` : playing && active >= 0 ? `Bar ${activeBar + 1}, count ${staffCountLabel(active, countMode) ? `${active % 4 ? Math.floor(active / 4) + 1 : ''}${staffCountLabel(active, countMode)}` : '—'}: ${sounding.length ? 'Scheduled strokes: '+sounding.join(', ') : 'Rest - keep counting, no stroke'}` : 'Rest means no stroke on that instrument. Other instruments may still play.'}</div>
+      <p className="text-xs text-zinc-400">- rest / x normal / (x) ghost / accented x / ↝ tied continuation. Each grid slot lasts one sixteenth note. Staff symbols and playback count labels follow the current Count labels selection. Empty slots are silent but still take time. The cursor follows selected count labels and actual note onsets; only sounding instrument cells are highlighted. Hidden instruments are listed in the playback status.</p>
       <div className="flex flex-wrap gap-2"><button disabled={playing || chart.bars.length >= 256} onClick={() => { setChart((current) => ({ ...current, bars: [...current.bars, { ...blankBar(), ...(current.meter === '2/4' ? { beats: 2 as const } : {}) }], barLabels: [...current.bars.map((_, index) => current.barLabels?.[index] ?? ''), ''], section: undefined, review: restructureReview(current,[...current.bars.map((_,index)=>[index]),[]]) })); setSelectedBar(chart.bars.length) }} className="rounded border border-white/20 px-3 py-2 disabled:opacity-40">Add blank bar</button><button disabled={playing || chart.bars.length >= 256} onClick={() => { const copy = structuredClone(chart.bars[selectedBar]); setChart((current) => ({ ...current, bars: [...current.bars, copy], barLabels: [...current.bars.map((_, index) => current.barLabels?.[index] ?? ''), current.barLabels?.[selectedBar] ?? ''], section: undefined, review: restructureReview(current,[...current.bars.map((_,index)=>[index]),[selectedBar]]) })); setSelectedBar(chart.bars.length) }} className="rounded border border-white/20 px-3 py-2 disabled:opacity-40">Duplicate bar</button><button disabled={playing || chart.bars.length === 1} onClick={() => { setChart((current) => ({ ...current, pickupOffset: undefined, bars: current.bars.filter((_, index) => index !== selectedBar), barLabels: current.bars.map((_, index) => current.barLabels?.[index] ?? '').filter((_, index) => index !== selectedBar), section: undefined, review: restructureReview(current,current.bars.flatMap((_,index)=>index===selectedBar?[]:[[index]])) })); setSelectedBar(0) }} className="rounded border border-white/20 px-3 py-2 disabled:opacity-40">Remove bar</button></div>
       <p role="status" className="text-sm text-cyan-200">{message}</p>
     </GlassCard>
@@ -207,6 +212,7 @@ export function SongChartEditor({ recognitionDraft, onDraftConsumed, onSourceRef
       <div className="grid grid-cols-2 gap-2">{(['start', 'end'] as const).map((edge) => <label key={edge} className="text-sm">{edge === 'start' ? 'Start bar' : 'End bar'}<select aria-label={edge === 'start' ? 'Start bar' : 'End bar'} disabled={playing} value={chartSection(chart)[edge]} onChange={(event) => { const value = Number(event.target.value); setChart((current) => { const section = chartSection(current); return { ...current, section: edge === 'start' ? { start: value, end: Math.max(value, section.end) } : { start: Math.min(value, section.start), end: value } } }) }} className="mt-1 w-full rounded border border-white/25 bg-zinc-900 p-2">{chart.bars.map((_, index) => <option key={index} value={index}>Bar {index + 1}</option>)}</select></label>)}</div>
       <button disabled={playing} onClick={() => setChart((current) => ({ ...current, section: undefined }))} className="rounded border border-white/25 px-3 py-2 disabled:opacity-40">Use full chart</button>
       <p className="text-xs text-zinc-300">Play bars {chartSection(chart).start + 1} to {chartSection(chart).end + 1}. Loop repeats this section. Adding, duplicating, or removing bars resets the range to the full chart.</p>
+      <details aria-label="Scheduled stroke audit"><summary>Review scheduled strokes before playback</summary><p className="text-xs">Only these attacks are scheduled in the selected section. Count labels do not add drum sounds. Grace strokes sound shortly before the main note. Mute applies to both. Hidden rows still sound unless muted.</p><ul className="max-h-64 overflow-auto text-sm">{chartPlaybackAudit(chart).map((hit,index)=><li key={index}>Bar {hit.bar+1}, slot {hit.step+1}: {hit.instrument}{hit.grace?' + '+hit.grace+' grace stroke(s)':''}{hit.muted?' — muted':''}{!visible.includes(hit.instrument)?' — hidden row':''}</li>)}</ul></details>
       <ChartReviewChecklist chart={chart} disabled={playing} onSelectBar={setSelectedBar}/>
       <p aria-label="Selected section timing">Selected section: {chartTimingSummary(chart).beats} beats, {chartTimingSummary(chart).seconds.toFixed(2)} seconds at {chart.bpm} BPM per cycle; count-in {chartTimingSummary(chart).countInSeconds.toFixed(2)} seconds once. Starts at bar {chartTimingSummary(chart).startBar+1}, slot {chartTimingSummary(chart).startStep+1}. Tempo edits affect upcoming timing.</p>
       <details aria-label="Chart correction summary"><summary>Review chart corrections and source references</summary>{chartCorrectionSummary(chart).map(item=><p key={item.index}>Bar {item.index+1}: {item.review}; {item.durationMode} durations; source page {item.sourcePage??'not set'}, {item.sourceCrops} retained crop(s).</p>)}<p>Reviewed status applies only to the current bar signature. Check pending source interpretations before saving.</p></details>
