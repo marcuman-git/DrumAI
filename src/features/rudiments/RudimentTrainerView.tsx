@@ -1,3 +1,4 @@
+import {SnareStudyTrainer} from '../snare-study/SnareStudyTrainer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Play, Shuffle, Square } from 'lucide-react'
 import { startPracticeSession, stopPracticeSession, trackPracticeEvent } from '../../core/services/storage/practiceEvents'
@@ -12,6 +13,7 @@ type RandomMode = 'Phrase Only' | 'Category + Phrase' | 'Full Shuffle'
 export function RudimentTrainerView() {
   const [category, setCategory] = useState<keyof typeof rudiments>('Paradiddles')
   const [mode, setMode] = useState<'Learn' | 'Practice' | 'Challenge' | 'Mastery'>('Practice')
+  const [studyMode,setStudyMode]=useState(false)
   const [tempo, setTempo] = useState(60)
   const [isPlaying, setIsPlaying] = useState(false)
   const [loopPlayback, setLoopPlayback] = useState(false)
@@ -169,6 +171,9 @@ export function RudimentTrainerView() {
   return (
     <div className="space-y-4">
       <SectionHeader title="Rudiment Trainer" subtitle="All PAS categories with learn, practice, challenge, and mastery workflows." />
+      <div className="flex flex-wrap gap-2"><button aria-pressed={!studyMode} onClick={()=>{handleStop();setStudyMode(false)}} className="min-h-11 rounded border px-3 py-2">PAS rudiments</button><button aria-pressed={studyMode} onClick={()=>{handleStop();setStudyMode(true)}} className="min-h-11 rounded border px-3 py-2">Snare studies</button></div>
+      {studyMode&&<SnareStudyTrainer/>}
+      <div hidden={studyMode}>
 
       <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
         <GlassCard className="space-y-4">
@@ -293,6 +298,7 @@ export function RudimentTrainerView() {
             Phrase Only = keep mode/category. Category + Phrase = keep mode. Full Shuffle = mode + category + phrase.
           </p>
         </GlassCard>
+      </div>
       </div>
     </div>
   )
