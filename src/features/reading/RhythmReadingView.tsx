@@ -1,3 +1,4 @@
+import {SnareStudyTrainer} from '../snare-study/SnareStudyTrainer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Play, Square } from 'lucide-react'
 import { parseDuration } from '../../core/services/audio/rhythmPlayback'
@@ -34,6 +35,7 @@ function stepInfo(token: string): RhythmStep {
 }
 
 export function RhythmReadingView() {
+  const [studyMode,setStudyMode]=useState(false)
   const [tempo, setTempo] = useState(60)
   const [index, setIndex] = useState(0)
   const [activeStep, setActiveStep] = useState(-1)
@@ -199,6 +201,9 @@ export function RhythmReadingView() {
   return (
     <div className="space-y-4">
       <SectionHeader title="Rhythm Reading" subtitle="Interactive reading chart with play/stop controls and live note highlighting." />
+      <div className="flex flex-wrap gap-2"><button aria-pressed={!studyMode} onClick={()=>{clearPlayback();setStudyMode(false)}} className="min-h-11 rounded border px-3 py-2">Kit reading</button><button aria-pressed={studyMode} onClick={()=>{clearPlayback();setStudyMode(true)}} className="min-h-11 rounded border px-3 py-2">Snare studies</button></div>
+      {studyMode&&<SnareStudyTrainer/>}
+      <div hidden={studyMode}>
 
       <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
         <GlassCard className="space-y-3">
@@ -281,6 +286,7 @@ export function RhythmReadingView() {
             <input type="checkbox" className="accent-cyan-400" /> Sight-reading challenge mode
           </label>
         </GlassCard>
+      </div>
       </div>
     </div>
   )
