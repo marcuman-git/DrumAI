@@ -531,3 +531,10 @@ Later conversion version assignments remain provisional until recognition valida
 
 ### Next recommended combined v0.10.47
 - Broaden rest matching across fonts/scales with separate development and validation crops, improve the remaining Baba low-resolution flag cases, and expand negative/source/playback checks together in one release. The earlier proposed phases47–48 were already delivered in v0.10.45.
+
+### v1.0.0-rc.4 — combined playback alignment and five improvements (2026-11-27)
+
+- Fixed eighth-mode cursor advancement through silent sixteenths without changing clock/bar length. Named scheduled voices, sounding-cell highlights and an auditable attack list expose hidden/grace events. Grace strokes now respect mute/solo/volume. Reviewed event scheduling remains authoritative.
+- Added same-center competing-identity protection, explicit distinct-head selection, difficult-duration alternatives, conversion-issue filtering, labelled/focusable mobile grid and a mobile regression.
+- Added Highway complete-bar timing evidence at four scales.232 timing references across20 source cases; six72-DPI durations require explicit review, six unmatched detections remain reported. Existing source guards pass.
+- 561 unit tests across161 files, production build and lint with0 errors/32 existing warnings pass. Browser launch blocked by missing libatk runtime; hardware/audio/offline checks remain pending. Complete install/testing details in PLAYBACK_ALIGNMENT.md. One rc4 upload over complete rc3; no dependency additions, workflow or chart-schema changes.

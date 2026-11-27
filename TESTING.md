@@ -9,3 +9,7 @@ Verify advanced MusicXML round trips, triplet/fine timing, simultaneous voices, 
 Check full backup export/restore, malformed imports, unrelated storage exclusion and transaction failure recovery. Keep the automatic safety copy when testing replacement restores. Compare profile, libraries, chart notes and history after reloading.
 
 Before stable release, complete `RELEASE_READINESS.md`: physical audio, microphone, MIDI hotplug/latency, navigation cleanup, browser/mobile accessibility, offline launch and update behavior. Device-free tests cannot certify those checks.
+
+## Rc4 playback alignment
+
+Run `npm run test:unit`, `npm run build` and `npm run test:e2e` after the complete upload. See `PLAYBACK_ALIGNMENT.md` for screenshot-specific, imported timing, mute/grace, source and mobile checks. Browser launch needs the Playwright Chromium Linux dependencies; local rc4 browser execution was blocked by libatk-1.0.so.0. Unit audio tests verify scheduling, not physical loudspeaker output.

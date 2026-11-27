@@ -1,4 +1,4 @@
-# DrumMaster AI — v1.0.0-rc.3
+# DrumMaster AI — v1.0.0-rc.4
 
 A local-first drum practice app with metronome, timing analysis, rudiments, stick control, reading, dictation, independence, grooves, fills, polyrhythm, odd-time, dynamics, speed training, song charts, analytics and a rule-based practice coach.
 
@@ -25,3 +25,5 @@ The installed PWA caches the app after a successful online visit. Local PDFs mus
 ## Release status
 
 This is a release candidate. Automated validation is recorded in `RELEASE_READINESS.md`. Hardware microphone/MIDI accuracy, audible output and supported-browser/mobile/offline checks must pass before a stable v1.0 label. Recognition limitations remain visible and editable.
+
+Playback alignment and the five combined review improvements are described in `PLAYBACK_ALIGNMENT.md`.

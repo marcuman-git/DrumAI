@@ -1,4 +1,4 @@
-# v1.0.0-rc.3 release readiness
+# v1.0.0-rc.4 release readiness
 
 ## Combined release scope
 
@@ -17,7 +17,7 @@ The phantom-rest correction and its verification are described in REST_NOTATION_
 
 ## Automated evidence
 
-548 unit tests pass across158 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
+561 unit tests pass across161 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
 
 ## Required checks before stable v1.0
 
@@ -32,3 +32,7 @@ The phantom-rest correction and its verification are described in REST_NOTATION_
 - [ ] Validate new independent source pages, especially low-resolution flags, rests and ambiguous cymbals; retain manual review for uncertain cases.
 
 Automatic arbitrary-score transcription, mixed meter/tempo MusicXML, nested repeats, arbitrary tuplets, cloud/community sync and hardware-certified scoring are not claimed by this release. Existing unresolved recognition cases remain in source reports. The candidate consolidates the local app finalization work; stable release depends on the checks above.
+
+## Rc4 playback and review evidence
+
+See `PLAYBACK_ALIGNMENT.md`. Selected counting and actual onsets drive playback visualization. Grace strokes honor the mix. Same-center competing checked identities block draft confirmation. Five complete source bars at four scales yield232 timing references; six72-DPI Highway durations require explicit review. Source regression guards pass; six unmatched suggestions remain. The mobile browser regression is included but local launch is blocked by a missing Linux runtime library. Physical-audio and device checks above remain required.
