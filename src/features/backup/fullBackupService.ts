@@ -10,6 +10,7 @@ const STORES=[
  ['drummaster-ai-adaptive-plan-v1','drummaster-ai-adaptive-plan-fallback-v1'],
  [null,'drummaster-song-charts-v1'],[null,'drummaster-independence-library-v1'],
  [null,'drummaster-independence-v1'],[null,'drummaster-stickings-v1'],
+ [null,'drummaster-snare-studies-v1'],
  [null,'drummaster-speed-records-v1'],[null,'drummaster-groove-playlist-v1'],
 ] as const
 export interface FullBackup{app:'DrumMaster AI Full Backup';schema:1;createdAt:string;history:PracticeBackup;data:Record<string,unknown>}

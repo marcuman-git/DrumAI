@@ -14,3 +14,9 @@ it('rejects unknown stores and malformed charts before writing',async()=>{
 it('rolls local writes back if the database transaction fails',async()=>{
  const backup=await createFullBackup();backup.data['drummaster-speed-records-v1']={best:100};localStorage.setItem('drummaster-speed-records-v1','{"best":80}');const {setMany}=await import('idb-keyval');vi.mocked(setMany).mockRejectedValueOnce(Error('storage unavailable'));await expect(restoreFullBackup(backup)).rejects.toThrow('Restore failed');expect(localStorage.getItem('drummaster-speed-records-v1')).toBe('{"best":80}')
 })
+it('includes snare study preferences and tempo-specific confirmed rounds in the full backup',async()=>{
+ const progress={id:'four-strokes',bpm:60,clean:{'four-strokes@60@R':3}}
+ localStorage.setItem('drummaster-snare-studies-v1',JSON.stringify(progress));const backup=await createFullBackup()
+ expect(backup.data['drummaster-snare-studies-v1']).toEqual(progress);localStorage.removeItem('drummaster-snare-studies-v1')
+ await restoreFullBackup(backup);expect(JSON.parse(localStorage.getItem('drummaster-snare-studies-v1')!)).toEqual(progress)
+})
