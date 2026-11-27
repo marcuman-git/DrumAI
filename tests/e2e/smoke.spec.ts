@@ -63,3 +63,15 @@ test('mobile drummer score supports an excerpt, loop range and direct note navig
  await page.getByRole('button',{name:'Stop score'}).click()
  await expect(page.getByRole('button',{name:'Play score'})).toBeEnabled()
 })
+
+test('snare studies keep compound meters in the study player and transfer measured rolls to Song Practice',async({page})=>{
+ await prepareApp(page);await page.goto('/');await page.getByRole('button',{name:/song practice/i}).click()
+ await page.getByRole('button',{name:'Snare Studies',exact:true}).click()
+ await page.getByLabel('Snare study').selectOption('six-eight')
+ await expect(page.getByRole('img',{name:'Snare study bar 1, 6/8'})).toBeVisible()
+ await expect(page.getByRole('button',{name:'Open study in Song Practice'})).toBeDisabled()
+ await page.getByLabel('Snare study').selectOption('five-roll')
+ await page.getByRole('button',{name:'Open study in Song Practice'}).click()
+ await expect(page.getByRole('heading',{name:'Measured five-stroke roll',exact:true})).toBeVisible()
+ await expect(page.getByRole('button',{name:'Play score'})).toBeEnabled()
+})
