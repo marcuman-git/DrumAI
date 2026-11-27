@@ -1,3 +1,9 @@
+# v1.0.0-rc.2 — musical timing consolidation
+
+The requested timing work is delivered as one update. Test the source → timing proposal → reviewed draft → chart → playback workflow using TIMING_UPDATE.md. Stable release still requires browser/device/listening and independent-source validation; no additional serial timing release plan is required to use this update.
+
+---
+
 # Remaining work after v1.0.0-rc.1
 
 The six planned local-app implementation releases are consolidated into one candidate. See RELEASE_READINESS.md for the delivered-scope mapping and release gates.

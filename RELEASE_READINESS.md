@@ -1,4 +1,4 @@
-# v1.0.0-rc.1 release readiness
+# v1.0.0-rc.2 release readiness
 
 ## Combined release scope
 
@@ -11,9 +11,11 @@
 | Recovery/usability/offline | Full-app backup preview and safety copy, rollback tests, storage-failure notification, usable Daily Plan navigation and PWA update prompt/relative manifest paths |
 | Final validation | Unit/build/source regression verification, complete upload inventory and documentation; hardware/browser checks explicitly pending |
 
+The consolidated timing workflow and source comparison checks are described in TIMING_UPDATE.md.
+
 ## Automated evidence
 
-525 unit tests pass across151 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
+543 unit tests pass across157 files. Production build passes. Original source benchmark rerun is included in the release validation folder. Expanded rest scan recovers12/12 known repeated-scale references with0 unmatched suggestions and no quarter-rest mislabels in those crops. Because expanded sensitivity was selected after examining these cases, they are regression/development evidence, not an untouched holdout.
 
 ## Required checks before stable v1.0
 

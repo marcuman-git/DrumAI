@@ -1,3 +1,9 @@
+# Consolidated musical timing update — v1.0.0-rc.2
+
+Added source-evidence timing constraints, explicit ambiguity/anchors, mixed beams, preserved review metadata, connected stylized-head stem recovery, and safeguards against accidental grid conversion. Whole-bar timing regressions check184 heads across16 source/scale cases; five unmatched detections remain reported. See TIMING_UPDATE.md for workflow, evidence and limits.
+
+---
+
 # Combined candidate — 2026-11-26
 
 v1.0.0-rc.1 combines the six local-app finalization tracks: source review, advanced reviewed timing/MusicXML,256-bar charts, input/persistence cleanup, complete local backup, and release documentation. Existing source/history workflows remain compatible. New-user demonstration progress and production coach injection controls were removed.
